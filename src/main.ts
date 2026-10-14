@@ -10,6 +10,7 @@ import { BootScene } from './game/scenes/BootScene'
 import { TitleScene } from './game/scenes/TitleScene'
 import { WorldScene } from './game/scenes/WorldScene'
 import { BattleScene } from './game/scenes/BattleScene'
+import { EndingScene } from './game/scenes/EndingScene'
 
 const parent = document.querySelector<HTMLDivElement>('#app')
 if (!parent) {
@@ -31,7 +32,7 @@ const config: Phaser.Types.Core.GameConfig = {
     width: 640,
     height: 480,
   },
-  scene: [BootScene, TitleScene, WorldScene, BattleScene],
+  scene: [BootScene, TitleScene, WorldScene, BattleScene, EndingScene],
   input: {
     keyboard: true,
     mouse: true,
@@ -43,5 +44,11 @@ const config: Phaser.Types.Core.GameConfig = {
   },
 }
 
-// eslint-disable-next-line no-new
-new Phaser.Game(config)
+const game = new Phaser.Game(config)
+
+// 仅开发模式暴露调试句柄，便于自动化自测；生产构建会被移除
+if (import.meta.env.DEV) {
+  void import('./game/state/GameState').then(({ GameState }) => {
+    Object.assign(window, { __game: game, __GS: GameState })
+  })
+}

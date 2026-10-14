@@ -1,51 +1,71 @@
 /**
- * 大地图：走动、碰撞、NPC 对话、传送、遇敌
+ * 大地图：走动、碰撞、NPC 互动（对话/疗愈/商店/训练家/BOSS）、传送、遇敌
  * @author zjh
  * @date 2026-10-14
  */
 
 import Phaser from 'phaser'
-import { createCreature, SPECIES } from '../data/creatures'
+import { SPECIES, createCreature } from '../data/creatures'
 import {
   MAPS,
   isSolid,
   isTallGrass,
+  npcLines,
   tileAt,
   type MapDef,
   type NpcDef,
+  type TileKind,
+  type WarpDef,
 } from '../data/maps'
-import { GameState } from '../state/GameState'
+import { GameState, type Facing } from '../state/GameState'
 import { Sfx } from '../systems/AudioBeeps'
+import { DialogueBox } from '../ui/DialogueBox'
+import { InputKeys } from '../ui/InputKeys'
+import { ListPanel } from '../ui/ListPanel'
 import { TouchPad } from '../ui/TouchPad'
+import { battleTransition, fadeIn, fadeToScene } from '../ui/Transition'
+import { WorldMenus } from '../ui/WorldMenus'
 
 const MOVE_MS = 140
+/** 进入地图 / 战斗结束后，至少走几步才会再次遇敌 */
+const SAFE_STEPS = 2
+
+/** 地砖类型 → 贴图 key */
+const TILE_TEXTURE: Record<TileKind, string> = {
+  grass: 'tile-grass',
+  path: 'tile-path',
+  wall: 'tile-wall',
+  water: 'tile-water',
+  floor: 'tile-floor',
+  tall: 'tile-tall-mark',
+  door: 'tile-door',
+  warp: 'tile-warp',
+  rock: 'tile-rock',
+  ash: 'tile-ash',
+}
+
+/** NPC 头顶标记 */
+const ROLE_MARK: Partial<Record<NonNullable<NpcDef['role']>, string>> = {
+  healer: '+',
+  shop: '店',
+}
 
 export class WorldScene extends Phaser.Scene {
   private map!: MapDef
   private player!: Phaser.GameObjects.Sprite
-  private cursor!: Phaser.Types.Input.Keyboard.CursorKeys
-  private wasd!: {
-    W: Phaser.Input.Keyboard.Key
-    A: Phaser.Input.Keyboard.Key
-    S: Phaser.Input.Keyboard.Key
-    D: Phaser.Input.Keyboard.Key
-  }
-  private space!: Phaser.Input.Keyboard.Key
-  private esc!: Phaser.Input.Keyboard.Key
+  private keys!: InputKeys
+  private touch!: TouchPad
+  private dialogue!: DialogueBox
+  private menus!: WorldMenus
+  private hudText!: Phaser.GameObjects.Text
   private tileX = 0
   private tileY = 0
   private moving = false
-  private facing: 'up' | 'down' | 'left' | 'right' = 'down'
-  private dialogueOpen = false
-  private menuOpen = false
-  private dialogueBox!: Phaser.GameObjects.Container
-  private menuBox!: Phaser.GameObjects.Container
-  private dialogueLines: string[] = []
-  private dialogueIndex = 0
-  private dialogueNpc: NpcDef | null = null
-  private hudText!: Phaser.GameObjects.Text
-  private touch!: TouchPad
-  private encounterCooldown = 0
+  /** 过渡中（切图/进战斗），屏蔽输入 */
+  private busy = false
+  private facing: Facing = 'down'
+  private safeSteps = SAFE_STEPS
+  private npcMarks = new Map<string, Phaser.GameObjects.Text>()
 
   constructor() {
     super('World')
@@ -55,28 +75,32 @@ export class WorldScene extends Phaser.Scene {
     this.map = MAPS[GameState.mapId] ?? MAPS.town
     this.tileX = GameState.playerX
     this.tileY = GameState.playerY
+    this.facing = GameState.facing
+    this.moving = false
+    this.busy = false
+    this.safeSteps = SAFE_STEPS
+    this.npcMarks.clear()
     this.cameras.main.setBackgroundColor(this.map.bgColor)
+    this.cameras.main.setZoom(1)
 
     this.drawMap()
     this.spawnNpcs()
 
-    this.player = this.add.sprite(0, 0, 'spr-player').setDepth(10)
+    this.player = this.add.sprite(0, 0, `spr-player-${this.facing}`).setDepth(10)
     this.placePlayerVisual()
 
+    // 地图小于画面时，扩大镜头边界让地图居中显示
+    const ts = this.map.tileSize
+    const mapW = this.map.width * ts
+    const mapH = this.map.height * ts
+    const { width: viewW, height: viewH } = this.scale
     this.cameras.main.setBounds(
-      0,
-      0,
-      this.map.width * this.map.tileSize,
-      this.map.height * this.map.tileSize,
+      mapW < viewW ? -(viewW - mapW) / 2 : 0,
+      mapH < viewH ? -(viewH - mapH) / 2 : 0,
+      Math.max(mapW, viewW),
+      Math.max(mapH, viewH),
     )
     this.cameras.main.startFollow(this.player, true, 0.15, 0.15)
-
-    if (this.input.keyboard) {
-      this.cursor = this.input.keyboard.createCursorKeys()
-      this.wasd = this.input.keyboard.addKeys('W,A,S,D') as typeof this.wasd
-      this.space = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
-      this.esc = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC)
-    }
 
     this.hudText = this.add
       .text(12, 10, '', {
@@ -89,50 +113,46 @@ export class WorldScene extends Phaser.Scene {
       .setDepth(501)
     this.refreshHud()
 
-    this.buildDialogueUi()
-    this.buildMenuUi()
     this.touch = new TouchPad(this)
-
-    this.events.on('resume', () => {
-      this.refreshHud()
-      this.encounterCooldown = 20
+    this.keys = new InputKeys(this, this.touch)
+    this.dialogue = new DialogueBox(this)
+    this.menus = new WorldMenus(new ListPanel(this), {
+      toast: (m) => this.flashToast(m),
+      refreshHud: () => this.refreshHud(),
+      backToTitle: () => {
+        this.menus.panel.close()
+        this.busy = true
+        fadeToScene(this, 'Title')
+      },
     })
+
+    fadeIn(this)
+    this.showMapBanner()
   }
 
   update(): void {
-    if (this.dialogueOpen) {
-      if ((this.space && Phaser.Input.Keyboard.JustDown(this.space)) || this.touch.consumeAction()) {
-        this.advanceDialogue()
-      }
+    const input = this.keys.poll()
+    if (this.busy) return
+
+    if (this.dialogue.isOpen) {
+      if (input.confirm) this.dialogue.advance()
       return
     }
-    if (this.menuOpen) {
-      if ((this.esc && Phaser.Input.Keyboard.JustDown(this.esc)) || this.touch.consumeMenu()) {
-        this.closeMenu()
-      }
+    if (this.menus.isOpen) {
+      this.menus.panel.handle(input)
       return
     }
-
-    if ((this.esc && Phaser.Input.Keyboard.JustDown(this.esc)) || this.touch.consumeMenu()) {
-      this.openMenu()
-      return
-    }
-
-    if ((this.space && Phaser.Input.Keyboard.JustDown(this.space)) || this.touch.consumeAction()) {
-      this.tryInteract()
-    }
-
     if (this.moving) return
-    if (this.encounterCooldown > 0) this.encounterCooldown--
 
-    let dx = 0
-    let dy = 0
-    if (this.cursor?.left.isDown || this.wasd?.A.isDown || this.touch.input.left) dx = -1
-    else if (this.cursor?.right.isDown || this.wasd?.D.isDown || this.touch.input.right) dx = 1
-    else if (this.cursor?.up.isDown || this.wasd?.W.isDown || this.touch.input.up) dy = -1
-    else if (this.cursor?.down.isDown || this.wasd?.S.isDown || this.touch.input.down) dy = 1
-
-    if (dx !== 0 || dy !== 0) this.tryMove(dx, dy)
+    if (input.cancel) {
+      this.menus.openMain()
+      return
+    }
+    if (input.confirm) {
+      this.tryInteract()
+      return
+    }
+    if (input.dx !== 0 || input.dy !== 0) this.tryMove(input.dx, input.dy)
   }
 
   private drawMap(): void {
@@ -140,38 +160,52 @@ export class WorldScene extends Phaser.Scene {
     for (let y = 0; y < this.map.height; y++) {
       for (let x = 0; x < this.map.width; x++) {
         const kind = this.map.tiles[y * this.map.width + x]
-        const key =
-          kind === 'tall'
-            ? 'tile-tall-mark'
-            : kind === 'grass'
-              ? 'tile-grass'
-              : kind === 'path'
-                ? 'tile-path'
-                : kind === 'wall'
-                  ? 'tile-wall'
-                  : kind === 'water'
-                    ? 'tile-water'
-                    : kind === 'floor'
-                      ? 'tile-floor'
-                      : kind === 'door'
-                        ? 'tile-door'
-                        : kind === 'warp'
-                          ? 'tile-warp'
-                          : 'tile-grass'
+        const key = kind === 'path' && this.map.pathTexture ? this.map.pathTexture : TILE_TEXTURE[kind]
         this.add.image(x * ts + ts / 2, y * ts + ts / 2, key)
       }
     }
-
-    // 地图名已在 HUD 显示，避免与触控垫重叠
   }
 
+  /**
+   * 生成 NPC：BOSS 用伙伴立绘，训练家未击败时头顶显示「!」
+   * @author zjh
+   * @date 2026-10-14
+   */
   private spawnNpcs(): void {
     const ts = this.map.tileSize
     for (const npc of this.map.npcs) {
-      const spr = this.add.sprite(npc.x * ts + ts / 2, npc.y * ts + ts / 2, 'spr-npc')
-      spr.setTint(npc.color)
-      spr.setDepth(9)
+      const cx = npc.x * ts + ts / 2
+      const cy = npc.y * ts + ts / 2
+      if (npc.role === 'boss') {
+        const bossSpecies = npc.team?.[npc.team.length - 1]?.speciesId ?? 'magmane'
+        const spr = this.add.image(cx, cy, `spr-${bossSpecies}`).setScale(0.8).setDepth(9)
+        this.tweens.add({ targets: spr, y: cy - 3, yoyo: true, repeat: -1, duration: 700 })
+      } else {
+        this.add.sprite(cx, cy, 'spr-npc').setTint(npc.color).setDepth(9)
+      }
+
+      const mark = this.npcMarkText(npc)
+      if (mark) {
+        const t = this.add
+          .text(cx, cy - 22, mark, {
+            fontSize: '13px',
+            color: '#3a2a10',
+            backgroundColor: '#ffe08a',
+            padding: { x: 4, y: 1 },
+          })
+          .setOrigin(0.5)
+          .setDepth(11)
+        this.tweens.add({ targets: t, y: cy - 25, yoyo: true, repeat: -1, duration: 500 })
+        this.npcMarks.set(npc.id, t)
+      }
     }
+  }
+
+  private npcMarkText(npc: NpcDef): string | null {
+    if ((npc.role === 'trainer' || npc.role === 'boss') && npc.defeatedKey) {
+      return GameState.getFlag(npc.defeatedKey) ? null : '!'
+    }
+    return npc.role ? ROLE_MARK[npc.role] ?? null : null
   }
 
   private placePlayerVisual(): void {
@@ -179,21 +213,26 @@ export class WorldScene extends Phaser.Scene {
     this.player.setPosition(this.tileX * ts + ts / 2, this.tileY * ts + ts / 2)
   }
 
+  private setFacing(f: Facing): void {
+    this.facing = f
+    GameState.facing = f
+    this.player.setTexture(`spr-player-${f}`)
+  }
+
   private occupiedByNpc(x: number, y: number): NpcDef | null {
     return this.map.npcs.find((n) => n.x === x && n.y === y) ?? null
   }
 
   private tryMove(dx: number, dy: number): void {
-    if (dx < 0) this.facing = 'left'
-    if (dx > 0) this.facing = 'right'
-    if (dy < 0) this.facing = 'up'
-    if (dy > 0) this.facing = 'down'
+    this.setFacing(dx < 0 ? 'left' : dx > 0 ? 'right' : dy < 0 ? 'up' : 'down')
 
     const nx = this.tileX + dx
     const ny = this.tileY + dy
     const tile = tileAt(this.map, nx, ny)
     if (!tile || isSolid(tile) || this.occupiedByNpc(nx, ny)) return
 
+    const fromX = this.tileX
+    const fromY = this.tileY
     this.moving = true
     this.tileX = nx
     this.tileY = ny
@@ -209,223 +248,174 @@ export class WorldScene extends Phaser.Scene {
       duration: MOVE_MS,
       onComplete: () => {
         this.moving = false
-        this.afterStep(tile)
+        this.afterStep(tile, fromX, fromY)
       },
     })
+    // 走路时轻微弹跳
+    this.tweens.add({ targets: this.player, scaleY: 0.9, yoyo: true, duration: MOVE_MS / 2 })
   }
 
-  private afterStep(tile: string): void {
+  /**
+   * 落地后：检查传送点（含关卡锁）与遇敌
+   * @author zjh
+   * @date 2026-10-14
+   */
+  private afterStep(tile: TileKind, fromX: number, fromY: number): void {
     const warp = this.map.warps.find((w) => w.x === this.tileX && w.y === this.tileY)
     if (warp) {
-      GameState.mapId = warp.targetMap
-      GameState.playerX = warp.targetX
-      GameState.playerY = warp.targetY
-      Sfx.confirm()
-      this.scene.restart()
+      this.useWarp(warp, fromX, fromY)
       return
     }
 
-    if (isTallGrass(tile as never) && this.encounterCooldown <= 0 && this.map.wildChance > 0) {
-      if (Math.random() < this.map.wildChance) {
-        this.startWildBattle()
-      }
+    if (this.safeSteps > 0) this.safeSteps--
+    if (isTallGrass(tile)) this.rustleGrass()
+    if (isTallGrass(tile) && this.safeSteps <= 0 && this.map.wildChance > 0) {
+      if (Math.random() < this.map.wildChance) this.startWildBattle()
+    }
+  }
+
+  private useWarp(warp: WarpDef, fromX: number, fromY: number): void {
+    if (warp.requireFlag && !GameState.getFlag(warp.requireFlag)) {
+      // 未解锁：退回上一格并提示
+      this.tileX = fromX
+      this.tileY = fromY
+      GameState.playerX = fromX
+      GameState.playerY = fromY
+      this.placePlayerVisual()
+      Sfx.cancel()
+      this.dialogue.open(warp.lockedLines ?? ['前面暂时过不去。'])
+      return
+    }
+    GameState.mapId = warp.targetMap
+    GameState.playerX = warp.targetX
+    GameState.playerY = warp.targetY
+    Sfx.confirm()
+    this.busy = true
+    const cam = this.cameras.main
+    cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.restart())
+    cam.fadeOut(220, 0, 0, 0)
+  }
+
+  /** 踩草时冒出几片小叶子 */
+  private rustleGrass(): void {
+    const ts = this.map.tileSize
+    const color = this.map.id === 'pass' ? 0xffb050 : 0x8fd99a
+    for (let i = 0; i < 3; i++) {
+      const leaf = this.add
+        .rectangle(this.tileX * ts + ts / 2, this.tileY * ts + ts / 2 + 6, 4, 4, color)
+        .setDepth(12)
+      this.tweens.add({
+        targets: leaf,
+        x: leaf.x + Phaser.Math.Between(-12, 12),
+        y: leaf.y - Phaser.Math.Between(8, 16),
+        alpha: 0,
+        duration: 320,
+        onComplete: () => leaf.destroy(),
+      })
     }
   }
 
   private facingTile(): { x: number; y: number } {
-    let x = this.tileX
-    let y = this.tileY
-    if (this.facing === 'left') x--
-    if (this.facing === 'right') x++
-    if (this.facing === 'up') y--
-    if (this.facing === 'down') y++
-    return { x, y }
+    const d = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] }[this.facing]
+    return { x: this.tileX + d[0], y: this.tileY + d[1] }
   }
 
+  /**
+   * 与面前 NPC 互动
+   * @author zjh
+   * @date 2026-10-14
+   */
   private tryInteract(): void {
     const { x, y } = this.facingTile()
     const npc = this.occupiedByNpc(x, y)
     if (!npc) return
-    Sfx.talk()
+    const say = (lines: string[], after?: () => void) =>
+      this.dialogue.open(lines.map((l) => `${npc.name}：${l}`), after)
 
-    // 疗愈师：对话时回血
-    if (npc.id === 'healer') {
-      GameState.healAll()
-      this.refreshHud()
+    switch (npc.role) {
+      case 'healer':
+        GameState.healAll()
+        this.refreshHud()
+        this.cameras.main.flash(250, 255, 240, 255)
+        Sfx.win()
+        say(npc.lines)
+        return
+      case 'shop':
+        say(npc.lines, () => this.menus.openShop(() => say(['欢迎再来！'])))
+        return
+      case 'trainer':
+      case 'boss': {
+        const beaten = npc.defeatedKey ? GameState.getFlag(npc.defeatedKey) : true
+        if (beaten) {
+          say(npc.afterLines ?? npc.lines)
+          return
+        }
+        if (!GameState.party.some((c) => c.hp > 0)) {
+          say(['你的伙伴们都累坏了，先去休息吧。'])
+          return
+        }
+        say(npc.challengeLines ?? ['来对战吧！'], () => this.startTrainerBattle(npc))
+        return
+      }
+      default:
+        say(npcLines(npc, (k) => !!GameState.getFlag(k)))
     }
-
-    // 训练家对战（未击败）
-    if (npc.battleSpeciesId && npc.defeatedKey && !GameState.getFlag(npc.defeatedKey)) {
-      this.openDialogue(npc, [
-        `${npc.name}：草地巡护，接受挑战吧！`,
-        '……战斗开始！',
-      ])
-      this.dialogueNpc = npc
-      return
-    }
-
-    if (npc.battleSpeciesId && npc.defeatedKey && GameState.getFlag(npc.defeatedKey)) {
-      this.openDialogue(npc, [`${npc.name}：你已经赢过我了，去高草里继续磨练吧。`])
-      return
-    }
-
-    this.openDialogue(npc, npc.lines.map((l) => `${npc.name}：${l}`))
   }
 
   private startWildBattle(): void {
     const pool = this.map.wildPool
-    if (!pool.length) return
+    if (!pool.length || !GameState.party.some((c) => c.hp > 0)) return
     const pick = pool[Math.floor(Math.random() * pool.length)]
     const lv = Phaser.Math.Between(pick.minLv, pick.maxLv)
-    const enemy = createCreature(pick.speciesId, lv)
     GameState.pendingBattle = {
       kind: 'wild',
-      enemy,
+      enemies: [createCreature(pick.speciesId, lv)],
       returnMapId: this.map.id,
       returnX: this.tileX,
       returnY: this.tileY,
     }
-    this.scene.start('Battle')
+    this.busy = true
+    battleTransition(this)
   }
 
   private startTrainerBattle(npc: NpcDef): void {
-    if (!npc.battleSpeciesId) return
-    const enemy = createCreature(npc.battleSpeciesId, npc.battleLevel ?? 6)
+    if (!npc.team?.length) return
     GameState.pendingBattle = {
-      kind: 'trainer',
-      enemy,
+      kind: npc.role === 'boss' ? 'boss' : 'trainer',
+      enemies: npc.team.map((m) => createCreature(m.speciesId, m.level)),
       trainerName: npc.name,
       flagOnWin: npc.defeatedKey,
+      isBoss: npc.role === 'boss',
       returnMapId: this.map.id,
       returnX: this.tileX,
       returnY: this.tileY,
     }
-    this.scene.start('Battle')
+    this.busy = true
+    battleTransition(this)
   }
 
-  private buildDialogueUi(): void {
+  /** 进入地图时顶部滑入地图名 */
+  private showMapBanner(): void {
     const w = this.scale.width
-    const box = this.add.rectangle(w / 2, this.scale.height - 70, w - 24, 100, 0x102018, 0.92)
-    box.setStrokeStyle(2, 0xa8e6c0)
-    const text = this.add
-      .text(24, this.scale.height - 110, '', {
-        fontSize: '15px',
-        color: '#e8f5ee',
-        wordWrap: { width: w - 60 },
+    const banner = this.add
+      .text(w / 2, -30, `— ${this.map.name} —`, {
+        fontSize: '18px',
+        color: '#fff6e8',
+        backgroundColor: '#1a2e28dd',
+        padding: { x: 16, y: 8 },
       })
-      .setName('dlgText')
-    const hint = this.add
-      .text(w - 28, this.scale.height - 28, '▼', { fontSize: '14px', color: '#7ec8a3' })
-      .setOrigin(1, 1)
-    this.dialogueBox = this.add
-      .container(0, 0, [box, text, hint])
+      .setOrigin(0.5)
       .setScrollFactor(0)
-      .setDepth(600)
-      .setVisible(false)
-  }
-
-  private openDialogue(npc: NpcDef, lines: string[]): void {
-    this.dialogueNpc = npc
-    this.dialogueLines = lines
-    this.dialogueIndex = 0
-    this.dialogueOpen = true
-    this.dialogueBox.setVisible(true)
-    this.showDialogueLine()
-  }
-
-  private showDialogueLine(): void {
-    const t = this.dialogueBox.getByName('dlgText') as Phaser.GameObjects.Text
-    t.setText(this.dialogueLines[this.dialogueIndex] ?? '')
-  }
-
-  private advanceDialogue(): void {
-    this.dialogueIndex++
-    if (this.dialogueIndex >= this.dialogueLines.length) {
-      const npc = this.dialogueNpc
-      this.closeDialogue()
-      // 对话结束后触发训练家战
-      if (
-        npc?.battleSpeciesId &&
-        npc.defeatedKey &&
-        !GameState.getFlag(npc.defeatedKey) &&
-        this.dialogueLines.some((l) => l.includes('战斗开始'))
-      ) {
-        this.startTrainerBattle(npc)
-      }
-      return
-    }
-    Sfx.talk()
-    this.showDialogueLine()
-  }
-
-  private closeDialogue(): void {
-    this.dialogueOpen = false
-    this.dialogueBox.setVisible(false)
-    this.dialogueNpc = null
-  }
-
-  private buildMenuUi(): void {
-    const w = this.scale.width
-    const h = this.scale.height
-    const bg = this.add.rectangle(w / 2, h / 2, 280, 260, 0x102018, 0.95).setStrokeStyle(2, 0xe8a838)
-    const title = this.add.text(w / 2, h / 2 - 100, '菜单', { fontSize: '20px', color: '#f0e6c8' }).setOrigin(0.5)
-
-    const mk = (oy: number, label: string, fn: () => void) => {
-      const r = this.add
-        .rectangle(w / 2, h / 2 + oy, 200, 36, 0x2a5a42)
-        .setStrokeStyle(1, 0xa8e6c0)
-        .setInteractive({ useHandCursor: true })
-        .on('pointerdown', fn)
-      const t = this.add.text(w / 2, h / 2 + oy, label, { fontSize: '16px', color: '#e8f5ee' }).setOrigin(0.5)
-      return [r, t]
-    }
-
-    this.menuBox = this.add
-      .container(0, 0, [
-        bg,
-        title,
-        ...mk(-40, '保存进度', () => {
-          GameState.persist()
-          Sfx.confirm()
-          this.closeMenu()
-          this.flashToast('已保存到本地')
-        }),
-        ...mk(10, '查看队伍', () => {
-          Sfx.confirm()
-          this.showParty()
-        }),
-        ...mk(60, '返回标题', () => {
-          Sfx.cancel()
-          this.scene.start('Title')
-        }),
-        ...mk(110, '关闭', () => this.closeMenu()),
-      ])
-      .setScrollFactor(0)
-      .setDepth(700)
-      .setVisible(false)
-  }
-
-  private openMenu(): void {
-    this.menuOpen = true
-    this.menuBox.setVisible(true)
-    Sfx.confirm()
-  }
-
-  private closeMenu(): void {
-    this.menuOpen = false
-    this.menuBox.setVisible(false)
-  }
-
-  private showParty(): void {
-    const lines = GameState.party.map((c, i) => {
-      const sp = SPECIES[c.speciesId]
-      return `${i + 1}. ${sp.name} Lv.${c.level}  HP ${c.hp}/${c.maxHp}`
+      .setDepth(800)
+    this.tweens.add({
+      targets: banner,
+      y: 64,
+      duration: 350,
+      ease: 'Back.easeOut',
+      hold: 1100,
+      yoyo: true,
+      onComplete: () => banner.destroy(),
     })
-    this.closeMenu()
-    this.openDialogue(
-      { id: 'party', name: '队伍', x: 0, y: 0, color: 0xffffff, lines: [] },
-      ['【队伍】', ...lines],
-    )
   }
 
   private flashToast(msg: string): void {
@@ -438,7 +428,7 @@ export class WorldScene extends Phaser.Scene {
       })
       .setScrollFactor(0)
       .setOrigin(0.5)
-      .setDepth(800)
+      .setDepth(900)
     this.tweens.add({
       targets: t,
       alpha: 0,
@@ -451,10 +441,7 @@ export class WorldScene extends Phaser.Scene {
   private refreshHud(): void {
     const lead = GameState.party[0]
     const sp = lead ? SPECIES[lead.speciesId] : null
-    this.hudText.setText(
-      sp
-        ? `${this.map.name} ｜ ${sp.name} Lv.${lead.level}  HP ${lead.hp}/${lead.maxHp}`
-        : this.map.name,
-    )
+    const leadText = sp && lead ? ` ｜ ${sp.name} Lv.${lead.level} HP ${lead.hp}/${lead.maxHp}` : ''
+    this.hudText.setText(`${this.map.name}${leadText} ｜ 焰币 ${GameState.coins}`)
   }
 }
