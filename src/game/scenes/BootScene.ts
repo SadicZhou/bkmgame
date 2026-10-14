@@ -7,6 +7,7 @@
 import Phaser from 'phaser'
 import { preloadCreatureArt } from '../graphics/CreatureArt'
 import { registerPlaceholderTextures } from '../graphics/PixelFactory'
+import { preloadCharArt } from '../graphics/CharArt'
 import { preloadSceneArt } from '../graphics/SceneArt'
 
 export class BootScene extends Phaser.Scene {
@@ -19,6 +20,7 @@ export class BootScene extends Phaser.Scene {
     this.load.on('loaderror', (file: Phaser.Loader.File) => console.warn(`[Boot] 素材加载失败，回退程序绘制：${file.key}`))
     preloadCreatureArt(this)
     preloadSceneArt(this)
+    preloadCharArt(this)
   }
 
   create(): void {

@@ -6,6 +6,7 @@
  */
 
 import Phaser from 'phaser'
+import { NPC_FRAME, anchorFeet, hasCharArt, idleFrame, registerCharAnims } from '../graphics/CharArt'
 import { setCreatureScale } from '../graphics/CreatureArt'
 import { SPECIES, battleName, createCreature, type CreatureInstance } from '../data/creatures'
 import { decorBlocks } from '../data/decor'
@@ -62,6 +63,9 @@ export class WorldScene extends Phaser.Scene {
   /** 过渡中（切图/进战斗），屏蔽输入 */
   private busy = false
   private facing: Facing = 'down'
+  /** 是否使用 AI 行走图（缺图时回退到代码绘制） */
+  private charArt = false
+  private playerShadow!: Phaser.GameObjects.Ellipse
 
   constructor() {
     super('World')
@@ -84,7 +88,12 @@ export class WorldScene extends Phaser.Scene {
     this.eventView = new WorldEventsView(this, this.map)
     this.eventView.refresh()
 
-    this.player = this.add.sprite(0, 0, `spr-player-${this.facing}`).setDepth(10)
+    registerCharAnims(this)
+    this.charArt = hasCharArt(this, 'char-player')
+    this.playerShadow = this.add.ellipse(0, 0, 20, 7, 0x000000, 0.22).setDepth(8)
+    this.player = this.charArt
+      ? anchorFeet(this.add.sprite(0, 0, 'char-player', idleFrame(this.facing))).setDepth(10)
+      : this.add.sprite(0, 0, `spr-player-${this.facing}`).setDepth(10)
     this.placePlayerVisual()
 
     // 地图小于画面时，扩大镜头边界让地图居中显示
@@ -148,7 +157,9 @@ export class WorldScene extends Phaser.Scene {
 
   update(_time: number, delta: number): void {
     this.weather?.update(delta)
+    this.playerShadow.setPosition(this.player.x, this.player.y + 13)
     const input = this.keys.poll()
+    if (!this.moving && input.dx === 0 && input.dy === 0) this.stopWalk()
     if (this.busy) return
 
     if (this.dialogue.isOpen) {
@@ -194,13 +205,15 @@ export class WorldScene extends Phaser.Scene {
       } else if (npc.role === 'board') {
         this.add.image(cx, cy, 'spr-board').setDepth(9)
       } else {
-        this.add.sprite(cx, cy, 'spr-npc').setTint(npc.color).setDepth(9)
+        this.spawnPerson(npc, cx, cy)
       }
 
+      const tall = npc.role !== 'boss' && npc.role !== 'board' && this.npcHasArt(npc)
+      const markY = tall ? cy - 32 : cy - 22
       const mark = this.npcMarkText(npc)
       if (mark) {
         const t = this.add
-          .text(cx, cy - 22, mark, {
+          .text(cx, markY, mark, {
             fontSize: '13px',
             color: '#3a2a10',
             backgroundColor: '#ffe08a',
@@ -208,9 +221,35 @@ export class WorldScene extends Phaser.Scene {
           })
           .setOrigin(0.5)
           .setDepth(11)
-        this.tweens.add({ targets: t, y: cy - 25, yoyo: true, repeat: -1, duration: 500 })
+        this.tweens.add({ targets: t, y: markY - 3, yoyo: true, repeat: -1, duration: 500 })
       }
     }
+  }
+
+  private npcHasArt(npc: NpcDef): boolean {
+    return hasCharArt(this, 'char-npcs') && NPC_FRAME[npc.id] !== undefined
+  }
+
+  /**
+   * 人类 NPC：有行走图时用对应帧 + 脚下阴影 + 呼吸起伏，否则用着色的代码小人
+   * @author zjh
+   * @date 2026-10-14
+   */
+  private spawnPerson(npc: NpcDef, cx: number, cy: number): void {
+    if (!this.npcHasArt(npc)) {
+      this.add.sprite(cx, cy, 'spr-npc').setTint(npc.color).setDepth(9)
+      return
+    }
+    this.add.ellipse(cx, cy + 13, 20, 7, 0x000000, 0.22).setDepth(8)
+    const spr = anchorFeet(this.add.sprite(cx, cy, 'char-npcs', NPC_FRAME[npc.id])).setDepth(9)
+    this.tweens.add({
+      targets: spr,
+      scaleY: 1.035,
+      yoyo: true,
+      repeat: -1,
+      duration: 900 + ((npc.x * 7 + npc.y * 13) % 5) * 120,
+      ease: 'Sine.easeInOut',
+    })
   }
 
   private npcMarkText(npc: NpcDef): string | null {
@@ -226,9 +265,21 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private setFacing(f: Facing): void {
+    const turned = f !== this.facing
     this.facing = f
     GameState.facing = f
-    this.player.setTexture(`spr-player-${f}`)
+    if (!this.charArt) this.player.setTexture(`spr-player-${f}`)
+    else if (turned || !this.player.anims.isPlaying) {
+      this.player.anims.stop()
+      this.player.setFrame(idleFrame(f))
+    }
+  }
+
+  /** 停下时回到当前方向的站立帧 */
+  private stopWalk(): void {
+    if (!this.charArt || !this.player.anims.isPlaying) return
+    this.player.anims.stop()
+    this.player.setFrame(idleFrame(this.facing))
   }
 
   private occupiedByNpc(x: number, y: number): NpcDef | null {
@@ -263,8 +314,9 @@ export class WorldScene extends Phaser.Scene {
         this.afterStep(tile, fromX, fromY)
       },
     })
-    // 走路时轻微弹跳
-    this.tweens.add({ targets: this.player, scaleY: 0.9, yoyo: true, duration: MOVE_MS / 2 })
+    if (this.charArt) this.player.play(`walk-${this.facing}`, true)
+    // 代码绘制的小人没有行走帧，用轻微弹跳代替
+    else this.tweens.add({ targets: this.player, scaleY: 0.9, yoyo: true, duration: MOVE_MS / 2 })
   }
 
   /**
