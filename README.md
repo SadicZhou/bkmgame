@@ -96,7 +96,8 @@ set SIM=1 && set SIM_MATE=rockmite && set SIM_PASS_MATE=mistnewt && npx vitest r
 ```
 src/game/
   data/        属性、技能、特性、性格、物种、遭遇表、天气、异象、道具、地图
-  graphics/    运行时像素贴图：PixelFactory 入口 + 地图块 / 伙伴配色 / 伙伴绘制 / 人物物件
+  graphics/    运行时像素贴图：PixelFactory 入口 + 地图块 / 伙伴配色 / 伙伴绘制 / 人物物件；
+               CreatureArt 负责立绘加载与缩放（战斗中二阶 ×1.1、三阶 ×1.2，脚底对齐站台）
   scenes/      Boot / Title / Starter / World / Battle / Ending
   systems/     战斗（Core/Calc/Logic/AI/状态/特性）、资质、成长、遭遇、世界时钟、异象、存档、音效
   state/       运行时全局状态（队伍、寄存所、背包、图鉴、旗标、世界）

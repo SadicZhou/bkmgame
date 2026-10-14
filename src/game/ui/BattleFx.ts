@@ -5,7 +5,7 @@
  */
 
 import Phaser from 'phaser'
-import { setCreatureScale } from '../graphics/CreatureArt'
+import { setBattleCreatureScale } from '../graphics/CreatureArt'
 import { Sfx } from '../systems/AudioBeeps'
 
 type Img = Phaser.GameObjects.Image
@@ -138,7 +138,7 @@ export class BattleFx {
       repeat: 3,
       duration: 120,
       onComplete: () => {
-        setCreatureScale(spr.setTexture(newTexture).clearTint(), baseScale)
+        setBattleCreatureScale(spr.setTexture(newTexture).clearTint(), baseScale)
         this.sparkle(home.x, home.y, glow)
         Sfx.win()
       },
