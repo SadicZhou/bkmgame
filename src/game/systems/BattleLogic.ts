@@ -88,6 +88,7 @@ export function startBattle(
   else if (kind === 'unique') say(s, `${battleName(enemy)} 出现在你面前！`, 'swapEnemy')
   else say(s, `${opts.trainerName ?? '对手'} 派出了 ${battleName(enemy)}！`, 'swapEnemy')
   if (enemy.shiny) say(s, '✦ 它的身体闪闪发光！')
+  if (kind === 'unique' && s.token) say(s, '异象信物亮了起来，它被光芒吸引住了！')
   if (s.weather) say(s, `${WEATHER_INFO[s.weather].icon} 场地天气：${WEATHER_INFO[s.weather].label}`, 'weather')
   say(s, `去吧，${battleName(activePlayer(s))}！`, 'swapPlayer')
   onEnter(s, 'player')
@@ -374,10 +375,20 @@ function endOfTurn(s: BattleState): void {
   s.turn += 1
 }
 
+/** 携带异象信物时，唯一精灵第一回合被信物吸引、不会行动 */
+function tokenHolds(s: BattleState): boolean {
+  return s.kind === 'unique' && s.token && s.turn === 1
+}
+
+function sayTokenHold(s: BattleState): void {
+  say(s, `${battleName(activeEnemy(s))} 出神地望着异象信物，没有行动……`)
+}
+
 /** 敌方单独行动一次（我方执行非攻击行动后） */
 function enemyTurn(s: BattleState): void {
   if (s.over) return
-  if (activeEnemy(s).hp > 0 && activePlayer(s).hp > 0) executeMove(s, 'enemy', chooseEnemyMove(s))
+  if (tokenHolds(s)) sayTokenHold(s)
+  else if (activeEnemy(s).hp > 0 && activePlayer(s).hp > 0) executeMove(s, 'enemy', chooseEnemyMove(s))
   endOfTurn(s)
 }
 
@@ -392,6 +403,12 @@ export function playerFight(s: BattleState, slotIndex: number): void {
   const enemy = activeEnemy(s)
   if (slotIndex >= 0 && (player.moves[slotIndex]?.pp ?? 0) <= 0) {
     say(s, '这个技能的 PP 已经用完了！')
+    return
+  }
+  if (tokenHolds(s)) {
+    executeMove(s, 'player', slotIndex)
+    if (!s.over && activeEnemy(s) === enemy) sayTokenHold(s)
+    endOfTurn(s)
     return
   }
   const pMove = slotIndex < 0 ? STRUGGLE : MOVES[player.moves[slotIndex].id]

@@ -105,4 +105,25 @@ describe('收服', () => {
     expect(catchChance(1, 100, 99)).toBeLessThanOrEqual(0.95)
     expect(catchChance(100, 100, 0.01)).toBeGreaterThanOrEqual(0.03)
   })
+
+  it('携带信物时唯一精灵第一回合不行动，第二回合恢复', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.5)
+    const p = mk('puffmouse', 20)
+    const e = mk('starmarten', 20)
+    const s = startBattle([p], [e], 'unique', { token: true })
+    playerFight(s, 0)
+    expect(p.hp).toBe(p.maxHp)
+    expect(s.frames.some((f) => f.text.includes('异象信物'))).toBe(true)
+    playerFight(s, 0)
+    expect(p.hp).toBeLessThan(p.maxHp)
+  })
+
+  it('没有信物时唯一精灵第一回合照常行动', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.5)
+    const p = mk('puffmouse', 20)
+    const e = mk('starmarten', 20)
+    const s = startBattle([p], [e], 'unique')
+    playerFight(s, 0)
+    expect(p.hp).toBeLessThan(p.maxHp)
+  })
 })
