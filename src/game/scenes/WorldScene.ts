@@ -19,7 +19,7 @@ import { Sfx } from '../systems/AudioBeeps'
 import { activePhenomenon, uniqueForBattle } from '../systems/Phenomenon'
 import { isFullMoon, timeLabel } from '../systems/WorldClock'
 import { stepWorld, type StepResult } from '../systems/WorldTick'
-import { renderDecor } from '../ui/DecorLayer'
+import { decorLights, renderDecor } from '../ui/DecorLayer'
 import { DialogueBox } from '../ui/DialogueBox'
 import { renderMap } from '../ui/MapRenderer'
 import { InputKeys } from '../ui/InputKeys'
@@ -28,6 +28,7 @@ import { TouchPad } from '../ui/TouchPad'
 import { TownServices } from '../ui/TownServices'
 import { battleTransition, fadeIn, fadeToScene } from '../ui/Transition'
 import { WeatherLayer } from '../ui/WeatherLayer'
+import type { AmbientKind } from '../ui/weather/Ambient'
 import { WorldEventsView } from '../ui/WorldEventsView'
 import { WorldMenus } from '../ui/WorldMenus'
 
@@ -41,6 +42,13 @@ const ROLE_MARK: Partial<Record<NonNullable<NpcDef['role']>, string>> = {
   board: '告',
   storage: '存',
   granny: '忆',
+}
+
+/** 各地图的环境点缀：草地 / 小镇夜里有萤火虫，山道常有余烬 */
+const AMBIENT_BY_MAP: Record<string, AmbientKind> = {
+  town: 'fireflies',
+  meadow: 'fireflies',
+  pass: 'embers',
 }
 
 /** 唯一精灵等级范围 */
@@ -66,6 +74,8 @@ export class WorldScene extends Phaser.Scene {
   /** 是否使用 AI 行走图（缺图时回退到代码绘制） */
   private charArt = false
   private playerShadow!: Phaser.GameObjects.Ellipse
+  /** 火盆 / 壁炉位置（世界坐标），夜里照亮周围 */
+  private fireLights: { x: number; y: number }[] = []
 
   constructor() {
     super('World')
@@ -110,6 +120,8 @@ export class WorldScene extends Phaser.Scene {
     this.cameras.main.startFollow(this.player, true, 0.15, 0.15)
 
     this.weather = new WeatherLayer(this, 400)
+    this.weather.setAmbient(AMBIENT_BY_MAP[this.map.id] ?? null)
+    this.fireLights = decorLights(this.map)
     this.refreshAtmosphere()
 
     this.hudText = this.add
@@ -156,8 +168,9 @@ export class WorldScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
-    this.weather?.update(delta)
     this.playerShadow.setPosition(this.player.x, this.player.y + 13)
+    this.updateLights()
+    this.weather?.update(delta)
     const input = this.keys.poll()
     if (!this.moving && input.dx === 0 && input.dy === 0) this.stopWalk()
     if (this.busy) return
@@ -611,6 +624,16 @@ export class WorldScene extends Phaser.Scene {
         this.toastCount = Math.max(0, this.toastCount - 1)
       },
     })
+  }
+
+  /** 夜晚光源：玩家提灯 + 地图上的火光（世界坐标换算为屏幕坐标） */
+  private updateLights(): void {
+    const cam = this.cameras.main
+    const toScreen = (x: number, y: number, r: number) => ({ x: x - cam.scrollX, y: y - cam.scrollY, r })
+    this.weather.setLights([
+      toScreen(this.player.x, this.player.y - 4, 84),
+      ...this.fireLights.map((l) => toScreen(l.x, l.y, 70)),
+    ])
   }
 
   /** 昼夜滤镜 + 天气粒子 + 异象染色 */

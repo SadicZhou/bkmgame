@@ -1,6 +1,7 @@
 /**
  * 粒子特效用的小纹理（运行时生成）：
  * - fx-soft：16px 白色径向柔光（蒸汽、雾团、光晕、萤火）
+ * - fx-light：128px 白色径向柔光（夜晚遮罩上擦出光圈）
  * - fx-dot：3px 白色方点（余烬、花粉、沙粒、雪花）
  * - fx-drop：2×10 白色雨丝
  * - fx-ring：12px 白色圆环（雨滴溅开）
@@ -33,6 +34,14 @@ export function registerFxTextures(scene: Phaser.Scene): void {
     grad.addColorStop(1, 'rgba(255,255,255,0)')
     ctx.fillStyle = grad
     ctx.fillRect(0, 0, 16, 16)
+  })
+  canvasTexture(scene, 'fx-light', 128, 128, (ctx) => {
+    const grad = ctx.createRadialGradient(64, 64, 0, 64, 64, 64)
+    grad.addColorStop(0, 'rgba(255,255,255,1)')
+    grad.addColorStop(0.45, 'rgba(255,255,255,0.85)')
+    grad.addColorStop(1, 'rgba(255,255,255,0)')
+    ctx.fillStyle = grad
+    ctx.fillRect(0, 0, 128, 128)
   })
   canvasTexture(scene, 'fx-dot', 3, 3, (ctx) => {
     ctx.fillStyle = '#fff'

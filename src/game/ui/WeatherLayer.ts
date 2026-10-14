@@ -1,63 +1,64 @@
 /**
- * 天气与昼夜叠加层：夜晚蓝调、雨丝、雾气、沙尘、雪花、心火光点、雷闪
- * 全部元素固定在屏幕上（scrollFactor 0），由场景每帧调用 update 推进。
+ * 天气与昼夜叠加层（全部固定在屏幕上，由场景每帧调用 update）。层次从下到上（构造深度 + 小数偏移）：
+ * 1. 天气色调  2. 天气粒子（weather/WeatherParticles）  3. 夜晚遮罩与光圈（weather/NightShade）
+ * 4. 异象染色  5. 环境点缀：萤火虫 / 余烬（weather/Ambient）
  * @author zjh
  * @date 2026-10-14
  */
 
 import Phaser from 'phaser'
 import type { Weather } from '../data/weather'
+import { buildAmbient, type AmbientKind } from './weather/Ambient'
+import { NightShade, type LightSource } from './weather/NightShade'
+import { buildWeather, type FxArea, type WeatherFx } from './weather/WeatherParticles'
 
-interface Drop {
-  obj: Phaser.GameObjects.Rectangle
-  vx: number
-  vy: number
-}
-
-/** 各天气的粒子外观：数量、尺寸、颜色、速度（像素/秒） */
-const DROP_STYLE: Partial<Record<Weather, { n: number; w: number; h: number; color: number; alpha: number; vx: number; vy: number }>> = {
-  rain: { n: 70, w: 1, h: 10, color: 0xa8d0ff, alpha: 0.55, vx: -60, vy: 520 },
-  storm: { n: 90, w: 1, h: 12, color: 0xc0dcff, alpha: 0.6, vx: -120, vy: 640 },
-  sand: { n: 60, w: 6, h: 1, color: 0xe8c080, alpha: 0.5, vx: 380, vy: 30 },
-  snow: { n: 55, w: 3, h: 3, color: 0xffffff, alpha: 0.8, vx: -20, vy: 60 },
-  heartfire: { n: 28, w: 3, h: 3, color: 0xff9ab8, alpha: 0.7, vx: 0, vy: -40 },
-}
-
-/** 整屏色调：夜晚 / 天气 */
+/** 整屏色调：天气 */
 const TINT: Partial<Record<Weather, { color: number; alpha: number }>> = {
   rain: { color: 0x203048, alpha: 0.18 },
   storm: { color: 0x101828, alpha: 0.3 },
-  fog: { color: 0xdde6ee, alpha: 0.22 },
-  sand: { color: 0xc89048, alpha: 0.18 },
+  fog: { color: 0xdde6ee, alpha: 0.2 },
+  sand: { color: 0xc89048, alpha: 0.16 },
   snow: { color: 0xdde8ff, alpha: 0.12 },
   heartfire: { color: 0xff7aa0, alpha: 0.1 },
 }
+
+/** 各层相对构造深度的偏移 */
+const LAYER = { tint: 0, fx: 0.1, night: 0.2, extra: 0.3, ambient: 0.4 }
 
 export class WeatherLayer {
   private readonly scene: Phaser.Scene
   private readonly w: number
   private readonly h: number
   private readonly depth: number
-  private readonly nightRect: Phaser.GameObjects.Rectangle
   private readonly tintRect: Phaser.GameObjects.Rectangle
+  private readonly night: NightShade
   private readonly extraTint: Phaser.GameObjects.Rectangle
-  private drops: Drop[] = []
-  private fogBlobs: Phaser.GameObjects.Ellipse[] = []
+  private fx: WeatherFx | null = null
+  private ambientObj: Phaser.GameObjects.GameObject | null = null
   private weather: Weather | null = null
-  private flashTimer = 0
+  private isNight = false
+  private ambient: AmbientKind | null = null
 
   constructor(scene: Phaser.Scene, depth = 30, area?: { w: number; h: number }) {
     this.scene = scene
     this.depth = depth
     this.w = area?.w ?? scene.scale.width
     this.h = area?.h ?? scene.scale.height
-    this.tintRect = this.fullRect(0x000000, 0)
-    this.nightRect = this.fullRect(0x0a1440, 0)
-    this.extraTint = this.fullRect(0x000000, 0)
+    this.tintRect = this.fullRect(LAYER.tint)
+    this.night = new NightShade(scene, this.w, this.h, depth + LAYER.night)
+    this.extraTint = this.fullRect(LAYER.extra)
   }
 
-  private fullRect(color: number, alpha: number): Phaser.GameObjects.Rectangle {
-    return this.scene.add.rectangle(0, 0, this.w, this.h, color, alpha).setOrigin(0).setScrollFactor(0).setDepth(this.depth)
+  private area(offset: number): FxArea {
+    return { w: this.w, h: this.h, depth: this.depth + offset }
+  }
+
+  private fullRect(offset: number): Phaser.GameObjects.Rectangle {
+    return this.scene.add
+      .rectangle(0, 0, this.w, this.h, 0x000000, 0)
+      .setOrigin(0)
+      .setScrollFactor(0)
+      .setDepth(this.depth + offset)
   }
 
   /**
@@ -66,32 +67,15 @@ export class WeatherLayer {
    * @date 2026-10-14
    */
   set(weather: Weather | null, night: boolean, fullMoon = false): void {
-    this.nightRect.setFillStyle(fullMoon ? 0x1a2460 : 0x0a1440, night ? (fullMoon ? 0.28 : 0.4) : 0)
-    if (weather === this.weather) return
+    this.night.set(fullMoon ? 0x1a2460 : 0x0a1440, night ? (fullMoon ? 0.32 : 0.48) : 0)
+    if (weather === this.weather && night === this.isNight) return
     this.weather = weather
-    this.clearDrops()
+    this.isNight = night
     const tint = weather ? TINT[weather] : undefined
     this.tintRect.setFillStyle(tint?.color ?? 0, tint?.alpha ?? 0)
-    const style = weather ? DROP_STYLE[weather] : undefined
-    if (style) {
-      for (let i = 0; i < style.n; i++) {
-        const obj = this.scene.add
-          .rectangle(Math.random() * this.w, Math.random() * this.h, style.w, style.h, style.color, style.alpha)
-          .setScrollFactor(0)
-          .setDepth(this.depth)
-        const jitter = 0.7 + Math.random() * 0.6
-        this.drops.push({ obj, vx: style.vx * jitter, vy: style.vy * jitter })
-      }
-    }
-    if (weather === 'fog') {
-      for (let i = 0; i < 6; i++) {
-        const e = this.scene.add
-          .ellipse(Math.random() * this.w, Math.random() * this.h, 260, 90, 0xffffff, 0.1)
-          .setScrollFactor(0)
-          .setDepth(this.depth)
-        this.fogBlobs.push(e)
-      }
-    }
+    this.clearFx()
+    this.fx = weather ? buildWeather(this.scene, weather, night, this.area(LAYER.fx)) : null
+    this.rebuildAmbient()
   }
 
   /** 额外色调（异象地图染色），alpha 0 为关闭 */
@@ -99,40 +83,43 @@ export class WeatherLayer {
     this.extraTint.setFillStyle(color, alpha)
   }
 
-  private clearDrops(): void {
-    this.drops.forEach((d) => d.obj.destroy())
-    this.fogBlobs.forEach((e) => e.destroy())
-    this.drops = []
-    this.fogBlobs = []
+  /** 环境点缀：萤火虫只在夜里出现，余烬常驻 */
+  setAmbient(kind: AmbientKind | null): void {
+    if (kind === this.ambient) return
+    this.ambient = kind
+    this.rebuildAmbient()
   }
 
-  /** 每帧推进粒子；dt 为毫秒 */
+  private rebuildAmbient(): void {
+    this.ambientObj?.destroy()
+    this.ambientObj = null
+    const kind = this.ambient
+    if (!kind || (kind === 'fireflies' && !this.isNight)) return
+    this.ambientObj = buildAmbient(this.scene, kind, this.isNight, this.area(LAYER.ambient))
+  }
+
+  private clearFx(): void {
+    if (!this.fx) return
+    this.scene.tweens.killTweensOf(this.fx.objects)
+    this.fx.objects.forEach((o) => o.destroy())
+    this.fx = null
+  }
+
+  /** 夜晚光源（屏幕坐标），通常每帧传入玩家与火光位置 */
+  setLights(lights: LightSource[]): void {
+    this.night.setLights(lights)
+  }
+
+  /** 每帧推进；dt 为毫秒 */
   update(dt: number): void {
-    const s = dt / 1000
-    for (const d of this.drops) {
-      d.obj.x += d.vx * s
-      d.obj.y += d.vy * s
-      if (d.obj.y > this.h + 10) d.obj.y = -10
-      if (d.obj.y < -10) d.obj.y = this.h + 10
-      if (d.obj.x > this.w + 10) d.obj.x = -10
-      if (d.obj.x < -10) d.obj.x = this.w + 10
-    }
-    for (const e of this.fogBlobs) {
-      e.x += 12 * s
-      if (e.x > this.w + 140) e.x = -140
-    }
-    if (this.weather === 'storm') {
-      this.flashTimer -= dt
-      if (this.flashTimer <= 0) {
-        this.flashTimer = 4000 + Math.random() * 6000
-        this.scene.cameras.main.flash(120, 220, 230, 255)
-      }
-    }
+    this.fx?.update?.(dt)
+    this.night.update(dt)
   }
 
   destroy(): void {
-    this.clearDrops()
-    this.nightRect.destroy()
+    this.clearFx()
+    this.ambientObj?.destroy()
+    this.night.destroy()
     this.tintRect.destroy()
     this.extraTint.destroy()
   }

@@ -56,6 +56,18 @@ function flame(scene: Phaser.Scene, x: number, y: number): void {
 const FX: Record<DecorFx, (scene: Phaser.Scene, x: number, y: number) => void> = { steam, flame }
 
 /**
+ * 当前地图的火光位置（世界坐标），夜里用作光源
+ * @author zjh
+ * @date 2026-10-14
+ */
+export function decorLights(map: MapDef): { x: number; y: number }[] {
+  const ts = map.tileSize
+  return (DECOR[map.id] ?? [])
+    .filter((d) => d.fx === 'flame')
+    .map((d) => ({ x: (d.x + d.w / 2) * ts + (d.fxAt?.x ?? 0), y: (d.y + d.h) * ts + (d.fxAt?.y ?? 0) }))
+}
+
+/**
  * 铺设当前地图的装饰物
  * @author zjh
  * @date 2026-10-14
