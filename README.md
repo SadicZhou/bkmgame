@@ -50,7 +50,7 @@ npm run preview
 
 **可爱像素（cute pixel）**：软圆轮廓、大头大眼、粉彩/暖亮色，约 16×16～32×32 可读块面。  
 伙伴立绘的基调按物种自由选择（可爱 / 帅气 / 霸气），共同底线是"明亮、正派、不邪恶"，详见 [docs/art-guide.md](docs/art-guide.md)。  
-当前全部为**可替换占位**；玩法优先，不要求玩家提供素材。
+伙伴立绘、场景背景、地图装饰物、玩家与 NPC 行走图均为 AI 生成的原创像素图；地图块、天气与氛围特效由代码实时绘制。所有图片缺失时都会回退到程序绘制，不影响运行。
 
 ## 素材来源
 
@@ -59,7 +59,12 @@ v1 **不依赖外部美术包**，保证克隆即可绿构建：
 | 资源 | 来源 | 说明 |
 |------|------|------|
 | 全部 29 种伙伴立绘（含守护兽与 3 只唯一伙伴，每种含异色，共 58 张） | **AI 生成原创像素图**（原图 `art-src/creatures/`，处理后 `public/assets/creatures/`） | 144×144 透明 PNG；处理脚本 `python scripts/process-sprites.py` |
-| 地砖 / 玩家 / NPC / 物件 | **仓库内运行时生成**（`src/game/graphics/`） | 原创可爱像素占位，无 IP 风险；伙伴立绘缺图时也会回退到程序绘制 |
+| 战斗背景 ×4、标题 / 选伙伴 / 结局背景 | **AI 生成原创像素图**（`art-src/backgrounds/` → `public/assets/backgrounds/`） | 处理脚本 `python scripts/process-backgrounds.py` |
+| 地图装饰物 ×9（小屋、水井、杂货摊、温泉、火盆、床、壁炉、盆栽、地毯） | **AI 生成原创像素图**（`art-src/decor/` → `public/assets/decor/`） | 摆放与碰撞见 `src/game/data/decor.ts`；处理脚本 `python scripts/process-decor.py` |
+| 玩家行走图（4 方向 × 3 帧）、9 位 NPC | **AI 生成原创像素图**（`art-src/chars/` → `public/assets/chars/`） | 每帧 32×40；处理脚本 `python scripts/process-chars.py` |
+| 地图块（草地变体、树林 / 山崖 / 木墙、动态水面 / 高草 / 灰烬 / 传送点） | **代码逐像素绘制**（`src/game/graphics/tiles/`） | 按坐标挑变体，按地图换墙；铺设见 `src/game/ui/MapRenderer.ts` |
+| 天气与氛围（雨溅、雷电、雾、沙、雪、晴光、心火、夜晚提灯光圈、萤火虫、余烬） | **Phaser 粒子**（`src/game/ui/weather/`） | 由 `src/game/ui/WeatherLayer.ts` 统一调度 |
+| 告示板 / 事件物件 | **仓库内运行时生成**（`src/game/graphics/ObjectArt.ts`） | 原创像素占位 |
 | 音效 | **Web Audio 合成短音**（`src/game/systems/AudioBeeps.ts`） | 无外部 OST，无扒曲 |
 | 背景音乐 | 暂无（静音 + 提示音） | 可后续加 1～2 条 CC0 loop |
 
@@ -97,12 +102,13 @@ set SIM=1 && set SIM_MATE=rockmite && set SIM_PASS_MATE=mistnewt && npx vitest r
 ```
 src/game/
   data/        属性、技能、特性、性格、物种、遭遇表、天气、异象、道具、地图
-  graphics/    运行时像素贴图：PixelFactory 入口 + 地图块 / 伙伴配色 / 伙伴绘制 / 人物物件；
-               CreatureArt 负责立绘加载与缩放（战斗中二阶 ×1.1、三阶 ×1.2，脚底对齐站台）
+  graphics/    运行时像素贴图：PixelFactory 入口 + tiles/（地图块）/ 伙伴配色 / 伙伴绘制 / 人物物件 / 特效小纹理；
+               CreatureArt 负责立绘加载与缩放（战斗中二阶 ×1.1、三阶 ×1.2，脚底对齐站台）；
+               SceneArt 加载背景与装饰物，CharArt 加载人物行走图
   scenes/      Boot / Title / Starter / World / Battle / Ending
   systems/     战斗（Core/Calc/Logic/AI/状态/特性）、资质、成长、遭遇、世界时钟、异象、存档、音效
   state/       运行时全局状态（队伍、寄存所、背包、图鉴、旗标、世界）
-  ui/          输入、对话框、列表面板、菜单、小镇服务、学招替换、天气层、事件表现、战斗特效
+  ui/          输入、对话框、列表面板、菜单、小镇服务、学招替换、地图铺设、装饰层、天气层（weather/）、事件表现、战斗特效
 tests/         Vitest 单元测试
 docs/          设计文档与策划稿（docs/planning）
 ```

@@ -1,6 +1,6 @@
 # 焰迹旅人 · 伙伴立绘美术规范
 
-> 作者：周建豪　｜　更新：2026-10-14　｜　进度：全部 29 种伙伴立绘已完成（含异色，共 58 张）；地图块、玩家、NPC 仍为程序像素占位
+> 作者：周建豪　｜　更新：2026-10-14　｜　进度：全部 29 种伙伴立绘已完成（含异色，共 58 张）；场景背景 7 张、地图装饰物 9 件、玩家行走图与 9 位 NPC 已完成；地图块与天气特效由代码绘制（见第五节）
 
 ## 一、总原则：底线统一，基调自由
 
@@ -71,3 +71,18 @@ Background: flat solid pure magenta #FF00FF, no gradient, no shadow on backgroun
 2. 运行 `python scripts\process-sprites.py`：抠洋红背景、裁边、缩放到 144×144，并自动生成 `-shiny` 异色版。
 3. 把物种 id 加进 `src/game/graphics/CreatureArt.ts` 的 `ART_SPECIES`。
 4. 在深色背景下检查抠图边缘和异色效果，再进游戏看战斗画面（二阶 ×1.1、三阶 ×1.2 会自动放大）。
+
+## 五、场景、装饰物与人物
+
+同样遵守"明亮、正派"的底线，提示词沿用上面的像素风描述和纯品红背景。
+
+| 类别 | 原图位置 | 处理脚本 | 输出规格 | 接入位置 |
+|------|----------|----------|----------|----------|
+| 场景背景 | `art-src/backgrounds/` | `scripts/process-backgrounds.py` | 战斗 640×360，其余 640×480，JPG | `graphics/SceneArt.ts` |
+| 地图装饰物 | `art-src/decor/` | `scripts/process-decor.py` | 按游戏内宽度缩放（32px = 1 格），PNG | `data/decor.ts`（位置、占格、是否挡路、动效） |
+| 人物行走图 | `art-src/chars/` | `scripts/process-chars.py` | 每帧 32×40，脚底对齐，排成一行 | `graphics/CharArt.ts`（NPC id → 帧号） |
+
+- **装饰物**：可以把多件物件画在一张图里并排摆放，在脚本的 `SHEETS` 里按从左到右登记，脚本会自动切开并去掉邻居碎片。
+- **人物**：玩家图是 4 行（下、上、左、右）× 3 列（站立、迈左脚、迈右脚）的网格；NPC 图是 3×3 网格，全部朝前。同一张图的所有格子共用一个裁剪框，保证帧间不抖动。
+- **新增 NPC**：在 NPC 合图里加一格，重新运行脚本，再在 `CharArt.ts` 的 `NPC_FRAME` 里登记帧号；没登记的 NPC 会自动使用代码绘制的着色小人。
+- **地图块与天气**不出图：地图块在 `graphics/tiles/` 里逐像素绘制（`PixelPen` 带固定随机种子，每次生成结果相同），天气在 `ui/weather/` 里用 Phaser 粒子实现。
