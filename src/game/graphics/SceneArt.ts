@@ -2,11 +2,13 @@
  * 场景背景图：战斗背景（按区域 / 战斗类型）与标题、选伙伴、结局的全屏背景。
  * 原图放在 art-src/backgrounds/，运行 scripts/process-backgrounds.py 输出到 public/assets/backgrounds/。
  * 缺图时 addBackdrop 返回 null，由各场景回退到纯色绘制。
+ * 地图装饰物（data/decor）也在这里一并预加载，源图在 art-src/decor/，用 scripts/process-decor.py 处理。
  * @author zjh
  * @date 2026-10-14
  */
 
 import Phaser from 'phaser'
+import { DECOR_KEYS } from '../data/decor'
 import type { PendingBattle } from '../state/GameState'
 
 /** 全部背景 key（文件名同 key） */
@@ -29,6 +31,7 @@ export type BackdropKey = (typeof BACKGROUNDS)[number]
  */
 export function preloadSceneArt(scene: Phaser.Scene): void {
   for (const key of BACKGROUNDS) scene.load.image(key, `assets/backgrounds/${key}.jpg`)
+  for (const key of DECOR_KEYS) scene.load.image(key, `assets/decor/${key}.png`)
 }
 
 /**

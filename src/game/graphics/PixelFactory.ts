@@ -9,6 +9,7 @@
 import Phaser from 'phaser'
 import { paintCreature } from './CritterArt'
 import { CRITTERS, shinyPalette } from './CritterPalettes'
+import { registerFxTextures } from './FxTextures'
 import { paintObjects } from './ObjectArt'
 import { paintTiles } from './TileArt'
 
@@ -21,6 +22,7 @@ export function registerPlaceholderTextures(scene: Phaser.Scene): void {
   const g = scene.make.graphics({ x: 0, y: 0 }, false)
 
   paintTiles(scene)
+  registerFxTextures(scene)
   for (const [id, palette] of Object.entries(CRITTERS)) {
     paintCreature(scene, g, `spr-${id}`, palette, false)
     paintCreature(scene, g, `spr-${id}-shiny`, shinyPalette(palette), true)

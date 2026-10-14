@@ -8,6 +8,7 @@
 import Phaser from 'phaser'
 import { setCreatureScale } from '../graphics/CreatureArt'
 import { SPECIES, battleName, createCreature, type CreatureInstance } from '../data/creatures'
+import { decorBlocks } from '../data/decor'
 import { ITEMS } from '../data/items'
 import { MAPS, isSolid, isTallGrass, npcLines, tileAt, type MapDef, type NpcDef, type TileKind, type WarpDef } from '../data/maps'
 import { MINOR_EVENTS, PHENOMENON_RULES, type PhenomenonDef } from '../data/phenomena'
@@ -17,6 +18,7 @@ import { Sfx } from '../systems/AudioBeeps'
 import { activePhenomenon, uniqueForBattle } from '../systems/Phenomenon'
 import { isFullMoon, timeLabel } from '../systems/WorldClock'
 import { stepWorld, type StepResult } from '../systems/WorldTick'
+import { renderDecor } from '../ui/DecorLayer'
 import { DialogueBox } from '../ui/DialogueBox'
 import { renderMap } from '../ui/MapRenderer'
 import { InputKeys } from '../ui/InputKeys'
@@ -172,6 +174,7 @@ export class WorldScene extends Phaser.Scene {
 
   private drawMap(): void {
     renderMap(this, this.map)
+    renderDecor(this, this.map)
   }
 
   /**
@@ -238,7 +241,7 @@ export class WorldScene extends Phaser.Scene {
     const nx = this.tileX + dx
     const ny = this.tileY + dy
     const tile = tileAt(this.map, nx, ny)
-    if (!tile || isSolid(tile) || this.occupiedByNpc(nx, ny) || this.eventView.uniqueAt(nx, ny)) return
+    if (!tile || isSolid(tile) || decorBlocks(this.map.id, nx, ny) || this.occupiedByNpc(nx, ny) || this.eventView.uniqueAt(nx, ny)) return
 
     const fromX = this.tileX
     const fromY = this.tileY

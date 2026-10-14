@@ -4,6 +4,8 @@
  * @date 2026-10-14
  */
 
+import { decorBlocks } from './decor'
+
 export type TileKind =
   | 'grass'
   | 'path'
@@ -342,8 +344,8 @@ function buildPass(): MapDef {
     '#R..^^..^^..R#',
     '#R.^^^..^^^.R#',
     '#RR..R..R..RR#',
-    '#~~..^^^^..RR#',
-    '#~~..^^^^...R#',
+    '#....^^^^..RR#',
+    '#....^^^^...R#',
     '#RR........RR#',
     '#R^^^RR..^^^R#',
     '#R^^^RR..^^^R#',
@@ -441,7 +443,6 @@ function buildCabin(): MapDef {
   borderWalls(tiles, w, h)
   tiles[7 * w + 4] = 'warp'
   tiles[7 * w + 5] = 'warp'
-  setRect(tiles, w, 2, 2, 3, 3, 'wall')
 
   return {
     id: 'cabin',
@@ -489,7 +490,7 @@ export function openTiles(map: MapDef): { x: number; y: number }[] {
   for (let y = 0; y < map.height; y++) {
     for (let x = 0; x < map.width; x++) {
       const k = map.tiles[y * map.width + x]
-      if (isSolid(k) || k === 'warp' || k === 'door') continue
+      if (isSolid(k) || k === 'warp' || k === 'door' || decorBlocks(map.id, x, y)) continue
       if (map.npcs.some((n) => n.x === x && n.y === y)) continue
       if (map.warps.some((w) => w.x === x && w.y === y)) continue
       out.push({ x, y })
