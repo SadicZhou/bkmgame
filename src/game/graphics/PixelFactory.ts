@@ -20,7 +20,7 @@ import { paintTiles } from './TileArt'
 export function registerPlaceholderTextures(scene: Phaser.Scene): void {
   const g = scene.make.graphics({ x: 0, y: 0 }, false)
 
-  paintTiles(scene, g)
+  paintTiles(scene)
   for (const [id, palette] of Object.entries(CRITTERS)) {
     paintCreature(scene, g, `spr-${id}`, palette, false)
     paintCreature(scene, g, `spr-${id}-shiny`, shinyPalette(palette), true)

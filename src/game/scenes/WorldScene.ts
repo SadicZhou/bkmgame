@@ -18,6 +18,7 @@ import { activePhenomenon, uniqueForBattle } from '../systems/Phenomenon'
 import { isFullMoon, timeLabel } from '../systems/WorldClock'
 import { stepWorld, type StepResult } from '../systems/WorldTick'
 import { DialogueBox } from '../ui/DialogueBox'
+import { renderMap } from '../ui/MapRenderer'
 import { InputKeys } from '../ui/InputKeys'
 import { ListPanel } from '../ui/ListPanel'
 import { TouchPad } from '../ui/TouchPad'
@@ -28,20 +29,6 @@ import { WorldEventsView } from '../ui/WorldEventsView'
 import { WorldMenus } from '../ui/WorldMenus'
 
 const MOVE_MS = 140
-
-/** 地砖类型 → 贴图 key */
-const TILE_TEXTURE: Record<TileKind, string> = {
-  grass: 'tile-grass',
-  path: 'tile-path',
-  wall: 'tile-wall',
-  water: 'tile-water',
-  floor: 'tile-floor',
-  tall: 'tile-tall-mark',
-  door: 'tile-door',
-  warp: 'tile-warp',
-  rock: 'tile-rock',
-  ash: 'tile-ash',
-}
 
 /** NPC 头顶标记 */
 const ROLE_MARK: Partial<Record<NonNullable<NpcDef['role']>, string>> = {
@@ -184,14 +171,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private drawMap(): void {
-    const ts = this.map.tileSize
-    for (let y = 0; y < this.map.height; y++) {
-      for (let x = 0; x < this.map.width; x++) {
-        const kind = this.map.tiles[y * this.map.width + x]
-        const key = kind === 'path' && this.map.pathTexture ? this.map.pathTexture : TILE_TEXTURE[kind]
-        this.add.image(x * ts + ts / 2, y * ts + ts / 2, key)
-      }
-    }
+    renderMap(this, this.map)
   }
 
   /**
