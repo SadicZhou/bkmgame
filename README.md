@@ -5,7 +5,7 @@
 **运行方式：** 仅本机 `F:\work\game`（不再依赖云端开发服）  
 **远端仓库（稍后同步）：** https://github.com/SadicZhou/bkmgame  
 **作者：** 周建豪  
-**进度：** v2 已完成（主线通关 / 道具与收服 / 成长进化 / 图鉴 / 战斗与画面打磨），详见 `docs/v2-design.md`  
+**进度：** v2 已完成（主线通关 / 道具与收服 / 成长进化 / 图鉴 / 战斗与画面打磨），详见 `docs/v2-design.md`；v3～v4 策划稿已完成，待评审，见 `docs/planning/00-总览.md`  
 **技术栈：** Vite + TypeScript + Phaser 3
 
 ## 如何运行（Windows 本地 · 唯一推荐）
