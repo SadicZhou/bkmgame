@@ -82,7 +82,7 @@ export class DialogueBox {
         this.shown++
         this.text.setText(this.current.slice(0, this.shown))
         if (this.shown % 3 === 0) Sfx.talk()
-        if (this.shown >= this.current.length) this.finishLine()
+        if (this.shown >= this.current.length && this.timer) this.finishLine()
       },
     })
   }
@@ -92,6 +92,7 @@ export class DialogueBox {
     this.timer = undefined
     this.shown = this.current.length
     this.text.setText(this.current)
+    this.hintTween?.stop()
     this.hint.setVisible(true).setY(this.scene.scale.height - 30)
     this.hintTween = this.scene.tweens.add({
       targets: this.hint,

@@ -1,10 +1,12 @@
 /**
- * 运行时全局游戏状态（跨场景共享）：队伍、位置、旗标、背包、金币、图鉴
+ * 运行时全局游戏状态（跨场景共享）：队伍、寄存所、位置、旗标、背包、金币、图鉴、世界时钟
  * @author zjh
  * @date 2026-10-14
  */
 
+import { PARTY_LIMIT } from '../data/items'
 import { createCreature, type CreatureInstance } from '../data/creatures'
+import type { Weather } from '../data/weather'
 import type { BattleKind } from '../systems/BattleLogic'
 import { healParty, normalizeCreature } from '../systems/Growth'
 import {
@@ -17,6 +19,7 @@ import {
   type GameFlags,
   type SaveData,
 } from '../systems/SaveSystem'
+import { createWorld, dayOf, isNight, weatherOf, type WorldSave } from '../systems/WorldClock'
 
 export interface PendingBattle {
   kind: BattleKind
@@ -26,6 +29,11 @@ export interface PendingBattle {
   flagOnWin?: string
   /** BOSS 战胜利后进入结局 */
   isBoss?: boolean
+  /** 异象战对应的异象 id */
+  phenomenonId?: string
+  /** 战斗场地天气（室内 / 城镇为 null） */
+  weather: Weather | null
+  night: boolean
   returnMapId: string
   returnX: number
   returnY: number
@@ -36,8 +44,15 @@ export type Facing = 'up' | 'down' | 'left' | 'right'
 /** 全灭后的复活点 */
 export const RESPAWN = { mapId: 'cabin', x: 4, y: 5 }
 
+/** 户外地图及其解锁旗标 */
+export const OUTDOOR_MAPS: { mapId: string; requireFlag?: string }[] = [
+  { mapId: 'meadow' },
+  { mapId: 'pass', requireFlag: 'ranger_beaten' },
+]
+
 class GameStateStore {
   party: CreatureInstance[] = []
+  storage: CreatureInstance[] = []
   mapId = 'town'
   playerX = 8
   playerY = 8
@@ -47,16 +62,20 @@ class GameStateStore {
   coins = 100
   bag: Record<string, number> = {}
   dex: DexRecord = { seen: [], caught: [] }
+  starterId = 'flarehorn'
+  world: WorldSave = createWorld()
   pendingBattle: PendingBattle | null = null
   startedAt = Date.now()
 
   /**
-   * 新开局：焰角兔作为初始伙伴，附赠少量道具
+   * 新开局：以选择的初始伙伴出发，附赠少量道具
    * @author zjh
    * @date 2026-10-14
    */
-  newGame(): void {
-    this.party = [createCreature('flarehorn', 5)]
+  newGame(starterId = 'flarehorn'): void {
+    this.starterId = starterId
+    this.party = [createCreature(starterId, 5)]
+    this.storage = []
     this.mapId = 'town'
     this.playerX = 8
     this.playerY = 8
@@ -65,7 +84,8 @@ class GameStateStore {
     this.playSeconds = 0
     this.coins = 100
     this.bag = defaultBag()
-    this.dex = { seen: ['flarehorn'], caught: ['flarehorn'] }
+    this.dex = { seen: [starterId], caught: [starterId] }
+    this.world = createWorld()
     this.pendingBattle = null
     this.startedAt = Date.now()
   }
@@ -79,6 +99,7 @@ class GameStateStore {
 
   applySave(data: SaveData): void {
     this.party = data.party.map(normalizeCreature)
+    this.storage = data.storage.map(normalizeCreature)
     this.mapId = data.mapId
     this.playerX = data.playerX
     this.playerY = data.playerY
@@ -88,6 +109,8 @@ class GameStateStore {
     this.coins = data.coins
     this.bag = { ...data.bag }
     this.dex = { seen: [...data.dex.seen], caught: [...data.dex.caught] }
+    this.starterId = data.starterId
+    this.world = structuredClone(data.world)
     this.pendingBattle = null
     this.startedAt = Date.now()
   }
@@ -100,17 +123,22 @@ class GameStateStore {
   persist(): void {
     this.playSeconds = this.totalSeconds()
     this.startedAt = Date.now()
-    saveGame({
-      mapId: this.mapId,
-      playerX: this.playerX,
-      playerY: this.playerY,
-      party: this.party.map((c) => ({ ...c, moves: c.moves ? [...c.moves] : undefined })),
-      flags: { ...this.flags },
-      playSeconds: this.playSeconds,
-      coins: this.coins,
-      bag: { ...this.bag },
-      dex: { seen: [...this.dex.seen], caught: [...this.dex.caught] },
-    })
+    saveGame(
+      structuredClone({
+        mapId: this.mapId,
+        playerX: this.playerX,
+        playerY: this.playerY,
+        party: this.party,
+        storage: this.storage,
+        flags: this.flags,
+        playSeconds: this.playSeconds,
+        coins: this.coins,
+        bag: this.bag,
+        dex: this.dex,
+        starterId: this.starterId,
+        world: this.world,
+      }),
+    )
   }
 
   hasSaveFile(): boolean {
@@ -163,6 +191,39 @@ class GameStateStore {
     if (index <= 0 || index >= this.party.length) return
     const [c] = this.party.splice(index, 1)
     this.party.unshift(c)
+  }
+
+  /**
+   * 新伙伴入队；队伍已满时送往寄存所
+   * @author zjh
+   * @date 2026-10-14
+   */
+  addCreature(c: CreatureInstance): 'party' | 'storage' {
+    if (this.party.length < PARTY_LIMIT) {
+      this.party.push(c)
+      return 'party'
+    }
+    this.storage.push(c)
+    return 'storage'
+  }
+
+  /** 当前天数 */
+  day(): number {
+    return dayOf(this.world.totalSteps)
+  }
+
+  night(): boolean {
+    return isNight(this.world.totalSteps)
+  }
+
+  /** 指定地图天气（室内 / 城镇为 null） */
+  weatherAt(mapId: string): Weather | null {
+    return weatherOf(this.world, mapId)
+  }
+
+  /** 已解锁的户外地图 */
+  unlockedOutdoorMaps(): string[] {
+    return OUTDOOR_MAPS.filter((m) => !m.requireFlag || this.getFlag(m.requireFlag)).map((m) => m.mapId)
   }
 }
 

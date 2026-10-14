@@ -1,0 +1,129 @@
+/**
+ * 平衡性模拟：练级节奏与主线训练家 / BOSS 胜率（默认跳过）
+ * 运行：set SIM=1 && set SIM_MATE=rockmite && set SIM_PASS_MATE=mistnewt && npx vitest run tests/balance.sim.test.ts
+ * @author zjh
+ * @date 2026-10-14
+ */
+
+import { it } from 'vitest'
+import { MOVES, STARTERS, createCreature, type CreatureInstance } from '../src/game/data/creatures'
+import { ENCOUNTERS } from '../src/game/data/encounters'
+import { MAPS } from '../src/game/data/maps'
+import { calcDamage } from '../src/game/systems/BattleCalc'
+import { activeEnemy, activePlayer, playerFight, playerUseItem, startBattle, type BattleState } from '../src/game/systems/BattleLogic'
+import { healParty } from '../src/game/systems/Growth'
+
+function bestMove(s: BattleState): number {
+  const p = activePlayer(s)
+  const e = activeEnemy(s)
+  let best = -1
+  let bestDmg = -1
+  p.moves.forEach((slot, idx) => {
+    const m = MOVES[slot.id]
+    if (slot.pp <= 0 || m.category !== 'attack') return
+    const d = calcDamage(s, p, e, m, () => 0.5).dmg
+    if (d > bestDmg) {
+      bestDmg = d
+      best = idx
+    }
+  })
+  return best
+}
+
+function fight(party: CreatureInstance[], enemies: CreatureInstance[], kind: 'wild' | 'trainer' | 'boss'): BattleState {
+  const s = startBattle(party, enemies, kind)
+  let turns = 0
+  while (!s.over && turns++ < 60) playerFight(s, bestMove(s))
+  return s
+}
+
+function wildPick(mapId: string): CreatureInstance {
+  const g = ENCOUNTERS[mapId].grass.filter((e) => !e.time)
+  const e = g[Math.floor(Math.random() * g.length)]
+  return createCreature(e.speciesId, e.minLv + Math.floor(Math.random() * (e.maxLv - e.minLv + 1)))
+}
+
+function team(npcId: string, mapId: string): CreatureInstance[] {
+  return MAPS[mapId].npcs.find((n) => n.id === npcId)!.team!.map((m) => createCreature(m.speciesId, m.level))
+}
+
+/**
+ * 唯一精灵收服模拟：先打到半血以下再丢安抚果，统计 收服 / 击倒 / 团灭 比例
+ * @author zjh
+ * @date 2026-10-14
+ */
+function catchUnique(party: CreatureInstance[], uniqueId: string, token: boolean): 'caught' | 'ko' | 'wiped' | 'timeout' {
+  const lv = Math.min(50, Math.max(12, ...party.map((c) => c.level)))
+  const s = startBattle(party, [createCreature(uniqueId, lv)], 'unique', { token, night: true, weather: 'sunny' })
+  let turns = 0
+  while (!s.over && turns++ < 60) {
+    const e = activeEnemy(s)
+    if (e.hp / e.maxHp > 0.5) playerFight(s, bestMove(s))
+    else playerUseItem(s, 'soothe_berry', 0)
+  }
+  if (s.caught) return 'caught'
+  if (s.won) return 'ko'
+  return s.over ? 'wiped' : 'timeout'
+}
+
+it.runIf(!!process.env.SIM)('unique catch', () => {
+  const rows: string[] = []
+  for (const uniqueId of ['starmarten', 'bloomdeer', 'magmashell']) {
+    for (const token of [true, false]) {
+      const tally = { caught: 0, ko: 0, wiped: 0, timeout: 0 }
+      const N = 300
+      for (let i = 0; i < N; i++) {
+        const party = [createCreature('blazehorn', 18), createCreature('tideback', 16), createCreature('rockmite', 15)]
+        tally[catchUnique(party, uniqueId, token)]++
+      }
+      const pct = (n: number) => `${((n / N) * 100).toFixed(0)}%`
+      rows.push(`${uniqueId} token=${token}: caught ${pct(tally.caught)} | ko ${pct(tally.ko)} | wiped ${pct(tally.wiped)} | timeout ${pct(tally.timeout)}`)
+    }
+  }
+  console.log(rows.join('\n'))
+})
+
+it.runIf(!!process.env.SIM)('main line pacing', () => {
+  const rows: string[] = []
+  for (const starter of STARTERS) {
+    let wins = { ranger: 0, hiker: 0, boss: 0 }
+    let battles = { meadow: 0, pass: 0 }
+    let lv = { ranger: 0, hiker: 0, boss: 0 }
+    const N = 60
+    for (let i = 0; i < N; i++) {
+      const party = [createCreature(starter, 5), createCreature(process.env.SIM_MATE ?? 'puffmouse', 3)]
+      // 草地练级：12 场野生（每 4 场回小屋一次）
+      for (let b = 0; b < 12; b++) {
+        if (b % 4 === 0) healParty(party)
+        fight(party, [wildPick('meadow')], 'wild')
+        battles.meadow++
+      }
+      healParty(party)
+      lv.ranger += party[0].level
+      if (fight(party, team('ranger', 'meadow'), 'trainer').won) wins.ranger++
+      healParty(party)
+      if (process.env.SIM_PASS_MATE) party.push(createCreature(process.env.SIM_PASS_MATE, 8))
+      for (let b = 0; b < 12; b++) {
+        if (b % 4 === 0) healParty(party)
+        fight(party, [wildPick('pass')], 'wild')
+        battles.pass++
+      }
+      healParty(party)
+      lv.hiker += party[0].level
+      if (fight(party, team('hiker', 'pass'), 'trainer').won) wins.hiker++
+      healParty(party)
+      for (let b = 0; b < 8; b++) {
+        if (b % 4 === 0) healParty(party)
+        fight(party, [wildPick('pass')], 'wild')
+      }
+      healParty(party)
+      lv.boss += party[0].level
+      if (fight(party, team('boss', 'pass'), 'boss').won) wins.boss++
+    }
+    const pct = (n: number) => `${((n / N) * 100).toFixed(0)}%`
+    rows.push(
+      `${starter}: ranger ${pct(wins.ranger)} (Lv${(lv.ranger / N).toFixed(1)}) | hiker ${pct(wins.hiker)} (Lv${(lv.hiker / N).toFixed(1)}) | boss ${pct(wins.boss)} (Lv${(lv.boss / N).toFixed(1)})`,
+    )
+  }
+  console.log(rows.join('\n'))
+})

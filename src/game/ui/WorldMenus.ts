@@ -1,22 +1,17 @@
 /**
- * 大地图菜单：主菜单、队伍、背包、图鉴、商店
+ * 大地图菜单：主菜单、队伍、背包、图鉴、异象录、商店
  * 全部基于同一个 ListPanel，通过 onCancel 回到上一级。
  * @author zjh
  * @date 2026-10-14
  */
 
-import {
-  DEX_ORDER,
-  SPECIES,
-  TYPE_LABEL,
-  displayName,
-  expToNext,
-  getMoves,
-  type CreatureInstance,
-} from '../data/creatures'
+import { DEX_ORDER, SPECIES, TYPE_LABEL, UNIQUE_ORDER, battleName, spriteKey, type CreatureInstance } from '../data/creatures'
 import { ITEMS, ITEM_ORDER, SHOP_STOCK } from '../data/items'
+import { PHENOMENA } from '../data/phenomena'
 import { GameState } from '../state/GameState'
 import { Sfx } from '../systems/AudioBeeps'
+import { applyItemToCreature, checkItemOnCreature } from '../systems/BattleLogic'
+import { abilityDetail, creatureDetail, rowLabel } from './CreatureInfo'
 import { ListPanel, type ListRow } from './ListPanel'
 
 export interface WorldMenuHooks {
@@ -49,15 +44,17 @@ export class WorldMenus {
    */
   openMain(index = 0): void {
     Sfx.confirm()
-    const caught = GameState.dex.caught.length
+    const caught = GameState.dex.caught.filter((id) => DEX_ORDER.includes(id)).length
+    const uniques = GameState.world.phenomenon.caught.length
     this.panel.open({
       title: '菜单',
       footer: this.coinsFooter(),
       index,
       rows: [
-        { label: '队伍', right: `${GameState.party.length} 只`, detail: '查看伙伴能力与招式，调整首发。', onSelect: () => this.openParty() },
-        { label: '背包', detail: '使用伤药、复苏草等道具。', onSelect: () => this.openBag() },
+        { label: '队伍', right: `${GameState.party.length} 只`, detail: '查看伙伴能力、资质与技能，调整首发。', onSelect: () => this.openParty() },
+        { label: '背包', detail: '使用伤药、万灵药、PP 果、引兽铃等道具。', onSelect: () => this.openBag() },
         { label: '图鉴', right: `${caught}/${DEX_ORDER.length}`, detail: '记录遇见与收服过的伙伴。', onSelect: () => this.openDex() },
+        { label: '异象录', right: `${uniques}/${UNIQUE_ORDER.length}`, detail: '记录在异象中邂逅的唯一精灵。', onSelect: () => this.openUniqueDex() },
         {
           label: '保存进度',
           detail: '存到本机浏览器（localStorage）。',
@@ -73,33 +70,22 @@ export class WorldMenus {
     })
   }
 
-  /** 伙伴详情文本 */
-  private creatureDetail(c: CreatureInstance): string {
-    const sp = SPECIES[c.speciesId]
-    const moves = getMoves(c)
-      .map((m) => `${m.name}(${TYPE_LABEL[m.type]}${m.power})`)
-      .join(' ')
-    const evo =
-      sp.evolvesTo && sp.evolveLevel ? ` · ${sp.evolveLevel} 级进化` : ''
-    return (
-      `[${TYPE_LABEL[sp.type]}] 攻${c.atk} 防${c.def} 速${c.spd} · 经验 ${c.exp}/${expToNext(c.level)}${evo}\n` +
-      `招式：${moves}`
-    )
-  }
-
-  private partyRows(onPick: (i: number) => void, filter?: (c: CreatureInstance) => boolean): ListRow[] {
-    return GameState.party.map((c, i) => ({
-      label: `${i === 0 ? '★ ' : ''}${displayName(c)} Lv.${c.level}`,
-      right: c.hp > 0 ? `HP ${c.hp}/${c.maxHp}` : '倒下',
-      icon: `spr-${c.speciesId}`,
-      detail: this.creatureDetail(c),
-      disabled: filter ? !filter(c) : false,
-      onSelect: () => onPick(i),
-    }))
+  private partyRows(onPick: (i: number) => void, filter?: (c: CreatureInstance) => string | null): ListRow[] {
+    return GameState.party.map((c, i) => {
+      const reason = filter?.(c) ?? null
+      return {
+        label: rowLabel(c, i === 0 ? '★ ' : ''),
+        right: c.hp > 0 ? `HP ${c.hp}/${c.maxHp}` : '倒下',
+        icon: spriteKey(c),
+        detail: reason ?? creatureDetail(c),
+        disabled: !!reason,
+        onSelect: () => onPick(i),
+      }
+    })
   }
 
   /**
-   * 队伍：选中后可设为首发
+   * 队伍：选中后可设为首发、查看特性
    * @author zjh
    * @date 2026-10-14
    */
@@ -115,9 +101,9 @@ export class WorldMenus {
   private openCreature(i: number): void {
     const c = GameState.party[i]
     if (!c) return
-    const detail = this.creatureDetail(c)
+    const detail = creatureDetail(c)
     this.panel.open({
-      title: `${displayName(c)} Lv.${c.level}`,
+      title: `${battleName(c)} Lv.${c.level}`,
       rows: [
         {
           label: i === 0 ? '已是首发' : '设为首发',
@@ -126,10 +112,11 @@ export class WorldMenus {
           onSelect: () => {
             GameState.setLead(i)
             this.hooks.refreshHud()
-            this.hooks.toast(`${displayName(c)} 成为首发！`)
+            this.hooks.toast(`${battleName(c)} 成为首发！`)
             this.openParty(0)
           },
         },
+        { label: '特性说明', detail: abilityDetail(c) },
         { label: '返回', detail, onSelect: () => this.openParty(i) },
       ],
       onCancel: () => this.openParty(i),
@@ -137,25 +124,31 @@ export class WorldMenus {
   }
 
   /**
-   * 背包：回复/复活类可在地图上使用
+   * 背包：回复 / 解除 / PP 类选择目标；引兽铃、驱兽香直接生效；安抚果只能在战斗中用
    * @author zjh
    * @date 2026-10-14
    */
   openBag(index = 0): void {
     const ids = ITEM_ORDER.filter((id) => GameState.itemCount(id) > 0)
-    const rows: ListRow[] = ids.map((id) => {
+    const w = GameState.world
+    const rows: ListRow[] = ids.map((id, i) => {
       const it = ITEMS[id]
+      const active = it.kind === 'lure' && w.lureSteps > 0 ? `（剩余 ${w.lureSteps} 步）` : it.kind === 'repel' && w.repelSteps > 0 ? `（剩余 ${w.repelSteps} 步）` : ''
       return {
         label: it.name,
         right: `×${GameState.itemCount(id)}`,
-        detail: it.desc,
+        detail: `${it.desc}${active}`,
         onSelect: () => {
           if (it.kind === 'catch') {
             this.hooks.toast('只能在野生战斗中使用')
             Sfx.cancel()
             return
           }
-          this.openItemTarget(id, ids.indexOf(id))
+          if (it.kind === 'lure' || it.kind === 'repel') {
+            this.useFieldItem(id, i)
+            return
+          }
+          this.openItemTarget(id, i)
         },
       }
     })
@@ -163,41 +156,55 @@ export class WorldMenus {
     this.panel.open({ title: '背包', footer: this.coinsFooter(), index, rows, onCancel: () => this.openMain(1) })
   }
 
+  /** 引兽铃与驱兽香互斥：用一个会抵消另一个 */
+  private useFieldItem(itemId: string, bagIndex: number): void {
+    const it = ITEMS[itemId]
+    if (!GameState.consumeItem(itemId)) return
+    const w = GameState.world
+    if (it.kind === 'lure') {
+      w.lureSteps = it.value
+      w.repelSteps = 0
+      this.hooks.toast(`叮铃～ ${it.value} 步内野生伙伴会更常出现`)
+    } else {
+      w.repelSteps = it.value
+      w.lureSteps = 0
+      this.hooks.toast(`淡淡的香气散开，${it.value} 步内弱小的野生伙伴不会靠近`)
+    }
+    this.openBag(Math.min(bagIndex, Math.max(0, ITEM_ORDER.filter((id) => GameState.itemCount(id) > 0).length - 1)))
+  }
+
   private openItemTarget(itemId: string, bagIndex: number): void {
     const it = ITEMS[itemId]
-    const usable = (c: CreatureInstance) =>
-      it.kind === 'heal' ? c.hp > 0 && c.hp < c.maxHp : c.hp <= 0
     this.panel.open({
       title: `对谁使用 ${it.name}？`,
-      rows: this.partyRows((i) => {
-        const c = GameState.party[i]
-        if (!GameState.consumeItem(itemId)) return
-        if (it.kind === 'heal') {
-          const before = c.hp
-          c.hp = Math.min(c.maxHp, c.hp + it.value)
-          this.hooks.toast(`${displayName(c)} 回复了 ${c.hp - before} HP`)
-        } else {
-          c.hp = Math.max(1, Math.floor(c.maxHp * it.value))
-          this.hooks.toast(`${displayName(c)} 重新振作起来了！`)
-        }
-        this.hooks.refreshHud()
-        if (GameState.itemCount(itemId) > 0) this.openItemTarget(itemId, bagIndex)
-        else this.openBag(0)
-      }, usable),
+      rows: this.partyRows(
+        (i) => {
+          const c = GameState.party[i]
+          if (!checkItemOnCreature(itemId, c).ok || !GameState.consumeItem(itemId)) return
+          this.hooks.toast(applyItemToCreature(itemId, c))
+          this.hooks.refreshHud()
+          if (GameState.itemCount(itemId) > 0) this.openItemTarget(itemId, bagIndex)
+          else this.openBag(0)
+        },
+        (c) => {
+          const check = checkItemOnCreature(itemId, c)
+          return check.ok ? null : `${battleName(c)}：${check.reason}`
+        },
+      ),
       onCancel: () => this.openBag(bagIndex),
     })
   }
 
   /**
-   * 图鉴
+   * 图鉴（普通伙伴）
    * @author zjh
    * @date 2026-10-14
    */
   openDex(): void {
     const { seen, caught } = GameState.dex
-    const rows: ListRow[] = DEX_ORDER.map((id, i) => {
+    const rows: ListRow[] = DEX_ORDER.map((id) => {
       const sp = SPECIES[id]
-      const no = String(i + 1).padStart(2, '0')
+      const no = String(sp.dexNo).padStart(2, '0')
       if (caught.includes(id)) {
         return { label: `No.${no} ${sp.name}`, right: '已收服', icon: `spr-${id}`, detail: `[${TYPE_LABEL[sp.type]}] ${sp.desc}` }
       }
@@ -206,11 +213,37 @@ export class WorldMenus {
       }
       return { label: `No.${no} ？？？`, icon: `spr-${id}`, iconDim: true, detail: '还没有遇见过。' }
     })
+    const caughtCount = caught.filter((id) => DEX_ORDER.includes(id)).length
     this.panel.open({
       title: '伙伴图鉴',
-      footer: `收服 ${caught.length}/${DEX_ORDER.length}`,
+      footer: `收服 ${caughtCount}/${DEX_ORDER.length}`,
       rows,
       onCancel: () => this.openMain(2),
+    })
+  }
+
+  /**
+   * 异象录：唯一精灵与对应异象
+   * @author zjh
+   * @date 2026-10-14
+   */
+  openUniqueDex(): void {
+    const p = GameState.world.phenomenon
+    const rows: ListRow[] = UNIQUE_ORDER.map((id) => {
+      const sp = SPECIES[id]
+      const def = PHENOMENA.find((d) => d.uniqueSpeciesId === id)
+      const got = def ? p.caught.includes(def.id) : false
+      const seen = GameState.dex.seen.includes(id)
+      const where = def ? `异象「${def.name}」` : '尚未现世的异象'
+      if (got) return { label: `✧ ${sp.name}`, right: '已邂逅', icon: `spr-${id}`, detail: `[${TYPE_LABEL[sp.type]}] ${sp.desc}\n来自${where}。` }
+      if (seen) return { label: `✧ ${sp.name}`, right: '擦肩而过', icon: `spr-${id}`, detail: `在${where}中见过它。\n${def?.rumorText ?? ''}` }
+      return { label: '✧ ？？？', icon: `spr-${id}`, iconDim: true, detail: def ? `传闻：${def.rumorText}` : '关于它的传闻还没有流传开来。' }
+    })
+    this.panel.open({
+      title: '异象录',
+      footer: `邂逅 ${p.caught.length}/${UNIQUE_ORDER.length}`,
+      rows,
+      onCancel: () => this.openMain(3),
     })
   }
 

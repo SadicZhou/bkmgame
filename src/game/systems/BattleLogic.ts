@@ -1,105 +1,56 @@
 /**
- * 回合制战斗结算（纯逻辑，无渲染）
- * 每条提示都会生成一帧快照 BattleFrame，场景按顺序播放即可得到正确的血条与动画时序。
+ * 回合制战斗流程（纯逻辑，无渲染）：出招顺序、技能结算、倒下与换人、回合结束效果、经验与奖励
+ * 数值计算见 BattleCalc；状态见 StatusEffects；特性见 AbilityHooks；敌方选招见 BattleAI。
  * @author zjh
  * @date 2026-10-14
  */
 
 import {
+  MOVES,
   SPECIES,
-  displayName,
-  expToNext,
-  getMoves,
-  typeMultiplier,
+  STRUGGLE,
+  battleName,
   type CreatureInstance,
   type MoveDef,
 } from '../data/creatures'
 import { ITEMS, PARTY_LIMIT, catchChance } from '../data/items'
-import { grantExp } from './Growth'
+import { WEATHER_INFO, type Weather } from '../data/weather'
+import { guaranteedEscape, isType, onContact, onEnter, onFaint, onHit, onTurnEnd, tryEndure } from './AbilityHooks'
+import { chooseEnemyMove } from './BattleAI'
+import { calcDamage, effectiveSpeed, rollHit } from './BattleCalc'
+import {
+  activeEnemy,
+  activePlayer,
+  actorOf,
+  dealDamage,
+  other,
+  resetVolatile,
+  restoreHp,
+  say,
+  sideAnim,
+  volOf,
+  type BattleKind,
+  type BattleState,
+  type Side,
+} from './BattleCore'
+import { addFriendship, grantExp } from './Growth'
+import { beforeMove, changeStages, tryApplyStatus, tryApplyVolatile } from './StatusEffects'
 
-export type BattleKind = 'wild' | 'trainer' | 'boss'
-
-export type BattleAnim =
-  | 'none'
-  | 'hitEnemy'
-  | 'hitPlayer'
-  | 'faintEnemy'
-  | 'faintPlayer'
-  | 'swapPlayer'
-  | 'swapEnemy'
-  | 'throw'
-  | 'catchOk'
-  | 'catchFail'
-  | 'heal'
-  | 'levelUp'
-  | 'evolve'
-
-/** 单方快照 */
-export interface SideSnap {
-  speciesId: string
-  name: string
-  level: number
-  hp: number
-  maxHp: number
-  exp: number
-  expNext: number
-}
-
-/** 一条提示 + 当时双方状态 */
-export interface BattleFrame {
-  text: string
-  anim: BattleAnim
-  mult?: number
-  player: SideSnap
-  enemy: SideSnap
-}
-
-export interface BattleState {
-  kind: BattleKind
-  playerParty: CreatureInstance[]
-  enemyParty: CreatureInstance[]
-  activeIndex: number
-  enemyIndex: number
-  trainerName?: string
-  /** 待播放帧，场景取走后清空 */
-  frames: BattleFrame[]
-  over: boolean
-  fled: boolean
-  won: boolean
-  caught: CreatureInstance | null
-  coinsEarned: number
-}
+export { activeEnemy, activePlayer } from './BattleCore'
+export type { BattleAnim, BattleFrame, BattleKind, BattleState, SideSnap, PendingLearn } from './BattleCore'
 
 /** 非活跃伙伴分到的经验比例 */
 const SHARE_RATE = 0.3
 
-function snap(c: CreatureInstance): SideSnap {
-  return {
-    speciesId: c.speciesId,
-    name: displayName(c),
-    level: c.level,
-    hp: c.hp,
-    maxHp: c.maxHp,
-    exp: c.exp,
-    expNext: expToNext(c.level),
-  }
-}
-
-export function activePlayer(s: BattleState): CreatureInstance {
-  return s.playerParty[s.activeIndex]
-}
-
-export function activeEnemy(s: BattleState): CreatureInstance {
-  return s.enemyParty[s.enemyIndex]
-}
-
-/** 记录一帧 */
-function say(s: BattleState, text: string, anim: BattleAnim = 'none', mult?: number): void {
-  s.frames.push({ text, anim, mult, player: snap(activePlayer(s)), enemy: snap(activeEnemy(s)) })
+export interface BattleOptions {
+  trainerName?: string
+  weather?: Weather | null
+  night?: boolean
+  token?: boolean
 }
 
 /**
- * 开始战斗
+ * 开始战斗：入场提示、天气提示、出场特性
  * @author zjh
  * @date 2026-10-14
  */
@@ -107,69 +58,41 @@ export function startBattle(
   party: CreatureInstance[],
   enemies: CreatureInstance[],
   kind: BattleKind,
-  trainerName?: string,
+  opts: BattleOptions = {},
 ): BattleState {
-  const activeIndex = Math.max(0, party.findIndex((c) => c.hp > 0))
   const s: BattleState = {
     kind,
     playerParty: party,
     enemyParty: enemies,
-    activeIndex,
+    activeIndex: Math.max(0, party.findIndex((c) => c.hp > 0)),
     enemyIndex: 0,
-    trainerName,
+    trainerName: opts.trainerName,
     frames: [],
     over: false,
     fled: false,
     won: false,
     caught: null,
+    caughtToStorage: false,
     coinsEarned: 0,
+    weather: opts.weather ?? null,
+    weatherTurns: 0,
+    mapWeather: opts.weather ?? null,
+    night: !!opts.night,
+    token: !!opts.token,
+    vol: {},
+    pendingLearns: [],
+    turn: 1,
   }
   const enemy = enemies[0]
-  if (kind === 'wild') say(s, `野生的 ${displayName(enemy)} 跳了出来！`, 'swapEnemy')
-  else say(s, `${trainerName ?? '对手'} 派出了 ${displayName(enemy)}！`, 'swapEnemy')
-  say(s, `去吧，${displayName(activePlayer(s))}！`, 'swapPlayer')
+  if (kind === 'wild') say(s, `野生的 ${battleName(enemy)} 跳了出来！`, 'swapEnemy')
+  else if (kind === 'unique') say(s, `${battleName(enemy)} 出现在你面前！`, 'swapEnemy')
+  else say(s, `${opts.trainerName ?? '对手'} 派出了 ${battleName(enemy)}！`, 'swapEnemy')
+  if (enemy.shiny) say(s, '✦ 它的身体闪闪发光！')
+  if (s.weather) say(s, `${WEATHER_INFO[s.weather].icon} 场地天气：${WEATHER_INFO[s.weather].label}`, 'weather')
+  say(s, `去吧，${battleName(activePlayer(s))}！`, 'swapPlayer')
+  onEnter(s, 'player')
+  onEnter(s, 'enemy')
   return s
-}
-
-/**
- * 计算一次招式伤害：等级、攻防比、属性克制、本系加成、会心与浮动
- * @author zjh
- * @date 2026-10-14
- */
-export function calcDamage(
-  attacker: CreatureInstance,
-  defender: CreatureInstance,
-  move: MoveDef,
-): { dmg: number; mult: number; crit: boolean } {
-  const atkType = SPECIES[attacker.speciesId].type
-  const defType = SPECIES[defender.speciesId].type
-  const mult = typeMultiplier(move.type, defType)
-  const stab = move.type === atkType ? 1.2 : 1
-  const crit = Math.random() < 1 / 16
-  const raw =
-    ((2 * attacker.level) / 5 + 2) * move.power * (attacker.atk / Math.max(1, defender.def))
-  const dmg = Math.max(
-    1,
-    Math.round((raw / 12) * mult * stab * (crit ? 1.5 : 1) * (0.9 + Math.random() * 0.2)),
-  )
-  return { dmg, mult, crit }
-}
-
-/**
- * 敌方选招：训练家/BOSS 较聪明（偏好打出最高期望伤害），野生随机
- * @author zjh
- * @date 2026-10-14
- */
-function enemyChooseMove(s: BattleState): MoveDef {
-  const enemy = activeEnemy(s)
-  const moves = getMoves(enemy)
-  const smart = s.kind !== 'wild' && Math.random() < (s.kind === 'boss' ? 0.8 : 0.6)
-  if (!smart) return moves[Math.floor(Math.random() * moves.length)]
-  const targetType = SPECIES[activePlayer(s).speciesId].type
-  const selfType = SPECIES[enemy.speciesId].type
-  const score = (m: MoveDef) =>
-    m.power * typeMultiplier(m.type, targetType) * (m.type === selfType ? 1.2 : 1)
-  return moves.reduce((best, m) => (score(m) > score(best) ? m : best), moves[0])
 }
 
 function effectText(mult: number, crit: boolean): string {
@@ -180,70 +103,71 @@ function effectText(mult: number, crit: boolean): string {
   return t
 }
 
-function livingIndex(party: CreatureInstance[]): number {
-  return party.findIndex((c) => c.hp > 0)
-}
-
 /** 结算胜利金币 */
 function rewardCoins(s: BattleState): number {
   const levels = s.enemyParty.reduce((sum, c) => sum + c.level, 0)
   if (s.kind === 'wild') return levels * 6
   if (s.kind === 'trainer') return levels * 12
+  if (s.kind === 'unique') return levels * 10
   return levels * 20
 }
 
 /**
- * 分配经验：在场伙伴全额，其他存活伙伴按比例
+ * 分配经验：在场伙伴全额，其他存活伙伴按比例；收集待学技能
  * @author zjh
  * @date 2026-10-14
  */
 function distributeExp(s: BattleState, defeated: CreatureInstance): void {
   const base = SPECIES[defeated.speciesId].expYield * (0.8 + defeated.level * 0.12)
-  const bonus = s.kind === 'wild' ? 1 : 1.5
-  const full = Math.round(base * bonus)
+  const full = Math.round(base * (s.kind === 'wild' ? 1 : 1.5))
   s.playerParty.forEach((c, i) => {
     if (c.hp <= 0) return
-    const amount = i === s.activeIndex ? full : Math.round(full * SHARE_RATE)
-    for (const ev of grantExp(c, amount)) {
-      if (i !== s.activeIndex && ev.kind === 'exp') continue
-      const anim: BattleAnim =
-        ev.kind === 'evolve' ? 'evolve' : ev.kind === 'levelUp' ? 'levelUp' : 'none'
-      say(s, ev.text, i === s.activeIndex ? anim : 'none')
+    const active = i === s.activeIndex
+    for (const ev of grantExp(c, active ? full : Math.round(full * SHARE_RATE))) {
+      if (!active && ev.kind === 'exp') continue
+      if (ev.kind === 'wantLearn' && ev.moveId) s.pendingLearns.push({ uid: c.uid, moveId: ev.moveId })
+      const anim = !active
+        ? 'none'
+        : ev.kind === 'evolve'
+          ? 'evolve'
+          : ev.kind === 'awaken'
+            ? 'awaken'
+            : ev.kind === 'levelUp'
+              ? 'levelUp'
+              : 'none'
+      say(s, ev.text, anim)
     }
   })
 }
 
-/** 胜利收尾 */
 function finishWin(s: BattleState): void {
   s.over = true
   s.won = true
   s.coinsEarned = rewardCoins(s)
+  addFriendship(activePlayer(s), 1)
   say(s, `战斗胜利！获得 ${s.coinsEarned} 枚焰币。`)
 }
 
-/**
- * 对手倒下后的处理：经验、换下一只或胜利
- * @author zjh
- * @date 2026-10-14
- */
 function onEnemyFainted(s: BattleState): void {
   const enemy = activeEnemy(s)
-  say(s, `${displayName(enemy)} 倒下了！`, 'faintEnemy')
+  say(s, `${battleName(enemy)} 倒下了！`, 'faintEnemy')
   distributeExp(s, enemy)
   const next = s.enemyParty.findIndex((c, i) => i > s.enemyIndex && c.hp > 0)
-  if (next >= 0) {
-    s.enemyIndex = next
-    say(s, `${s.trainerName ?? '对手'} 派出了 ${displayName(activeEnemy(s))}！`, 'swapEnemy')
+  if (next < 0) {
+    finishWin(s)
     return
   }
-  finishWin(s)
+  s.enemyIndex = next
+  resetVolatile(s, activeEnemy(s))
+  say(s, `${s.trainerName ?? '对手'} 派出了 ${battleName(activeEnemy(s))}！`, 'swapEnemy')
+  onEnter(s, 'enemy')
 }
 
-/** 我方当前伙伴倒下后的处理：自动换人或全灭 */
 function onPlayerFainted(s: BattleState): void {
   const fallen = activePlayer(s)
-  say(s, `${displayName(fallen)} 倒下了！`, 'faintPlayer')
-  const next = livingIndex(s.playerParty)
+  say(s, `${battleName(fallen)} 倒下了！`, 'faintPlayer')
+  resetVolatile(s, fallen)
+  const next = s.playerParty.findIndex((c) => c.hp > 0)
   if (next < 0) {
     s.over = true
     s.won = false
@@ -251,56 +175,246 @@ function onPlayerFainted(s: BattleState): void {
     return
   }
   s.activeIndex = next
-  say(s, `换上 ${displayName(activePlayer(s))}！`, 'swapPlayer')
-}
-
-function doAttack(s: BattleState, side: 'player' | 'enemy', move: MoveDef): void {
-  const attacker = side === 'player' ? activePlayer(s) : activeEnemy(s)
-  const defender = side === 'player' ? activeEnemy(s) : activePlayer(s)
-  const { dmg, mult, crit } = calcDamage(attacker, defender, move)
-  defender.hp = Math.max(0, defender.hp - dmg)
-  say(
-    s,
-    `${displayName(attacker)} 使用 ${move.name}！${effectText(mult, crit)}`,
-    side === 'player' ? 'hitEnemy' : 'hitPlayer',
-    mult,
-  )
-  if (defender.hp <= 0) {
-    if (side === 'player') onEnemyFainted(s)
-    else onPlayerFainted(s)
-  }
-}
-
-/** 敌方回合（我方执行非攻击行动后调用） */
-function enemyTurn(s: BattleState): void {
-  if (s.over || activeEnemy(s).hp <= 0 || activePlayer(s).hp <= 0) return
-  doAttack(s, 'enemy', enemyChooseMove(s))
+  say(s, `换上 ${battleName(activePlayer(s))}！`, 'swapPlayer')
+  onEnter(s, 'player')
 }
 
 /**
- * 玩家出招：按速度决定先后
+ * 检查双方是否倒下（含涅槃复活、余烬反击引起的连锁）
  * @author zjh
  * @date 2026-10-14
  */
-export function playerFight(s: BattleState, moveIndex: number): void {
+function checkFaints(s: BattleState): void {
+  for (let guard = 0; guard < 4 && !s.over; guard++) {
+    const e = activeEnemy(s)
+    const p = activePlayer(s)
+    if (e.hp > 0 && p.hp > 0) return
+    if (e.hp <= 0 && !onFaint(s, 'enemy', e)) onEnemyFainted(s)
+    if (s.over) return
+    const p2 = activePlayer(s)
+    if (p2.hp <= 0 && !onFaint(s, 'player', p2)) onPlayerFainted(s)
+  }
+}
+
+/**
+ * 结算技能附加效果（攻击技按概率触发；变化技必定触发）
+ * @author zjh
+ * @date 2026-10-14
+ */
+function applyEffect(s: BattleState, side: Side, user: CreatureInstance, target: CreatureInstance, move: MoveDef, damage: number): void {
+  const e = move.effect
+  if (!e) return
+  const isStatus = move.category === 'status'
+  if (!isStatus && Math.random() * 100 >= e.chance) return
+  const whoSide = e.target === 'self' ? side : other(side)
+  const who = e.target === 'self' ? user : target
+  if (e.status) tryApplyStatus(s, whoSide, who, e.status, isStatus)
+  if (e.volatile) tryApplyVolatile(s, whoSide, who, e.volatile, isStatus)
+  if (e.stages) changeStages(s, whoSide, who, e.stages)
+  if (e.healRatio) {
+    const ratio = move.id === 'synthesis' && s.weather === 'sunny' ? 0.66 : e.healRatio
+    const healed = restoreHp(user, user.maxHp * ratio)
+    say(s, healed > 0 ? `${battleName(user)} 回复了 ${healed} HP！` : `${battleName(user)} 的 HP 已经是满的。`, healed > 0 ? sideAnim(side, 'heal', 'healEnemy') : 'none')
+  }
+  if (e.drainRatio && damage > 0) {
+    const healed = restoreHp(user, Math.max(1, damage * e.drainRatio))
+    if (healed > 0) say(s, `${battleName(user)} 吸取了 ${healed} HP！`, sideAnim(side, 'heal', 'healEnemy'))
+  }
+  if (e.recoilRatio && damage > 0) {
+    const hurt = dealDamage(user, Math.max(1, damage * e.recoilRatio))
+    say(s, `${battleName(user)} 受到了反作用力伤害！（-${hurt}）`, sideAnim(side, 'hurtPlayer', 'hurtEnemy'))
+  }
+}
+
+/**
+ * 变化技：特殊技（潮愈/霜壁/沙暴/吹散）+ 通用效果
+ * @author zjh
+ * @date 2026-10-14
+ */
+function useStatusMove(s: BattleState, side: Side, user: CreatureInstance, target: CreatureInstance, move: MoveDef): void {
+  const name = battleName(user)
+  say(s, `${name} 使用 ${move.name}！`)
+  if (move.effect?.target === 'foe' && !rollHit(s, move, target)) {
+    say(s, '但是没有命中……', 'miss')
+    return
+  }
+  const vol = volOf(s, user)
+  switch (move.special) {
+    case 'aqua_ring':
+      vol.aquaRing = 5
+      say(s, `${name} 被温柔的水环包围了！`, sideAnim(side, 'buffPlayer', 'buffEnemy'))
+      return
+    case 'frost_wall':
+      vol.frostWall = 3
+      say(s, `${name} 竖起了一道霜壁！`, sideAnim(side, 'buffPlayer', 'buffEnemy'))
+      return
+    case 'sandstorm':
+      s.weather = 'sand'
+      s.weatherTurns = 5
+      say(s, '狂风卷起了沙暴！', 'weather')
+      return
+    case 'defog': {
+      const foeVol = volOf(s, target)
+      for (const k of ['atk', 'def', 'spd'] as const) foeVol.stages[k] = Math.min(0, foeVol.stages[k])
+      s.weather = null
+      s.weatherTurns = 0
+      say(s, '一阵风吹散了场上的一切！', 'weather')
+      return
+    }
+  }
+  applyEffect(s, side, user, target, move, 0)
+}
+
+/**
+ * 执行一方的技能（slotIndex = -1 表示挣扎）
+ * @author zjh
+ * @date 2026-10-14
+ */
+function executeMove(s: BattleState, side: Side, slotIndex: number): void {
+  const user = actorOf(s, side)
+  const target = actorOf(s, other(side))
+  if (s.over || user.hp <= 0) return
+  const vol = volOf(s, user)
+  if (beforeMove(s, side, user) === 'skip') {
+    vol.lastMove = null
+    checkFaints(s)
+    return
+  }
+
+  let move: MoveDef
+  if (slotIndex < 0) {
+    move = STRUGGLE
+    say(s, `${battleName(user)} 已经没有可用的技能了！`)
+  } else {
+    const slot = user.moves[slotIndex]
+    move = MOVES[slot.id]
+    slot.pp = Math.max(0, slot.pp - 1)
+  }
+  vol.echo = vol.lastMove === move.id ? vol.echo + 1 : 0
+  vol.lastMove = move.id
+
+  if (move.category === 'status') {
+    useStatusMove(s, side, user, target, move)
+    checkFaints(s)
+    return
+  }
+
+  const name = battleName(user)
+  if (!rollHit(s, move, target)) {
+    say(s, `${name} 使用 ${move.name}！但是没有命中……`, 'miss')
+    return
+  }
+  const { dmg, mult, crit } = calcDamage(s, user, target, move)
+  const endured = tryEndure(s, target, dmg)
+  const dealt = dealDamage(target, endured ? target.hp - 1 : dmg)
+  say(s, `${name} 使用 ${move.name}！${effectText(mult, crit)}`, sideAnim(side, 'hitEnemy', 'hitPlayer'), mult)
+  if (endured) say(s, `${battleName(target)} 的「守护者」让它撑住了！`)
+
+  if (target.status === 'freeze' && move.type === 'flame' && target.hp > 0) {
+    target.status = null
+    say(s, `${battleName(target)} 身上的冰被烧化了！`)
+  }
+  if (move.contact) onContact(s, side, user, target)
+  onHit(s, side, user, target, move, crit)
+  applyEffect(s, side, user, target, move, dealt)
+  if (move.id === STRUGGLE.id) {
+    const hurt = dealDamage(user, Math.max(1, user.maxHp / 4))
+    say(s, `${name} 受到了挣扎的反作用力！（-${hurt}）`, sideAnim(side, 'hurtPlayer', 'hurtEnemy'))
+  }
+  checkFaints(s)
+}
+
+/**
+ * 回合结束：灼烧、寄生、潮愈、沙暴、自愈/花香、霜壁与招式天气倒计时
+ * @author zjh
+ * @date 2026-10-14
+ */
+function endOfTurn(s: BattleState): void {
+  for (const side of ['player', 'enemy'] as Side[]) {
+    if (s.over) return
+    const c = actorOf(s, side)
+    if (c.hp <= 0) continue
+    const vol = volOf(s, c)
+    const name = battleName(c)
+    const hurtAnim = sideAnim(side, 'hurtPlayer', 'hurtEnemy')
+    if (c.status === 'burn') {
+      const d = dealDamage(c, Math.max(1, c.maxHp / 16))
+      say(s, `${name} 受到灼烧伤害！（-${d}）`, hurtAnim)
+    }
+    if (c.hp > 0 && vol.seeded) {
+      const foe = actorOf(s, other(side))
+      const d = dealDamage(c, Math.max(1, c.maxHp / 8))
+      restoreHp(foe, d)
+      say(s, `寄生种吸取了 ${name} 的体力！（-${d}）`, hurtAnim)
+    }
+    if (c.hp > 0 && vol.aquaRing > 0) {
+      vol.aquaRing -= 1
+      const healed = restoreHp(c, c.maxHp / 16)
+      if (healed > 0) say(s, `水环为 ${name} 回复了 ${healed} HP。`, sideAnim(side, 'heal', 'healEnemy'))
+    }
+    if (c.hp > 0 && s.weather === 'sand' && !isType(c, 'stone')) {
+      const d = dealDamage(c, Math.max(1, c.maxHp / 16))
+      say(s, `沙暴击打着 ${name}！（-${d}）`, hurtAnim)
+    }
+    onTurnEnd(s, side, c)
+    if (vol.frostWall > 0) {
+      vol.frostWall -= 1
+      if (vol.frostWall === 0) say(s, `${name} 的霜壁消失了。`)
+    }
+    checkFaints(s)
+  }
+  if (s.over) return
+  if (s.weatherTurns > 0) {
+    s.weatherTurns -= 1
+    if (s.weatherTurns === 0) {
+      s.weather = s.mapWeather
+      say(s, '沙暴停息了。', 'weather')
+    }
+  }
+  s.turn += 1
+}
+
+/** 敌方单独行动一次（我方执行非攻击行动后） */
+function enemyTurn(s: BattleState): void {
+  if (s.over) return
+  if (activeEnemy(s).hp > 0 && activePlayer(s).hp > 0) executeMove(s, 'enemy', chooseEnemyMove(s))
+  endOfTurn(s)
+}
+
+/**
+ * 玩家出招：先比优先度，再比实际速度
+ * @author zjh
+ * @date 2026-10-14
+ */
+export function playerFight(s: BattleState, slotIndex: number): void {
   if (s.over) return
   const player = activePlayer(s)
-  const moves = getMoves(player)
-  const move = moves[Math.min(moveIndex, moves.length - 1)]
-  const enemyMove = enemyChooseMove(s)
-  const enemyRef = activeEnemy(s)
+  const enemy = activeEnemy(s)
+  if (slotIndex >= 0 && (player.moves[slotIndex]?.pp ?? 0) <= 0) {
+    say(s, '这个技能的 PP 已经用完了！')
+    return
+  }
+  const pMove = slotIndex < 0 ? STRUGGLE : MOVES[player.moves[slotIndex].id]
+  const eChoice = chooseEnemyMove(s)
+  const eMove = eChoice < 0 ? STRUGGLE : MOVES[enemy.moves[eChoice].id]
 
-  const playerFirst =
-    player.spd > enemyRef.spd || (player.spd === enemyRef.spd && Math.random() < 0.5)
+  let playerFirst: boolean
+  if (pMove.priority !== eMove.priority) playerFirst = pMove.priority > eMove.priority
+  else {
+    const ps = effectiveSpeed(s, player)
+    const es = effectiveSpeed(s, enemy)
+    playerFirst = ps > es || (ps === es && Math.random() < 0.5)
+  }
 
   if (playerFirst) {
-    doAttack(s, 'player', move)
+    executeMove(s, 'player', slotIndex)
     // 对手换了下一只时，新上场的对手本回合不再出手
-    if (!s.over && activeEnemy(s) === enemyRef && player.hp > 0) doAttack(s, 'enemy', enemyMove)
+    if (!s.over && activeEnemy(s) === enemy && activePlayer(s) === player) executeMove(s, 'enemy', eChoice)
   } else {
-    doAttack(s, 'enemy', enemyMove)
-    if (!s.over && activePlayer(s) === player && player.hp > 0) doAttack(s, 'player', move)
+    executeMove(s, 'enemy', eChoice)
+    if (!s.over && activePlayer(s) === player && activeEnemy(s) === enemy) executeMove(s, 'player', slotIndex)
   }
+  endOfTurn(s)
 }
 
 export function playerSwitch(s: BattleState, index: number): boolean {
@@ -314,25 +428,33 @@ export function playerSwitch(s: BattleState, index: number): boolean {
     say(s, '无法换上倒下的伙伴。')
     return false
   }
-  say(s, `回来吧，${displayName(activePlayer(s))}！`)
+  say(s, `回来吧，${battleName(activePlayer(s))}！`)
+  resetVolatile(s, activePlayer(s))
   s.activeIndex = index
-  say(s, `去吧，${displayName(target)}！`, 'swapPlayer')
+  say(s, `去吧，${battleName(target)}！`, 'swapPlayer')
+  onEnter(s, 'player')
   enemyTurn(s)
   return true
 }
 
+/** 是否允许逃跑 */
+export function canRun(s: BattleState): boolean {
+  return s.kind === 'wild' || s.kind === 'unique'
+}
+
 export function playerRun(s: BattleState): boolean {
   if (s.over) return false
-  if (s.kind !== 'wild') {
+  if (!canRun(s)) {
     say(s, '这场对战无法逃跑！')
     return false
   }
   const player = activePlayer(s)
-  const chance = 0.5 + (player.spd - activeEnemy(s).spd) * 0.03
-  if (Math.random() < Math.max(0.3, Math.min(0.95, chance))) {
+  const diff = effectiveSpeed(s, player) - effectiveSpeed(s, activeEnemy(s))
+  const chance = Math.max(0.3, Math.min(0.95, 0.5 + diff * 0.03))
+  if (guaranteedEscape(player) || Math.random() < chance) {
     s.fled = true
     s.over = true
-    say(s, '成功逃走了！')
+    say(s, guaranteedEscape(player) ? `${battleName(player)} 的「胆怯」让大家飞快地溜走了！` : '成功逃走了！')
     return true
   }
   say(s, '没能逃掉！')
@@ -355,20 +477,68 @@ export function checkItem(s: BattleState, itemId: string, targetIndex: number): 
   const item = ITEMS[itemId]
   if (!item) return { ok: false, reason: '未知道具' }
   if (item.kind === 'catch') {
-    if (s.kind !== 'wild') return { ok: false, reason: '不能安抚别人的伙伴！' }
-    if (!SPECIES[activeEnemy(s).speciesId].catchable) return { ok: false, reason: '它不为所动……' }
-    if (s.playerParty.length >= PARTY_LIMIT) return { ok: false, reason: `队伍已满（最多 ${PARTY_LIMIT} 只）` }
+    if (!canRun(s)) return { ok: false, reason: '不能安抚别人的伙伴！' }
+    if (SPECIES[activeEnemy(s).speciesId].catchRate <= 0) return { ok: false, reason: '它不为所动……' }
     return { ok: true }
   }
+  if (item.kind === 'lure' || item.kind === 'repel') return { ok: false, reason: '只能在野外使用' }
   const target = s.playerParty[targetIndex]
   if (!target) return { ok: false, reason: '没有目标' }
-  if (item.kind === 'heal') {
-    if (target.hp <= 0) return { ok: false, reason: '倒下的伙伴需要复苏草' }
-    if (target.hp >= target.maxHp) return { ok: false, reason: 'HP 已经是满的' }
-    return { ok: true }
+  return checkItemOnCreature(itemId, target)
+}
+
+/**
+ * 道具对某只伙伴是否有效（战斗内外共用）
+ * @author zjh
+ * @date 2026-10-14
+ */
+export function checkItemOnCreature(itemId: string, target: CreatureInstance): ItemCheck {
+  const item = ITEMS[itemId]
+  switch (item.kind) {
+    case 'heal':
+      if (target.hp <= 0) return { ok: false, reason: '倒下的伙伴需要复苏草' }
+      if (target.hp >= target.maxHp) return { ok: false, reason: 'HP 已经是满的' }
+      return { ok: true }
+    case 'revive':
+      return target.hp > 0 ? { ok: false, reason: '它还没有倒下' } : { ok: true }
+    case 'cure':
+      return target.status ? { ok: true } : { ok: false, reason: '没有异常状态' }
+    case 'pp':
+      return target.moves.some((m) => m.pp < (MOVES[m.id]?.pp ?? 0)) ? { ok: true } : { ok: false, reason: 'PP 都是满的' }
+    default:
+      return { ok: false, reason: '现在不能使用' }
   }
-  if (target.hp > 0) return { ok: false, reason: '它还没有倒下' }
-  return { ok: true }
+}
+
+/**
+ * 对伙伴使用回复类道具（战斗内外共用），返回提示文本
+ * @author zjh
+ * @date 2026-10-14
+ */
+export function applyItemToCreature(itemId: string, target: CreatureInstance): string {
+  const item = ITEMS[itemId]
+  const name = battleName(target)
+  switch (item.kind) {
+    case 'heal': {
+      const before = target.hp
+      target.hp = Math.min(target.maxHp, target.hp + item.value)
+      return `${name} 回复了 ${target.hp - before} 点 HP。`
+    }
+    case 'revive':
+      target.hp = Math.max(1, Math.floor(target.maxHp * item.value))
+      return `${name} 重新振作起来了！`
+    case 'cure':
+      target.status = null
+      return `${name} 的异常状态消失了！`
+    case 'pp':
+      for (const m of target.moves) {
+        const max = MOVES[m.id]?.pp ?? m.pp
+        m.pp = item.value > 0 ? Math.min(max, m.pp + item.value) : max
+      }
+      return `${name} 的技能 PP 回复了！`
+    default:
+      return ''
+  }
 }
 
 /**
@@ -383,28 +553,29 @@ export function playerUseItem(s: BattleState, itemId: string, targetIndex: numbe
   if (item.kind === 'catch') {
     const enemy = activeEnemy(s)
     say(s, `你轻轻抛出了 ${item.name}……`, 'throw')
-    if (Math.random() < catchChance(enemy.hp, enemy.maxHp, item.value)) {
-      const caught: CreatureInstance = { ...enemy, uid: `${enemy.uid}-pal`, moves: [...getMoves(enemy).map((m) => m.id)] }
-      s.playerParty.push(caught)
+    const chance = catchChance(enemy.hp, enemy.maxHp, item.value, {
+      status: enemy.status,
+      speciesRate: SPECIES[enemy.speciesId].catchRate,
+      token: s.token,
+    })
+    if (Math.random() < chance) {
+      const caught: CreatureInstance = { ...structuredClone(enemy), uid: `${enemy.uid}-pal` }
+      if (s.playerParty.length < PARTY_LIMIT) s.playerParty.push(caught)
+      else s.caughtToStorage = true
       s.caught = caught
       s.over = true
       s.won = true
-      say(s, `${displayName(caught)} 闻了闻，开心地加入了队伍！`, 'catchOk')
+      say(s, `${battleName(caught)} 闻了闻，开心地${s.caughtToStorage ? '成为了你的伙伴' : '加入了队伍'}！`, 'catchOk')
+      if (s.caughtToStorage) say(s, '（队伍已满，它被送往了伙伴寄存所。）')
       return
     }
-    say(s, `${displayName(enemy)} 扭过头去，安抚失败了！`, 'catchFail')
+    say(s, `${battleName(enemy)} 扭过头去，安抚失败了！`, 'catchFail')
     enemyTurn(s)
     return
   }
 
   const target = s.playerParty[targetIndex]
-  if (item.kind === 'heal') {
-    const before = target.hp
-    target.hp = Math.min(target.maxHp, target.hp + item.value)
-    say(s, `${displayName(target)} 回复了 ${target.hp - before} 点 HP。`, targetIndex === s.activeIndex ? 'heal' : 'none')
-  } else {
-    target.hp = Math.max(1, Math.floor(target.maxHp * item.value))
-    say(s, `${displayName(target)} 重新振作起来了！`)
-  }
+  const healAnim = item.kind === 'heal' && targetIndex === s.activeIndex ? 'heal' : 'none'
+  say(s, applyItemToCreature(itemId, target), healAnim)
   enemyTurn(s)
 }

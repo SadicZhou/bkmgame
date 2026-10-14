@@ -1,45 +1,41 @@
 /**
- * 原创伙伴数据（非宝可梦 IP）：物种、招式、学招表、进化链
+ * 伙伴实例：生成、能力值计算、技能槽、经验曲线
+ * 物种 / 技能 / 属性数据分别在 species.ts / moves.ts / types.ts。
  * @author zjh
  * @date 2026-10-14
  */
 
-export type ElementType = 'flame' | 'tide' | 'leaf' | 'stone'
+import { MOVES, STRUGGLE_ID, type MoveDef, type StatusId } from './moves'
+import { NATURE_IDS, natureMultiplier, type NatureId } from './natures'
+import { RARITY_INFO, SPECIES } from './species'
+import {
+  AWAKEN_LEVEL,
+  awakenBonus,
+  rollTalent,
+  talentGrade,
+  talentMultiplier,
+  type Rng,
+  type Talent,
+} from '../systems/Talent'
 
-export interface MoveDef {
+export { SPECIES, DEX_ORDER, UNIQUE_ORDER, STARTERS, RARITY_INFO } from './species'
+export type { CreatureSpecies, Rarity } from './species'
+export { MOVES } from './moves'
+export type { MoveDef } from './moves'
+export { TYPE_LABEL, typeMultiplier } from './types'
+export type { ElementType } from './types'
+
+/** 技能槽：技能 id + 剩余 PP */
+export interface MoveSlot {
   id: string
-  name: string
-  power: number
-  type: ElementType
+  pp: number
 }
 
-/** 学招表条目：达到 level 时学会 moveId */
-export interface LearnEntry {
-  level: number
-  moveId: string
-}
-
-export interface CreatureSpecies {
-  id: string
-  name: string
-  type: ElementType
-  /** 色块立绘主色 */
-  color: number
-  accent: number
-  baseHp: number
-  baseAtk: number
-  baseDef: number
-  baseSpd: number
-  learnset: LearnEntry[]
-  /** 击败后获得经验基数 */
-  expYield: number
-  /** 进化目标与等级（可选） */
-  evolvesTo?: string
-  evolveLevel?: number
-  /** 图鉴描述 */
-  desc: string
-  /** 是否可被收服（BOSS 不可） */
-  catchable: boolean
+/** 收服记录（唯一精灵证书用） */
+export interface CaughtInfo {
+  day: number
+  mapId: string
+  weather: string
 }
 
 export interface CreatureInstance {
@@ -53,375 +49,162 @@ export interface CreatureInstance {
   atk: number
   def: number
   spd: number
-  /** 已掌握招式 id（最多 4 个）；旧存档可能缺失，读档时补齐 */
-  moves?: string[]
+  moves: MoveSlot[]
+  talent: Talent
+  nature: NatureId
+  abilityId: string
+  /** 是否已鉴定（显示具体资质） */
+  appraised: boolean
+  /** 是否已天赋觉醒 */
+  awakened: boolean
+  shiny: boolean
+  /** 强壮个体（遭遇时 +2 级、资质下限 +5） */
+  strong?: boolean
+  /** 亲密度 0~255 */
+  friendship: number
+  /** 主状态异常（战斗外保留，回血点解除） */
+  status?: StatusId | null
+  caughtInfo?: CaughtInfo
 }
 
-/** 单只伙伴最多掌握的招式数 */
+/** 单只伙伴最多掌握的技能数 */
 export const MAX_MOVES = 4
-
-/** 类型克制：攻方打防方倍率 */
-const TYPE_CHART: Record<ElementType, Partial<Record<ElementType, number>>> = {
-  flame: { leaf: 1.5, tide: 0.75, stone: 0.75 },
-  tide: { flame: 1.5, stone: 1.5, leaf: 0.75 },
-  leaf: { tide: 1.5, stone: 1.5, flame: 0.75 },
-  stone: { flame: 1.5, leaf: 0.75, tide: 0.75 },
-}
-
-export const MOVES: Record<string, MoveDef> = {
-  tackle: { id: 'tackle', name: '冲撞', power: 14, type: 'stone' },
-  spark_kick: { id: 'spark_kick', name: '火星踢', power: 18, type: 'flame' },
-  ember_spit: { id: 'ember_spit', name: '余烬唾', power: 22, type: 'flame' },
-  flare_dash: { id: 'flare_dash', name: '焰流冲', power: 30, type: 'flame' },
-  blaze_burst: { id: 'blaze_burst', name: '炽焰爆', power: 38, type: 'flame' },
-  splash: { id: 'splash', name: '水花拍', power: 16, type: 'tide' },
-  bubble_roll: { id: 'bubble_roll', name: '泡泡滚', power: 24, type: 'tide' },
-  tide_crash: { id: 'tide_crash', name: '潮涌撞', power: 30, type: 'tide' },
-  torrent: { id: 'torrent', name: '激流', power: 38, type: 'tide' },
-  leaf_tap: { id: 'leaf_tap', name: '叶拍', power: 17, type: 'leaf' },
-  vine_snap: { id: 'vine_snap', name: '藤响', power: 23, type: 'leaf' },
-  petal_storm: { id: 'petal_storm', name: '花瓣风暴', power: 30, type: 'leaf' },
-  grove_beam: { id: 'grove_beam', name: '林冠光', power: 38, type: 'leaf' },
-  pebble: { id: 'pebble', name: '碎石弹', power: 19, type: 'stone' },
-  shell_bash: { id: 'shell_bash', name: '甲撞', power: 25, type: 'stone' },
-  rock_slide: { id: 'rock_slide', name: '岩崩', power: 30, type: 'stone' },
-  quake: { id: 'quake', name: '震地', power: 38, type: 'stone' },
-}
-
-/** 进化等级（短篇节奏：通关前大致可达） */
-const EVO_LV = 9
-
-export const SPECIES: Record<string, CreatureSpecies> = {
-  flarehorn: {
-    id: 'flarehorn',
-    name: '焰角兔',
-    type: 'flame',
-    color: 0xff8f6b,
-    accent: 0xffc857,
-    baseHp: 32,
-    baseAtk: 14,
-    baseDef: 10,
-    baseSpd: 13,
-    learnset: [
-      { level: 1, moveId: 'tackle' },
-      { level: 1, moveId: 'spark_kick' },
-      { level: 4, moveId: 'ember_spit' },
-      { level: 7, moveId: 'flare_dash' },
-    ],
-    expYield: 28,
-    evolvesTo: 'blazehorn',
-    evolveLevel: EVO_LV,
-    desc: '额角藏着一粒火种，开心时会冒出小火星。',
-    catchable: true,
-  },
-  blazehorn: {
-    id: 'blazehorn',
-    name: '炽角兔',
-    type: 'flame',
-    color: 0xff6b4a,
-    accent: 0xffe066,
-    baseHp: 40,
-    baseAtk: 18,
-    baseDef: 13,
-    baseSpd: 16,
-    learnset: [
-      { level: 1, moveId: 'tackle' },
-      { level: 1, moveId: 'spark_kick' },
-      { level: 4, moveId: 'ember_spit' },
-      { level: 7, moveId: 'flare_dash' },
-      { level: 11, moveId: 'blaze_burst' },
-    ],
-    expYield: 45,
-    desc: '双角燃起长焰，奔跑时会在身后留下焰迹。',
-    catchable: true,
-  },
-  tideback: {
-    id: 'tideback',
-    name: '碧波龟',
-    type: 'tide',
-    color: 0x6eb8e8,
-    accent: 0xa8e6ff,
-    baseHp: 38,
-    baseAtk: 11,
-    baseDef: 15,
-    baseSpd: 8,
-    learnset: [
-      { level: 1, moveId: 'tackle' },
-      { level: 1, moveId: 'splash' },
-      { level: 4, moveId: 'bubble_roll' },
-      { level: 7, moveId: 'tide_crash' },
-    ],
-    expYield: 30,
-    evolvesTo: 'torrentshell',
-    evolveLevel: EVO_LV,
-    desc: '背甲能储存一小片湖水，晒太阳时会冒泡泡。',
-    catchable: true,
-  },
-  torrentshell: {
-    id: 'torrentshell',
-    name: '涌潮龟',
-    type: 'tide',
-    color: 0x4a90d0,
-    accent: 0xc8f0ff,
-    baseHp: 48,
-    baseAtk: 14,
-    baseDef: 19,
-    baseSpd: 10,
-    learnset: [
-      { level: 1, moveId: 'tackle' },
-      { level: 1, moveId: 'splash' },
-      { level: 4, moveId: 'bubble_roll' },
-      { level: 7, moveId: 'tide_crash' },
-      { level: 11, moveId: 'torrent' },
-    ],
-    expYield: 47,
-    desc: '甲壳上的涡纹会随潮汐旋转，能喷出激流。',
-    catchable: true,
-  },
-  leafkit: {
-    id: 'leafkit',
-    name: '翠叶狐',
-    type: 'leaf',
-    color: 0x7bc96b,
-    accent: 0xc8f26b,
-    baseHp: 30,
-    baseAtk: 13,
-    baseDef: 11,
-    baseSpd: 15,
-    learnset: [
-      { level: 1, moveId: 'tackle' },
-      { level: 1, moveId: 'leaf_tap' },
-      { level: 4, moveId: 'vine_snap' },
-      { level: 7, moveId: 'petal_storm' },
-    ],
-    expYield: 27,
-    evolvesTo: 'grovefox',
-    evolveLevel: EVO_LV,
-    desc: '尾巴是一片大叶子，害羞时会把脸藏进去。',
-    catchable: true,
-  },
-  grovefox: {
-    id: 'grovefox',
-    name: '森冠狐',
-    type: 'leaf',
-    color: 0x4fae5a,
-    accent: 0xf2e86b,
-    baseHp: 38,
-    baseAtk: 17,
-    baseDef: 14,
-    baseSpd: 18,
-    learnset: [
-      { level: 1, moveId: 'tackle' },
-      { level: 1, moveId: 'leaf_tap' },
-      { level: 4, moveId: 'vine_snap' },
-      { level: 7, moveId: 'petal_storm' },
-      { level: 11, moveId: 'grove_beam' },
-    ],
-    expYield: 44,
-    desc: '头顶长出花冠，所到之处草木会轻轻摇摆。',
-    catchable: true,
-  },
-  rockmite: {
-    id: 'rockmite',
-    name: '岩甲虫',
-    type: 'stone',
-    color: 0xc4a484,
-    accent: 0xd7ccc8,
-    baseHp: 34,
-    baseAtk: 15,
-    baseDef: 14,
-    baseSpd: 7,
-    learnset: [
-      { level: 1, moveId: 'tackle' },
-      { level: 1, moveId: 'pebble' },
-      { level: 4, moveId: 'shell_bash' },
-      { level: 7, moveId: 'rock_slide' },
-    ],
-    expYield: 29,
-    evolvesTo: 'bouldermite',
-    evolveLevel: EVO_LV,
-    desc: '喜欢啃小石子，壳越啃越硬。',
-    catchable: true,
-  },
-  bouldermite: {
-    id: 'bouldermite',
-    name: '磐甲虫',
-    type: 'stone',
-    color: 0x9c7c5c,
-    accent: 0xe8dcd0,
-    baseHp: 44,
-    baseAtk: 19,
-    baseDef: 19,
-    baseSpd: 8,
-    learnset: [
-      { level: 1, moveId: 'tackle' },
-      { level: 1, moveId: 'pebble' },
-      { level: 4, moveId: 'shell_bash' },
-      { level: 7, moveId: 'rock_slide' },
-      { level: 11, moveId: 'quake' },
-    ],
-    expYield: 46,
-    desc: '壳像一块小磐石，跺脚能让地面发颤。',
-    catchable: true,
-  },
-  cindermoth: {
-    id: 'cindermoth',
-    name: '烬尘蛾',
-    type: 'flame',
-    color: 0xe8a05a,
-    accent: 0xfff0a0,
-    baseHp: 30,
-    baseAtk: 15,
-    baseDef: 10,
-    baseSpd: 16,
-    learnset: [
-      { level: 1, moveId: 'tackle' },
-      { level: 1, moveId: 'spark_kick' },
-      { level: 5, moveId: 'ember_spit' },
-      { level: 9, moveId: 'flare_dash' },
-    ],
-    expYield: 34,
-    desc: '翅膀上的鳞粉像余烬一样发光，常在山道夜里飞舞。',
-    catchable: true,
-  },
-  mistnewt: {
-    id: 'mistnewt',
-    name: '雾泉螈',
-    type: 'tide',
-    color: 0x8fd0c8,
-    accent: 0xe0fff8,
-    baseHp: 33,
-    baseAtk: 13,
-    baseDef: 13,
-    baseSpd: 12,
-    learnset: [
-      { level: 1, moveId: 'tackle' },
-      { level: 1, moveId: 'splash' },
-      { level: 5, moveId: 'bubble_roll' },
-      { level: 9, moveId: 'tide_crash' },
-    ],
-    expYield: 33,
-    desc: '住在山间温泉边，身上总缭绕着薄雾。',
-    catchable: true,
-  },
-  magmane: {
-    id: 'magmane',
-    name: '熔鬃狮',
-    type: 'flame',
-    color: 0xd9483b,
-    accent: 0xffb030,
-    baseHp: 50,
-    baseAtk: 19,
-    baseDef: 15,
-    baseSpd: 14,
-    learnset: [
-      { level: 1, moveId: 'tackle' },
-      { level: 1, moveId: 'ember_spit' },
-      { level: 6, moveId: 'flare_dash' },
-      { level: 10, moveId: 'rock_slide' },
-      { level: 12, moveId: 'blaze_burst' },
-    ],
-    expYield: 80,
-    desc: '守护余烬山巅火种的狮子，鬃毛是流动的熔岩。',
-    catchable: false,
-  },
-}
-
-/** 图鉴展示顺序 */
-export const DEX_ORDER: string[] = [
-  'flarehorn',
-  'blazehorn',
-  'tideback',
-  'torrentshell',
-  'leafkit',
-  'grovefox',
-  'rockmite',
-  'bouldermite',
-  'cindermoth',
-  'mistnewt',
-  'magmane',
-]
-
-export const TYPE_LABEL: Record<ElementType, string> = {
-  flame: '焰',
-  tide: '潮',
-  leaf: '叶',
-  stone: '岩',
-}
+export const MAX_LEVEL = 50
 
 let uidSeq = 1
 
+export function newUid(): string {
+  return `c${uidSeq++}-${Date.now().toString(36)}`
+}
+
+/** 能力值计算所需的最小信息 */
+type StatSource = Pick<CreatureInstance, 'speciesId' | 'level' | 'talent' | 'nature' | 'awakened'>
+
 /**
- * 按物种基础值与等级计算能力值
+ * 能力值 = 种族值 × 等级成长 × 资质 × 性格 × 觉醒
  * @author zjh
  * @date 2026-10-14
  */
-export function calcStats(
-  speciesId: string,
-  level: number,
-): { maxHp: number; atk: number; def: number; spd: number } {
-  const s = SPECIES[speciesId]
-  const scale = 1 + (level - 1) * 0.08
+export function calcStats(c: StatSource): { maxHp: number; atk: number; def: number; spd: number } {
+  const s = SPECIES[c.speciesId]
+  const scale = 1 + (c.level - 1) * 0.08
+  const awaken = c.awakened ? awakenBonus(talentGrade(c.talent)) : 1
+  const stat = (base: number, key: 'hp' | 'atk' | 'def' | 'spd') =>
+    Math.max(1, Math.round(base * scale * talentMultiplier(c.talent[key]) * natureMultiplier(c.nature, key) * awaken))
   return {
-    maxHp: Math.round(s.baseHp * scale),
-    atk: Math.round(s.baseAtk * scale),
-    def: Math.round(s.baseDef * scale),
-    spd: Math.round(s.baseSpd * scale),
+    maxHp: stat(s.baseHp, 'hp'),
+    atk: stat(s.baseAtk, 'atk'),
+    def: stat(s.baseDef, 'def'),
+    spd: stat(s.baseSpd, 'spd'),
   }
 }
 
 /**
- * 计算某等级应掌握的招式（取学招表中最近学会的 4 个）
+ * 计算某等级应掌握的技能（取学招表中最近学会的 4 个）
  * @author zjh
  * @date 2026-10-14
  */
 export function movesAtLevel(speciesId: string, level: number): string[] {
-  const learned = SPECIES[speciesId].learnset
-    .filter((e) => e.level <= level)
-    .map((e) => e.moveId)
+  const learned: string[] = []
+  for (const e of SPECIES[speciesId].learnset) {
+    if (e.level <= level && !learned.includes(e.moveId)) learned.push(e.moveId)
+  }
   return learned.slice(-MAX_MOVES)
 }
 
+export function fullSlot(id: string): MoveSlot {
+  return { id, pp: MOVES[id]?.pp ?? 1 }
+}
+
+/** 生成选项 */
+export interface CreateOptions {
+  /** 额外资质下限（与稀有度下限取大） */
+  talentFloor?: number
+  shiny?: boolean
+  strong?: boolean
+  nature?: NatureId
+  rng?: Rng
+}
+
 /**
- * 按等级生成伙伴实例
+ * 生成伙伴实例：掷资质、性格、特性
  * @author zjh
  * @date 2026-10-14
  */
-export function createCreature(speciesId: string, level = 5): CreatureInstance {
-  const stats = calcStats(speciesId, level)
+export function createCreature(speciesId: string, level = 5, opts: CreateOptions = {}): CreatureInstance {
+  const rng = opts.rng ?? Math.random
+  const sp = SPECIES[speciesId]
+  let floor = Math.max(RARITY_INFO[sp.rarity].talentFloor, opts.talentFloor ?? 0, opts.shiny ? 10 : 0)
+  if (opts.strong) floor += 5
+  const talent = rollTalent(Math.min(20, floor), rng)
+  const nature = opts.nature ?? NATURE_IDS[Math.floor(rng() * NATURE_IDS.length)]
+  const hidden = opts.shiny || sp.rarity === 'guardian'
+  const abilityId = hidden ? sp.hiddenAbility : sp.abilities[Math.floor(rng() * 2)]
+  const lv = Math.max(1, Math.min(MAX_LEVEL, level))
+  const base = { speciesId, level: lv, talent, nature, awakened: false }
+  const stats = calcStats(base)
   return {
-    uid: `c${uidSeq++}-${Date.now().toString(36)}`,
-    speciesId,
-    level,
+    uid: newUid(),
+    ...base,
     exp: 0,
     hp: stats.maxHp,
     ...stats,
-    moves: movesAtLevel(speciesId, level),
+    moves: movesAtLevel(speciesId, lv).map(fullSlot),
+    abilityId,
+    appraised: false,
+    shiny: !!opts.shiny,
+    strong: opts.strong || undefined,
+    friendship: sp.rarity === 'starter' ? 70 : 30,
+    status: null,
   }
 }
 
-/** 获取实例招式定义列表（兼容旧存档无 moves 字段） */
+/** 获取实例技能定义列表 */
 export function getMoves(c: CreatureInstance): MoveDef[] {
-  const ids = c.moves?.length ? c.moves : movesAtLevel(c.speciesId, c.level)
-  return ids.map((id) => MOVES[id]).filter(Boolean)
+  return c.moves.map((s) => MOVES[s.id]).filter(Boolean)
 }
 
-/** 升级所需经验（短篇节奏，曲线较平缓） */
+/** 是否所有技能 PP 耗尽（需要挣扎） */
+export function outOfPp(c: CreatureInstance): boolean {
+  return c.moves.every((s) => s.pp <= 0)
+}
+
+export const STRUGGLE = MOVES[STRUGGLE_ID]
+
+/**
+ * 升级所需经验：Lv15 以前与 v2 一致，之后逐渐变陡（等级上限 50）
+ * @author zjh
+ * @date 2026-10-14
+ */
 export function expToNext(level: number): number {
-  return Math.round(20 + level * 10)
+  const base = 20 + level * 10
+  return level <= 15 ? base : Math.round(base + (level - 15) ** 2 * 4)
 }
 
-export function typeMultiplier(atkType: ElementType, defType: ElementType): number {
-  return TYPE_CHART[atkType]?.[defType] ?? 1
+/** 是否达到觉醒条件 */
+export function canAwaken(c: CreatureInstance): boolean {
+  const g = talentGrade(c.talent)
+  return !c.awakened && c.level >= AWAKEN_LEVEL && (g === 'A' || g === 'S')
 }
 
 export function displayName(c: CreatureInstance): string {
   return c.nickname ?? SPECIES[c.speciesId].name
 }
 
+/** 带「强壮的 / 异色」前缀的战斗名 */
+export function battleName(c: CreatureInstance): string {
+  const prefix = c.strong ? '强壮的 ' : ''
+  return `${prefix}${displayName(c)}${c.shiny ? '✦' : ''}`
+}
+
+/** 贴图 key：异色使用独立调色板 */
+export function spriteKey(c: Pick<CreatureInstance, 'speciesId' | 'shiny'>): string {
+  return `spr-${c.speciesId}${c.shiny ? '-shiny' : ''}`
+}
+
 /** 从存档恢复时同步序号，避免 uid 碰撞 */
-export function syncUidSeq(party: CreatureInstance[]): void {
-  for (const c of party) {
+export function syncUidSeq(list: CreatureInstance[]): void {
+  for (const c of list) {
     const m = /^c(\d+)/.exec(c.uid)
     if (m) uidSeq = Math.max(uidSeq, Number(m[1]) + 1)
   }

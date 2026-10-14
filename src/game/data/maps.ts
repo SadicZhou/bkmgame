@@ -29,7 +29,11 @@ export interface WarpDef {
   lockedLines?: string[]
 }
 
-export type NpcRole = 'talk' | 'healer' | 'shop' | 'trainer' | 'boss'
+/**
+ * talk 对话 · healer 回血 · clinic 小屋综合服务（回血/鉴定/休息）· shop 商店 · trainer/boss 对战
+ * board 旅人告示板 · granny 记忆婆婆（遗忘/回忆技能）· storage 伙伴寄存所
+ */
+export type NpcRole = 'talk' | 'healer' | 'clinic' | 'shop' | 'trainer' | 'boss' | 'board' | 'granny' | 'storage'
 
 export interface TeamMember {
   speciesId: string
@@ -68,9 +72,10 @@ export interface MapDef {
   warps: WarpDef[]
   npcs: NpcDef[]
   spawn: { x: number; y: number }
-  /** 遇敌草（tall / ash）每步遇敌概率 */
-  wildChance: number
-  wildPool: { speciesId: string; minLv: number; maxLv: number }[]
+  /** 户外地图：有天气、计入异象判定步数（遭遇表见 encounters.ts） */
+  outdoor: boolean
+  /** 室内地图：不显示夜晚滤镜 */
+  indoor?: boolean
   bgColor: number
   /** 覆盖默认 path 地砖贴图（如山路） */
   pathTexture?: string
@@ -165,8 +170,7 @@ function buildTown(): MapDef {
     tiles,
     bgColor: 0x8fd99a,
     spawn: { x: 8, y: 8 },
-    wildChance: 0,
-    wildPool: [],
+    outdoor: false,
     warps: [
       { x: 14, y: 6, targetMap: 'meadow', targetX: 2, targetY: 6, label: '青苔草地' },
       { x: 14, y: 7, targetMap: 'meadow', targetX: 2, targetY: 7, label: '青苔草地' },
@@ -188,7 +192,12 @@ function buildTown(): MapDef {
         progressLines: [
           {
             flag: 'boss_beaten',
-            lines: ['火种又恢复了温暖的光，谢谢你，焰迹旅人！', '图鉴还没集满的话，山道和草地随时欢迎你。'],
+            lines: [
+              '火种又恢复了温暖的光，谢谢你，焰迹旅人！',
+              '不过……最近各地的心火波动得厉害，总有人说看见了奇怪的「异象」。',
+              '流星、花海、地火……据说每种异象都会唤来一只独一无二的伙伴。',
+              '去东边的旅人告示板看看传闻吧。',
+            ],
           },
           {
             flag: 'ranger_beaten',
@@ -218,7 +227,34 @@ function buildTown(): MapDef {
         x: 5,
         y: 7,
         color: 0xe8c060,
-        lines: ['欢迎光临！伤药、复苏草、安抚果，应有尽有～'],
+        lines: ['欢迎光临！伤药、万灵药、PP 果、安抚果，应有尽有～'],
+      },
+      {
+        id: 'board',
+        name: '旅人告示板',
+        role: 'board',
+        x: 12,
+        y: 5,
+        color: 0xb08050,
+        lines: ['告示板上贴满了天气预报和各地的传闻。'],
+      },
+      {
+        id: 'granny',
+        name: '记忆婆婆',
+        role: 'granny',
+        x: 3,
+        y: 7,
+        color: 0xb8a0d8,
+        lines: ['孩子，伙伴们记性好着呢，忘掉的招式也能想起来。', '要我帮忙吗？'],
+      },
+      {
+        id: 'storage',
+        name: '寄存员纳',
+        role: 'storage',
+        x: 10,
+        y: 9,
+        color: 0x80c0a0,
+        lines: ['这里是伙伴寄存所！队伍放不下的伙伴，我来好好照顾。'],
       },
     ],
   }
@@ -261,12 +297,7 @@ function buildMeadow(): MapDef {
     tiles,
     bgColor: 0x6ecf7e,
     spawn: { x: 2, y: 6 },
-    wildChance: 0.18,
-    wildPool: [
-      { speciesId: 'leafkit', minLv: 3, maxLv: 6 },
-      { speciesId: 'rockmite', minLv: 3, maxLv: 5 },
-      { speciesId: 'tideback', minLv: 4, maxLv: 6 },
-    ],
+    outdoor: true,
     warps: [
       { x: 1, y: 6, targetMap: 'town', targetX: 13, targetY: 6, label: '晨曦小镇' },
       { x: 1, y: 7, targetMap: 'town', targetX: 13, targetY: 7, label: '晨曦小镇' },
@@ -337,12 +368,7 @@ function buildPass(): MapDef {
     bgColor: 0x6b4a3a,
     pathTexture: 'tile-mountain-path',
     spawn: { x: 2, y: 18 },
-    wildChance: 0.14,
-    wildPool: [
-      { speciesId: 'cindermoth', minLv: 8, maxLv: 10 },
-      { speciesId: 'mistnewt', minLv: 8, maxLv: 10 },
-      { speciesId: 'rockmite', minLv: 8, maxLv: 10 },
-    ],
+    outdoor: true,
     warps: [{ x: 1, y: 18, targetMap: 'meadow', targetX: 15, targetY: 6, label: '青苔草地' }],
     npcs: [
       {
@@ -359,7 +385,11 @@ function buildPass(): MapDef {
         ],
         defeatedKey: 'hiker_beaten',
         challengeLines: ['山道上的风可不温柔！让我看看你的本事！', '……战斗开始！'],
-        afterLines: ['山顶的熔鬃狮很强，先去温泉那里休整一下吧。'],
+        afterLines: [
+          '山顶的熔鬃狮很强，先去温泉那里休整一下吧。',
+          '对了，它浑身是火——潮系和岩系的伙伴能克制它，叶系和焰系就别硬碰了。',
+          '这条山道的雾泉螈、草地上的岩甲虫和碧波龟都很适合带上去。',
+        ],
       },
       {
         id: 'spring',
@@ -368,7 +398,11 @@ function buildPass(): MapDef {
         x: 3,
         y: 8,
         color: 0x7ec8c0,
-        lines: ['温泉的热气能让伙伴们恢复元气。', '（队伍已全部恢复！）', '山顶就在北边，祝你好运。'],
+        lines: [
+          '温泉的热气能让伙伴们恢复元气。',
+          '（队伍已全部恢复！）',
+          '山顶就在北边。守护兽的火焰很烈，带上潮系或岩系的伙伴会安心很多。祝你好运。',
+        ],
       },
       {
         id: 'boss',
@@ -418,8 +452,8 @@ function buildCabin(): MapDef {
     tiles,
     bgColor: 0xd4a86a,
     spawn: { x: 4, y: 5 },
-    wildChance: 0,
-    wildPool: [],
+    outdoor: false,
+    indoor: true,
     warps: [
       { x: 4, y: 7, targetMap: 'town', targetX: 3, targetY: 4, label: '晨曦小镇' },
       { x: 5, y: 7, targetMap: 'town', targetX: 3, targetY: 4, label: '晨曦小镇' },
@@ -428,15 +462,11 @@ function buildCabin(): MapDef {
       {
         id: 'healer',
         name: '疗愈师岚',
-        role: 'healer',
+        role: 'clinic',
         x: 5,
         y: 3,
         color: 0x9b7ed9,
-        lines: [
-          '把伙伴带来吧，我帮你恢复体力。',
-          '（队伍已全部恢复！）',
-          '外面的世界很大，记得常常存档。',
-        ],
+        lines: ['欢迎回来，旅人。要做点什么？'],
       },
     ],
   }
@@ -447,6 +477,25 @@ export const MAPS: Record<string, MapDef> = {
   meadow: buildMeadow(),
   pass: buildPass(),
   cabin: buildCabin(),
+}
+
+/**
+ * 地图上可放置事件物件的空地：可通行、非传送/门、无 NPC
+ * @author zjh
+ * @date 2026-10-14
+ */
+export function openTiles(map: MapDef): { x: number; y: number }[] {
+  const out: { x: number; y: number }[] = []
+  for (let y = 0; y < map.height; y++) {
+    for (let x = 0; x < map.width; x++) {
+      const k = map.tiles[y * map.width + x]
+      if (isSolid(k) || k === 'warp' || k === 'door') continue
+      if (map.npcs.some((n) => n.x === x && n.y === y)) continue
+      if (map.warps.some((w) => w.x === x && w.y === y)) continue
+      out.push({ x, y })
+    }
+  }
+  return out
 }
 
 export function isSolid(kind: TileKind): boolean {

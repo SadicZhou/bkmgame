@@ -8,6 +8,7 @@ import './style.css'
 import Phaser from 'phaser'
 import { BootScene } from './game/scenes/BootScene'
 import { TitleScene } from './game/scenes/TitleScene'
+import { StarterScene } from './game/scenes/StarterScene'
 import { WorldScene } from './game/scenes/WorldScene'
 import { BattleScene } from './game/scenes/BattleScene'
 import { EndingScene } from './game/scenes/EndingScene'
@@ -32,7 +33,7 @@ const config: Phaser.Types.Core.GameConfig = {
     width: 640,
     height: 480,
   },
-  scene: [BootScene, TitleScene, WorldScene, BattleScene, EndingScene],
+  scene: [BootScene, TitleScene, StarterScene, WorldScene, BattleScene, EndingScene],
   input: {
     keyboard: true,
     mouse: true,

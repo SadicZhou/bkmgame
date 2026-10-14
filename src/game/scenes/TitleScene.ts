@@ -9,6 +9,7 @@ import { DEX_ORDER, displayName } from '../data/creatures'
 import { GameState } from '../state/GameState'
 import { Sfx } from '../systems/AudioBeeps'
 import { loadGame } from '../systems/SaveSystem'
+import { DAY_STEPS } from '../systems/WorldClock'
 import { InputKeys } from '../ui/InputKeys'
 import { fadeIn, fadeToScene } from '../ui/Transition'
 
@@ -61,10 +62,7 @@ export class TitleScene extends Phaser.Scene {
     })
 
     const save = loadGame()
-    this.makeButton(width / 2, 280, '开始新旅程', true, () => {
-      GameState.newGame()
-      fadeToScene(this, 'World')
-    })
+    this.makeButton(width / 2, 280, '开始新旅程', true, () => fadeToScene(this, 'Starter'))
     this.makeButton(width / 2, 336, '读取存档', !!save, () => {
       if (GameState.tryLoad()) fadeToScene(this, 'World')
       else this.leaving = false
@@ -74,11 +72,12 @@ export class TitleScene extends Phaser.Scene {
       const lead = save.party[0]
       const mins = Math.floor(save.playSeconds / 60)
       const cleared = save.flags.game_cleared ? ' ｜ ★ 已通关' : ''
+      const day = Math.floor(save.world.totalSteps / DAY_STEPS) + 1
       this.add
         .text(
           width / 2,
           372,
-          `${displayName(lead)} Lv.${lead.level} 等 ${save.party.length} 只 ｜ 图鉴 ${save.dex.caught.length}/${DEX_ORDER.length} ｜ ${mins} 分钟${cleared}`,
+          `${displayName(lead)} Lv.${lead.level} 等 ${save.party.length} 只 ｜ 第 ${day} 天 ｜ 图鉴 ${save.dex.caught.filter((id) => DEX_ORDER.includes(id)).length}/${DEX_ORDER.length} ｜ ${mins} 分钟${cleared}`,
           { fontSize: '12px', color: '#a8d8c0' },
         )
         .setOrigin(0.5)

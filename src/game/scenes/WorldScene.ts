@@ -1,34 +1,32 @@
 /**
- * 大地图：走动、碰撞、NPC 互动（对话/疗愈/商店/训练家/BOSS）、传送、遇敌
+ * 大地图：走动、碰撞、NPC 互动、传送；每步推进世界（昼夜 / 天气 / 异象 / 小事件 / 遇敌）
+ * 世界规则见 systems/WorldTick；事件物件见 ui/WorldEventsView；小镇服务见 ui/TownServices。
  * @author zjh
  * @date 2026-10-14
  */
 
 import Phaser from 'phaser'
-import { SPECIES, createCreature } from '../data/creatures'
-import {
-  MAPS,
-  isSolid,
-  isTallGrass,
-  npcLines,
-  tileAt,
-  type MapDef,
-  type NpcDef,
-  type TileKind,
-  type WarpDef,
-} from '../data/maps'
+import { SPECIES, battleName, createCreature, type CreatureInstance } from '../data/creatures'
+import { ITEMS } from '../data/items'
+import { MAPS, isSolid, isTallGrass, npcLines, tileAt, type MapDef, type NpcDef, type TileKind, type WarpDef } from '../data/maps'
+import { MINOR_EVENTS, PHENOMENON_RULES, type PhenomenonDef } from '../data/phenomena'
+import { WEATHER_INFO } from '../data/weather'
 import { GameState, type Facing } from '../state/GameState'
 import { Sfx } from '../systems/AudioBeeps'
+import { activePhenomenon, uniqueForBattle } from '../systems/Phenomenon'
+import { isFullMoon, timeLabel } from '../systems/WorldClock'
+import { stepWorld, type StepResult } from '../systems/WorldTick'
 import { DialogueBox } from '../ui/DialogueBox'
 import { InputKeys } from '../ui/InputKeys'
 import { ListPanel } from '../ui/ListPanel'
 import { TouchPad } from '../ui/TouchPad'
+import { TownServices } from '../ui/TownServices'
 import { battleTransition, fadeIn, fadeToScene } from '../ui/Transition'
+import { WeatherLayer } from '../ui/WeatherLayer'
+import { WorldEventsView } from '../ui/WorldEventsView'
 import { WorldMenus } from '../ui/WorldMenus'
 
 const MOVE_MS = 140
-/** 进入地图 / 战斗结束后，至少走几步才会再次遇敌 */
-const SAFE_STEPS = 2
 
 /** 地砖类型 → 贴图 key */
 const TILE_TEXTURE: Record<TileKind, string> = {
@@ -47,8 +45,15 @@ const TILE_TEXTURE: Record<TileKind, string> = {
 /** NPC 头顶标记 */
 const ROLE_MARK: Partial<Record<NonNullable<NpcDef['role']>, string>> = {
   healer: '+',
+  clinic: '+',
   shop: '店',
+  board: '告',
+  storage: '存',
+  granny: '忆',
 }
+
+/** 唯一精灵等级范围 */
+const UNIQUE_LEVEL = { min: 12, max: 50 }
 
 export class WorldScene extends Phaser.Scene {
   private map!: MapDef
@@ -57,6 +62,9 @@ export class WorldScene extends Phaser.Scene {
   private touch!: TouchPad
   private dialogue!: DialogueBox
   private menus!: WorldMenus
+  private services!: TownServices
+  private weather!: WeatherLayer
+  private eventView!: WorldEventsView
   private hudText!: Phaser.GameObjects.Text
   private tileX = 0
   private tileY = 0
@@ -64,8 +72,6 @@ export class WorldScene extends Phaser.Scene {
   /** 过渡中（切图/进战斗），屏蔽输入 */
   private busy = false
   private facing: Facing = 'down'
-  private safeSteps = SAFE_STEPS
-  private npcMarks = new Map<string, Phaser.GameObjects.Text>()
 
   constructor() {
     super('World')
@@ -78,13 +84,15 @@ export class WorldScene extends Phaser.Scene {
     this.facing = GameState.facing
     this.moving = false
     this.busy = false
-    this.safeSteps = SAFE_STEPS
-    this.npcMarks.clear()
+    // 进入地图 / 战斗结束后重新计算安全步数
+    GameState.world.stepsSinceEncounter = 0
     this.cameras.main.setBackgroundColor(this.map.bgColor)
     this.cameras.main.setZoom(1)
 
     this.drawMap()
     this.spawnNpcs()
+    this.eventView = new WorldEventsView(this, this.map)
+    this.eventView.refresh()
 
     this.player = this.add.sprite(0, 0, `spr-player-${this.facing}`).setDepth(10)
     this.placePlayerVisual()
@@ -102,12 +110,16 @@ export class WorldScene extends Phaser.Scene {
     )
     this.cameras.main.startFollow(this.player, true, 0.15, 0.15)
 
+    this.weather = new WeatherLayer(this, 400)
+    this.refreshAtmosphere()
+
     this.hudText = this.add
       .text(12, 10, '', {
-        fontSize: '14px',
+        fontSize: '13px',
         color: '#f0e6c8',
         backgroundColor: '#00000088',
         padding: { x: 8, y: 4 },
+        lineSpacing: 3,
       })
       .setScrollFactor(0)
       .setDepth(501)
@@ -116,7 +128,8 @@ export class WorldScene extends Phaser.Scene {
     this.touch = new TouchPad(this)
     this.keys = new InputKeys(this, this.touch)
     this.dialogue = new DialogueBox(this)
-    this.menus = new WorldMenus(new ListPanel(this), {
+    const panel = new ListPanel(this)
+    this.menus = new WorldMenus(panel, {
       toast: (m) => this.flashToast(m),
       refreshHud: () => this.refreshHud(),
       backToTitle: () => {
@@ -125,12 +138,26 @@ export class WorldScene extends Phaser.Scene {
         fadeToScene(this, 'Title')
       },
     })
+    this.services = new TownServices(panel, {
+      say: (lines, after) => this.dialogue.open(lines, after),
+      toast: (m) => this.flashToast(m),
+      refreshHud: () => this.refreshHud(),
+      onHeal: () => {
+        this.cameras.main.flash(250, 255, 240, 255)
+        Sfx.win()
+      },
+      onWorldChanged: () => {
+        this.refreshAtmosphere()
+        this.eventView.refresh()
+      },
+    })
 
     fadeIn(this)
     this.showMapBanner()
   }
 
-  update(): void {
+  update(_time: number, delta: number): void {
+    this.weather?.update(delta)
     const input = this.keys.poll()
     if (this.busy) return
 
@@ -167,7 +194,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
-   * 生成 NPC：BOSS 用伙伴立绘，训练家未击败时头顶显示「!」
+   * 生成 NPC：BOSS 用伙伴立绘，告示板用木牌贴图，训练家未击败时头顶显示「!」
    * @author zjh
    * @date 2026-10-14
    */
@@ -180,6 +207,8 @@ export class WorldScene extends Phaser.Scene {
         const bossSpecies = npc.team?.[npc.team.length - 1]?.speciesId ?? 'magmane'
         const spr = this.add.image(cx, cy, `spr-${bossSpecies}`).setScale(0.8).setDepth(9)
         this.tweens.add({ targets: spr, y: cy - 3, yoyo: true, repeat: -1, duration: 700 })
+      } else if (npc.role === 'board') {
+        this.add.image(cx, cy, 'spr-board').setDepth(9)
       } else {
         this.add.sprite(cx, cy, 'spr-npc').setTint(npc.color).setDepth(9)
       }
@@ -196,7 +225,6 @@ export class WorldScene extends Phaser.Scene {
           .setOrigin(0.5)
           .setDepth(11)
         this.tweens.add({ targets: t, y: cy - 25, yoyo: true, repeat: -1, duration: 500 })
-        this.npcMarks.set(npc.id, t)
       }
     }
   }
@@ -229,7 +257,7 @@ export class WorldScene extends Phaser.Scene {
     const nx = this.tileX + dx
     const ny = this.tileY + dy
     const tile = tileAt(this.map, nx, ny)
-    if (!tile || isSolid(tile) || this.occupiedByNpc(nx, ny)) return
+    if (!tile || isSolid(tile) || this.occupiedByNpc(nx, ny) || this.eventView.uniqueAt(nx, ny)) return
 
     const fromX = this.tileX
     const fromY = this.tileY
@@ -256,7 +284,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
-   * 落地后：检查传送点（含关卡锁）与遇敌
+   * 落地后：传送点优先；否则推进世界一步并播放结果
    * @author zjh
    * @date 2026-10-14
    */
@@ -266,11 +294,67 @@ export class WorldScene extends Phaser.Scene {
       this.useWarp(warp, fromX, fromY)
       return
     }
+    const grass = isTallGrass(tile)
+    if (grass) this.rustleGrass()
+    const res = stepWorld(this.map.id, this.tileX, this.tileY, grass && this.map.outdoor)
+    this.handleStep(res)
+  }
 
-    if (this.safeSteps > 0) this.safeSteps--
-    if (isTallGrass(tile)) this.rustleGrass()
-    if (isTallGrass(tile) && this.safeSteps <= 0 && this.map.wildChance > 0) {
-      if (Math.random() < this.map.wildChance) this.startWildBattle()
+  private handleStep(res: StepResult): void {
+    const w = GameState.world
+    const messages: string[] = []
+    let redraw = false
+
+    if (res.clock.phaseChanged) {
+      this.flashToast(isFullMoon(w.totalSteps) ? '🌕 满月升起来了……' : GameState.night() ? '☾ 夜幕降临了' : '☀ 天亮了')
+    }
+    if (res.clock.weatherChanged && this.map.outdoor) {
+      const wt = GameState.weatherAt(this.map.id)
+      if (wt) this.flashToast(`${WEATHER_INFO[wt].icon} 天气变成了「${WEATHER_INFO[wt].label}」`)
+    }
+    if (res.clock.phaseChanged || res.clock.weatherChanged) this.refreshAtmosphere()
+
+    if (res.phenomenonFaded) {
+      this.flashToast(`「${res.phenomenonFaded.name}」渐渐消散了……`)
+      redraw = true
+    }
+    if (res.phenomenonStarted) {
+      messages.push(res.phenomenonStarted.omenText)
+      redraw = true
+    }
+    if (res.minorStarted) {
+      const m = MINOR_EVENTS[res.minorStarted.id]
+      const where = MAPS[res.minorStarted.mapId]?.name ?? ''
+      const extra = res.minorStarted.speciesId ? `（${SPECIES[res.minorStarted.speciesId].name}）` : ''
+      this.flashToast(`【${m.name}】${where}${extra}`)
+      redraw = true
+    }
+    if (res.minorEnded) redraw = true
+    if (res.goal) {
+      const { def, done, total, tokenGained } = res.goal
+      Sfx.confirm()
+      this.flashToast(`拾取了${def.goalLabel} ${done}/${total}`)
+      if (tokenGained) messages.push(`${def.goalLabel}在你手中化作一枚发光的「异象信物」！`, '带着它去异象中心吧，这次相遇的安抚成功率会翻倍。')
+      redraw = true
+    }
+    if (res.crystal) {
+      Sfx.win()
+      this.flashToast(res.crystal.kind === 'coins' ? `心火结晶化作了 ${res.crystal.amount} 焰币！` : `心火结晶里藏着 ${ITEMS[res.crystal.itemId].name}！`)
+      redraw = true
+    }
+
+    if (redraw) {
+      this.eventView.refresh()
+      this.refreshAtmosphere()
+    }
+    this.refreshHud()
+
+    const encounter = res.encounter
+    if (messages.length) {
+      this.cameras.main.flash(300, 255, 255, 255)
+      this.dialogue.open(messages, encounter ? () => this.startWildBattle(encounter) : undefined)
+    } else if (encounter) {
+      this.startWildBattle(encounter)
     }
   }
 
@@ -321,12 +405,17 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
-   * 与面前 NPC 互动
+   * 与面前 NPC / 唯一精灵互动
    * @author zjh
    * @date 2026-10-14
    */
   private tryInteract(): void {
     const { x, y } = this.facingTile()
+    const unique = this.eventView.uniqueAt(x, y)
+    if (unique) {
+      this.approachUnique(unique)
+      return
+    }
     const npc = this.occupiedByNpc(x, y)
     if (!npc) return
     const say = (lines: string[], after?: () => void) =>
@@ -340,6 +429,19 @@ export class WorldScene extends Phaser.Scene {
         Sfx.win()
         say(npc.lines)
         return
+      case 'clinic':
+        say(npc.lines, () => this.services.openClinic())
+        return
+      case 'board':
+        Sfx.confirm()
+        this.dialogue.open(this.services.boardLines().map((l) => `【告示板】${l}`))
+        return
+      case 'storage':
+        say(npc.lines, () => this.services.openStorage())
+        return
+      case 'granny':
+        say(npc.lines, () => this.services.openGranny())
+        return
       case 'shop':
         say(npc.lines, () => this.menus.openShop(() => say(['欢迎再来！'])))
         return
@@ -350,7 +452,7 @@ export class WorldScene extends Phaser.Scene {
           say(npc.afterLines ?? npc.lines)
           return
         }
-        if (!GameState.party.some((c) => c.hp > 0)) {
+        if (!this.hasAbleCreature()) {
           say(['你的伙伴们都累坏了，先去休息吧。'])
           return
         }
@@ -362,18 +464,22 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
-  private startWildBattle(): void {
-    const pool = this.map.wildPool
-    if (!pool.length || !GameState.party.some((c) => c.hp > 0)) return
-    const pick = pool[Math.floor(Math.random() * pool.length)]
-    const lv = Phaser.Math.Between(pick.minLv, pick.maxLv)
-    GameState.pendingBattle = {
-      kind: 'wild',
-      enemies: [createCreature(pick.speciesId, lv)],
-      returnMapId: this.map.id,
-      returnX: this.tileX,
-      returnY: this.tileY,
-    }
+  private hasAbleCreature(): boolean {
+    return GameState.party.some((c) => c.hp > 0)
+  }
+
+  /** 场地天气：只有户外地图有天气 */
+  private fieldWeather() {
+    return this.map.outdoor ? GameState.weatherAt(this.map.id) : null
+  }
+
+  private returnInfo() {
+    return { weather: this.fieldWeather(), night: GameState.night(), returnMapId: this.map.id, returnX: this.tileX, returnY: this.tileY }
+  }
+
+  private startWildBattle(enemy: CreatureInstance): void {
+    if (!this.hasAbleCreature()) return
+    GameState.pendingBattle = { kind: 'wild', enemies: [enemy], ...this.returnInfo() }
     this.busy = true
     battleTransition(this)
   }
@@ -386,12 +492,38 @@ export class WorldScene extends Phaser.Scene {
       trainerName: npc.name,
       flagOnWin: npc.defeatedKey,
       isBoss: npc.role === 'boss',
-      returnMapId: this.map.id,
-      returnX: this.tileX,
-      returnY: this.tileY,
+      ...this.returnInfo(),
     }
     this.busy = true
     battleTransition(this)
+  }
+
+  /**
+   * 走近唯一精灵：现身台词 → 异象战（等级随队伍最高等级，限 12~50）
+   * @author zjh
+   * @date 2026-10-14
+   */
+  private approachUnique(def: PhenomenonDef): void {
+    if (!this.hasAbleCreature()) {
+      this.dialogue.open(['它好奇地看着你，可你的伙伴们都累坏了……先去休息吧。'])
+      return
+    }
+    const top = Math.max(...GameState.party.map((c) => c.level))
+    const level = Phaser.Math.Clamp(top, UNIQUE_LEVEL.min, UNIQUE_LEVEL.max)
+    const enemy = uniqueForBattle(GameState.world, def, level)
+    GameState.markSeen(enemy.speciesId)
+    const token = GameState.world.phenomenon.token ? ['（异象信物在你掌心发烫。）'] : []
+    this.dialogue.open([...def.appearLines, ...token], () => {
+      GameState.pendingBattle = {
+        kind: 'unique',
+        enemies: [enemy],
+        phenomenonId: def.id,
+        ...this.returnInfo(),
+      }
+      this.busy = true
+      this.cameras.main.flash(400, 255, 255, 255)
+      battleTransition(this)
+    })
   }
 
   /** 进入地图时顶部滑入地图名 */
@@ -418,9 +550,12 @@ export class WorldScene extends Phaser.Scene {
     })
   }
 
+  /** 屏幕中上方的短提示；连续多条时向下错开 */
+  private toastCount = 0
   private flashToast(msg: string): void {
+    const offset = (this.toastCount++ % 3) * 30
     const t = this.add
-      .text(this.scale.width / 2, 48, msg, {
+      .text(this.scale.width / 2, 60 + offset, msg, {
         fontSize: '14px',
         color: '#fff',
         backgroundColor: '#000000aa',
@@ -428,20 +563,46 @@ export class WorldScene extends Phaser.Scene {
       })
       .setScrollFactor(0)
       .setOrigin(0.5)
-      .setDepth(900)
+      // 高于 ListPanel（1100），在面板中操作时的反馈也能看清
+      .setDepth(1200)
     this.tweens.add({
       targets: t,
       alpha: 0,
-      delay: 900,
+      delay: 1300,
       duration: 400,
-      onComplete: () => t.destroy(),
+      onComplete: () => {
+        t.destroy()
+        this.toastCount = Math.max(0, this.toastCount - 1)
+      },
     })
   }
 
+  /** 昼夜滤镜 + 天气粒子 + 异象染色 */
+  private refreshAtmosphere(): void {
+    const steps = GameState.world.totalSteps
+    this.weather.set(this.fieldWeather(), !this.map.indoor && GameState.night(), isFullMoon(steps))
+    const tint = this.eventView.tint()
+    this.weather.setExtraTint(tint.color, tint.alpha)
+  }
+
+  /**
+   * HUD：地图 · 天数时段 · 天气 · 首发 · 焰币；第二行显示进行中的异象
+   * @author zjh
+   * @date 2026-10-14
+   */
   private refreshHud(): void {
+    const w = GameState.world
     const lead = GameState.party[0]
-    const sp = lead ? SPECIES[lead.speciesId] : null
-    const leadText = sp && lead ? ` ｜ ${sp.name} Lv.${lead.level} HP ${lead.hp}/${lead.maxHp}` : ''
-    this.hudText.setText(`${this.map.name}${leadText} ｜ 焰币 ${GameState.coins}`)
+    const leadText = lead ? ` ｜ ${battleName(lead)} Lv.${lead.level} HP ${lead.hp}/${lead.maxHp}` : ''
+    const wt = this.fieldWeather()
+    const weatherText = wt ? ` ${WEATHER_INFO[wt].icon}${WEATHER_INFO[wt].label}` : ''
+    let text = `${this.map.name} ｜ 第${GameState.day()}天 ${timeLabel(w.totalSteps)}${weatherText}${leadText} ｜ 焰币 ${GameState.coins}`
+    const def = activePhenomenon(w)
+    if (def) {
+      const total = PHENOMENON_RULES.goalCount[def.goal]
+      const goal = w.phenomenon.token ? '已得信物' : `${def.goalLabel} ${w.phenomenon.goalDone}/${total}`
+      text += `\n✧ 异象「${def.name}」@${MAPS[def.mapId].name} · ${goal}`
+    }
+    this.hudText.setText(text)
   }
 }

@@ -36,7 +36,9 @@ export interface ListPanelOptions {
 
 const PANEL_W = 440
 const ROW_H = 34
-const VISIBLE_ROWS = 7
+const VISIBLE_ROWS = 6
+/** 底部说明区高度（可容纳约 6 行） */
+const DETAIL_H = 90
 
 export class ListPanel {
   private readonly scene: Phaser.Scene
@@ -54,7 +56,7 @@ export class ListPanel {
   constructor(scene: Phaser.Scene) {
     this.scene = scene
     const { width: w, height: h } = scene.scale
-    const panelH = 96 + ROW_H * VISIBLE_ROWS + 56
+    const panelH = 96 + ROW_H * VISIBLE_ROWS + DETAIL_H
     this.top = (h - panelH) / 2
     const left = (w - PANEL_W) / 2
 
@@ -71,10 +73,10 @@ export class ListPanel {
     const detailY = this.top + 52 + ROW_H * VISIBLE_ROWS + 10
     const divider = scene.add.rectangle(w / 2, detailY - 6, PANEL_W - 32, 1, 0x4a7a60)
     this.detailText = scene.add.text(left + 18, detailY, '', {
-      fontSize: '13px',
+      fontSize: '12px',
       color: '#b8d8c8',
       wordWrap: { width: PANEL_W - 36, useAdvancedWrap: true },
-      lineSpacing: 3,
+      lineSpacing: 2,
     })
     this.footerText = scene.add
       .text(left + PANEL_W - 16, this.top + 22, '', { fontSize: '13px', color: '#ffd77a' })

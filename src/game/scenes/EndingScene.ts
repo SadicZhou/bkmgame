@@ -5,7 +5,7 @@
  */
 
 import Phaser from 'phaser'
-import { DEX_ORDER, displayName } from '../data/creatures'
+import { DEX_ORDER, battleName, spriteKey } from '../data/creatures'
 import { GameState } from '../state/GameState'
 import { Sfx } from '../systems/AudioBeeps'
 import { InputKeys } from '../ui/InputKeys'
@@ -89,15 +89,16 @@ export class EndingScene extends Phaser.Scene {
     const startX = width / 2 - (gap * (party.length - 1)) / 2
     party.forEach((c, i) => {
       const x = startX + i * gap
-      const img = this.add.image(x, 252, `spr-${c.speciesId}`).setScale(1.4).setAlpha(0)
+      const img = this.add.image(x, 252, spriteKey(c)).setScale(1.4).setAlpha(0)
       this.add
-        .text(x, 296, `${displayName(c)}\nLv.${c.level}`, { fontSize: '12px', color: '#e8f5ee', align: 'center' })
+        .text(x, 296, `${battleName(c)}\nLv.${c.level}`, { fontSize: '12px', color: '#e8f5ee', align: 'center' })
         .setOrigin(0.5, 0)
       this.tweens.add({ targets: img, alpha: 1, delay: 2600 + i * 200, duration: 500 })
       this.tweens.add({ targets: img, y: 246, yoyo: true, repeat: -1, duration: 600 + i * 80, delay: 3000 })
     })
 
-    const stats = `游玩时长 ${formatTime(GameState.totalSeconds())} ｜ 图鉴 ${GameState.dex.caught.length}/${DEX_ORDER.length} ｜ 焰币 ${GameState.coins}`
+    const dexCaught = GameState.dex.caught.filter((id) => DEX_ORDER.includes(id)).length
+    const stats = `游玩时长 ${formatTime(GameState.totalSeconds())} ｜ 第 ${GameState.day()} 天 ｜ 图鉴 ${dexCaught}/${DEX_ORDER.length} ｜ 焰币 ${GameState.coins}`
     this.add.text(width / 2, 346, stats, { fontSize: '13px', color: '#b8f0d0' }).setOrigin(0.5)
     this.add
       .text(width / 2, 368, '（已自动存档）  制作：周建豪 · Embertrail', { fontSize: '11px', color: '#8a7a90' })
