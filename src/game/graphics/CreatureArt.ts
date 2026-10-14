@@ -12,7 +12,11 @@ import Phaser from 'phaser'
 export const CREATURE_BASE = 48
 
 /** 已有图片立绘的物种（同时提供 -shiny 异色版） */
-export const ART_SPECIES = ['flarehorn', 'tideback', 'leafkit']
+export const ART_SPECIES = [
+  'flarehorn', 'blazehorn', 'pyrecrown',
+  'tideback', 'torrentshell', 'abyssshell',
+  'leafkit', 'grovefox', 'sylvanfox',
+]
 
 /**
  * 在场景 preload 阶段加载立绘；贴图 key 与程序绘制版一致（spr-物种id / spr-物种id-shiny）
