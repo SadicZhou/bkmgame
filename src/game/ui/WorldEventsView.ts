@@ -6,6 +6,7 @@
  */
 
 import Phaser from 'phaser'
+import { setCreatureScale } from '../graphics/CreatureArt'
 import { spriteKey } from '../data/creatures'
 import type { MapDef } from '../data/maps'
 import type { PhenomenonDef } from '../data/phenomena'
@@ -66,7 +67,7 @@ export class WorldEventsView {
       this.scene.tweens.add({ targets: glow, scale: 1.4, alpha: 0.1, yoyo: true, repeat: -1, duration: 900 })
       const pending = w.phenomenon.pendingUniques[def.id]
       const tex = pending ? spriteKey(pending) : `spr-${def.uniqueSpeciesId}`
-      const spr = this.scene.add.image(cx, cy, tex).setScale(0.7).setDepth(9)
+      const spr = setCreatureScale(this.scene.add.image(cx, cy, tex), 0.7).setDepth(9)
       this.scene.tweens.add({ targets: spr, y: cy - 4, yoyo: true, repeat: -1, duration: 800, ease: 'Sine.easeInOut' })
       const mark = this.scene.add
         .text(cx, cy - 26, '✧', { fontSize: '14px', color: '#ffffff', stroke: '#000000', strokeThickness: 3 })

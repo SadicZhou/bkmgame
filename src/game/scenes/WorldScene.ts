@@ -6,6 +6,7 @@
  */
 
 import Phaser from 'phaser'
+import { setCreatureScale } from '../graphics/CreatureArt'
 import { SPECIES, battleName, createCreature, type CreatureInstance } from '../data/creatures'
 import { ITEMS } from '../data/items'
 import { MAPS, isSolid, isTallGrass, npcLines, tileAt, type MapDef, type NpcDef, type TileKind, type WarpDef } from '../data/maps'
@@ -205,7 +206,7 @@ export class WorldScene extends Phaser.Scene {
       const cy = npc.y * ts + ts / 2
       if (npc.role === 'boss') {
         const bossSpecies = npc.team?.[npc.team.length - 1]?.speciesId ?? 'magmane'
-        const spr = this.add.image(cx, cy, `spr-${bossSpecies}`).setScale(0.8).setDepth(9)
+        const spr = setCreatureScale(this.add.image(cx, cy, `spr-${bossSpecies}`), 0.8).setDepth(9)
         this.tweens.add({ targets: spr, y: cy - 3, yoyo: true, repeat: -1, duration: 700 })
       } else if (npc.role === 'board') {
         this.add.image(cx, cy, 'spr-board').setDepth(9)

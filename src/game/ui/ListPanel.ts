@@ -6,6 +6,7 @@
  */
 
 import Phaser from 'phaser'
+import { setCreatureScale } from '../graphics/CreatureArt'
 import { Sfx } from '../systems/AudioBeeps'
 import type { InputFrame } from './InputKeys'
 
@@ -210,7 +211,7 @@ export class ListPanel {
       let textX = left + 26
       const parts: Phaser.GameObjects.GameObject[] = [bg]
       if (row.icon) {
-        const icon = this.scene.add.image(left + 34, y, row.icon).setScale(0.55)
+        const icon = setCreatureScale(this.scene.add.image(left + 34, y, row.icon), 0.55)
         if (row.iconDim) icon.setTint(0x222222)
         parts.push(icon)
         textX = left + 56

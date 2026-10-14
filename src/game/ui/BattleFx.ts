@@ -5,6 +5,7 @@
  */
 
 import Phaser from 'phaser'
+import { setCreatureScale } from '../graphics/CreatureArt'
 import { Sfx } from '../systems/AudioBeeps'
 
 type Img = Phaser.GameObjects.Image
@@ -129,14 +130,15 @@ export class BattleFx {
   evolve(spr: Img, newTexture: string, home: { x: number; y: number }, baseScale: number, glow = 0xffe066): void {
     this.scene.cameras.main.flash(500, 255, 255, 255)
     spr.setTintFill(0xffffff)
+    const from = spr.scale
     this.scene.tweens.add({
       targets: spr,
-      scale: { from: baseScale, to: baseScale * 1.2 },
+      scale: { from, to: from * 1.2 },
       yoyo: true,
       repeat: 3,
       duration: 120,
       onComplete: () => {
-        spr.setTexture(newTexture).clearTint().setScale(baseScale)
+        setCreatureScale(spr.setTexture(newTexture).clearTint(), baseScale)
         this.sparkle(home.x, home.y, glow)
         Sfx.win()
       },

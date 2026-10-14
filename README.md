@@ -57,7 +57,8 @@ v1 **不依赖外部美术包**，保证克隆即可绿构建：
 
 | 资源 | 来源 | 说明 |
 |------|------|------|
-| 地砖 / 玩家 / NPC / 4 只伙伴 | **仓库内运行时生成**（`src/game/graphics/PixelFactory.ts`） | 原创可爱像素占位，无 IP 风险 |
+| 初始伙伴立绘（焰角兔 / 碧波龟 / 翠叶狐，含异色） | **AI 生成原创像素图**（原图 `art-src/creatures/`，处理后 `public/assets/creatures/`） | 144×144 透明 PNG；处理脚本 `python scripts/process-sprites.py` |
+| 其余伙伴 / 地砖 / 玩家 / NPC / 物件 | **仓库内运行时生成**（`src/game/graphics/`） | 原创可爱像素占位，无 IP 风险；有 PNG 的物种自动优先使用图片 |
 | 音效 | **Web Audio 合成短音**（`src/game/systems/AudioBeeps.ts`） | 无外部 OST，无扒曲 |
 | 背景音乐 | 暂无（静音 + 提示音） | 可后续加 1～2 条 CC0 loop |
 

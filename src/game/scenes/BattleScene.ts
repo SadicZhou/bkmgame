@@ -10,6 +10,7 @@ import { MOVES, SPECIES, TYPE_LABEL, battleName, outOfPp, spriteKey, typeMultipl
 import { ITEMS, ITEM_ORDER } from '../data/items'
 import { PHENOMENON_BY_ID, PHENOMENON_RULES } from '../data/phenomena'
 import { WEATHER_INFO } from '../data/weather'
+import { setCreatureScale } from '../graphics/CreatureArt'
 import { GameState, RESPAWN, type PendingBattle } from '../state/GameState'
 import { Sfx } from '../systems/AudioBeeps'
 import {
@@ -188,8 +189,8 @@ export class BattleScene extends Phaser.Scene {
     this.add.ellipse(this.enemyHome.x, this.enemyHome.y + 46, 190, 44, theme.pad, 0.9)
     this.add.ellipse(this.playerHome.x, this.playerHome.y + 50, 210, 50, theme.pad, 0.9)
 
-    this.enemySpr = this.add.image(this.enemyHome.x, this.enemyHome.y, 'spr-flarehorn').setScale(ENEMY_SCALE)
-    this.playerSpr = this.add.image(this.playerHome.x, this.playerHome.y, 'spr-flarehorn').setScale(PLAYER_SCALE)
+    this.enemySpr = setCreatureScale(this.add.image(this.enemyHome.x, this.enemyHome.y, 'spr-flarehorn'), ENEMY_SCALE)
+    this.playerSpr = setCreatureScale(this.add.image(this.playerHome.x, this.playerHome.y, 'spr-flarehorn'), PLAYER_SCALE)
   }
 
   private buildHud(): void {
@@ -375,7 +376,7 @@ export class BattleScene extends Phaser.Scene {
         break
       case 'catchOk':
         Sfx.win()
-        this.tweens.add({ targets: this.enemySpr, scale: 0.2, alpha: 0, duration: 400 })
+        this.tweens.add({ targets: this.enemySpr, scale: this.enemySpr.scale * 0.08, alpha: 0, duration: 400 })
         this.fx.sparkle(this.enemyHome.x, this.enemyHome.y, 0xffd6e0)
         break
       case 'catchFail':
@@ -451,7 +452,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private slideIn(spr: Phaser.GameObjects.Image, texture: string, home: { x: number; y: number }, dir: 1 | -1, scale: number): void {
-    spr.setTexture(texture).setAlpha(1).setAngle(0).clearTint().setScale(scale)
+    setCreatureScale(spr.setTexture(texture).setAlpha(1).setAngle(0).clearTint(), scale)
     spr.setPosition(home.x + dir * 260, home.y)
     this.tweens.add({ targets: spr, x: home.x, duration: 360, ease: 'Back.easeOut' })
   }

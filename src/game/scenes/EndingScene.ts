@@ -5,6 +5,7 @@
  */
 
 import Phaser from 'phaser'
+import { setCreatureScale } from '../graphics/CreatureArt'
 import { DEX_ORDER, battleName, spriteKey } from '../data/creatures'
 import { GameState } from '../state/GameState'
 import { Sfx } from '../systems/AudioBeeps'
@@ -89,7 +90,7 @@ export class EndingScene extends Phaser.Scene {
     const startX = width / 2 - (gap * (party.length - 1)) / 2
     party.forEach((c, i) => {
       const x = startX + i * gap
-      const img = this.add.image(x, 252, spriteKey(c)).setScale(1.4).setAlpha(0)
+      const img = setCreatureScale(this.add.image(x, 252, spriteKey(c)), 1.4).setAlpha(0)
       this.add
         .text(x, 296, `${battleName(c)}\nLv.${c.level}`, { fontSize: '12px', color: '#e8f5ee', align: 'center' })
         .setOrigin(0.5, 0)

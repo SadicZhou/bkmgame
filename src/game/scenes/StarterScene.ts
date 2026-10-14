@@ -6,6 +6,7 @@
  */
 
 import Phaser from 'phaser'
+import { setCreatureScale } from '../graphics/CreatureArt'
 import { SPECIES, STARTERS, TYPE_LABEL } from '../data/creatures'
 import { TYPE_COLOR } from '../data/types'
 import { GameState } from '../state/GameState'
@@ -86,7 +87,7 @@ export class StarterScene extends Phaser.Scene {
       })
     const color = TYPE_COLOR[sp.type]
     this.add.circle(x, top + 64, 44, Phaser.Display.Color.HexStringToColor(color).color, 0.25)
-    const sprite = this.add.image(x, top + 64, `spr-${id}`).setScale(2.2)
+    const sprite = setCreatureScale(this.add.image(x, top + 64, `spr-${id}`), 2.2)
     this.add.text(x, top + 126, sp.name, { fontSize: '18px', color: '#fff6e8' }).setOrigin(0.5)
     this.add
       .text(x, top + 150, `[${TYPE_LABEL[sp.type]}]`, { fontSize: '13px', color })

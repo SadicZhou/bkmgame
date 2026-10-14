@@ -6,6 +6,7 @@
 
 import Phaser from 'phaser'
 import { DEX_ORDER, displayName } from '../data/creatures'
+import { setCreatureScale } from '../graphics/CreatureArt'
 import { GameState } from '../state/GameState'
 import { Sfx } from '../systems/AudioBeeps'
 import { loadGame } from '../systems/SaveSystem'
@@ -57,7 +58,7 @@ export class TitleScene extends Phaser.Scene {
 
     const mascots = ['spr-flarehorn', 'spr-tideback', 'spr-leafkit']
     mascots.forEach((key, i) => {
-      const img = this.add.image(width / 2 + (i - 1) * 80, 192, key).setScale(i === 1 ? 1.35 : 1.55)
+      const img = setCreatureScale(this.add.image(width / 2 + (i - 1) * 80, 192, key), 1.55)
       this.tweens.add({ targets: img, y: 184, yoyo: true, repeat: -1, duration: 700 + i * 120, ease: 'Sine.easeInOut' })
     })
 
