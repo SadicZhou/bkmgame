@@ -11,6 +11,7 @@ import { ITEMS, ITEM_ORDER } from '../data/items'
 import { PHENOMENON_BY_ID, PHENOMENON_RULES } from '../data/phenomena'
 import { WEATHER_INFO } from '../data/weather'
 import { setBattleCreatureScale } from '../graphics/CreatureArt'
+import { addBackdrop, battleBackdropKey } from '../graphics/SceneArt'
 import { GameState, RESPAWN, type PendingBattle } from '../state/GameState'
 import { Sfx } from '../systems/AudioBeeps'
 import {
@@ -164,6 +165,18 @@ export class BattleScene extends Phaser.Scene {
   // ───────────────────────── 布局 ─────────────────────────
 
   private drawStage(): void {
+    if (addBackdrop(this, battleBackdropKey(this.pending))) {
+      this.add.ellipse(this.enemyHome.x, this.enemyHome.y + 50, 170, 34, 0x000000, 0.22)
+      this.add.ellipse(this.playerHome.x, this.playerHome.y + 56, 190, 38, 0x000000, 0.25)
+    } else {
+      this.drawPlainStage()
+    }
+    this.enemySpr = setBattleCreatureScale(this.add.image(this.enemyHome.x, this.enemyHome.y, 'spr-flarehorn'), ENEMY_SCALE)
+    this.playerSpr = setBattleCreatureScale(this.add.image(this.playerHome.x, this.playerHome.y, 'spr-flarehorn'), PLAYER_SCALE)
+  }
+
+  /** 缺背景图时的纯色场地 */
+  private drawPlainStage(): void {
     const { width, height } = this.scale
     const theme =
       this.pending.kind === 'boss'
@@ -188,9 +201,6 @@ export class BattleScene extends Phaser.Scene {
     }
     this.add.ellipse(this.enemyHome.x, this.enemyHome.y + 46, 190, 44, theme.pad, 0.9)
     this.add.ellipse(this.playerHome.x, this.playerHome.y + 50, 210, 50, theme.pad, 0.9)
-
-    this.enemySpr = setBattleCreatureScale(this.add.image(this.enemyHome.x, this.enemyHome.y, 'spr-flarehorn'), ENEMY_SCALE)
-    this.playerSpr = setBattleCreatureScale(this.add.image(this.playerHome.x, this.playerHome.y, 'spr-flarehorn'), PLAYER_SCALE)
   }
 
   private buildHud(): void {

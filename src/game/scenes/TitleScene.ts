@@ -7,6 +7,7 @@
 import Phaser from 'phaser'
 import { DEX_ORDER, displayName } from '../data/creatures'
 import { setCreatureScale } from '../graphics/CreatureArt'
+import { addBackdrop } from '../graphics/SceneArt'
 import { GameState } from '../state/GameState'
 import { Sfx } from '../systems/AudioBeeps'
 import { loadGame } from '../systems/SaveSystem'
@@ -35,11 +36,12 @@ export class TitleScene extends Phaser.Scene {
     this.buttons = []
     this.leaving = false
 
-    this.add.rectangle(0, 0, width, height, 0x1a2e28).setOrigin(0)
-    // 粉彩氛围块（可爱像素向）
-    this.add.rectangle(width / 2, height * 0.32, width, height * 0.48, 0x3d6b5a, 0.85)
-    this.add.circle(80, 60, 40, 0xffb7c5, 0.35)
-    this.add.circle(width - 60, 100, 50, 0xffe08a, 0.28)
+    if (!addBackdrop(this, 'bg-title')) {
+      this.add.rectangle(0, 0, width, height, 0x1a2e28).setOrigin(0)
+      this.add.rectangle(width / 2, height * 0.32, width, height * 0.48, 0x3d6b5a, 0.85)
+    }
+    // 标题区柔光底，保证文字在晨光背景上清晰
+    this.add.ellipse(width / 2, 88, 420, 110, 0x2a1830, 0.35)
 
     this.add
       .text(width / 2, 64, '焰迹旅人', {
@@ -48,13 +50,16 @@ export class TitleScene extends Phaser.Scene {
         color: '#fff6e8',
       })
       .setOrigin(0.5)
+      .setStroke('#5a2a1a', 6)
+      .setShadow(0, 3, '#000000', 4, true, true)
 
     this.add
       .text(width / 2, 112, 'Embertrail · 可爱像素短篇', {
         fontSize: '15px',
-        color: '#b8f0d0',
+        color: '#fff0c8',
       })
       .setOrigin(0.5)
+      .setStroke('#3a2030', 4)
 
     const mascots = ['spr-flarehorn', 'spr-tideback', 'spr-leafkit']
     mascots.forEach((key, i) => {

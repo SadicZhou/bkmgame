@@ -7,6 +7,7 @@
 
 import Phaser from 'phaser'
 import { setCreatureScale } from '../graphics/CreatureArt'
+import { addBackdrop } from '../graphics/SceneArt'
 import { SPECIES, STARTERS, TYPE_LABEL } from '../data/creatures'
 import { TYPE_COLOR } from '../data/types'
 import { GameState } from '../state/GameState'
@@ -48,13 +49,16 @@ export class StarterScene extends Phaser.Scene {
     this.confirming = false
     this.leaving = false
 
-    this.add.rectangle(0, 0, width, height, 0x1a2e28).setOrigin(0)
-    this.add.circle(90, 70, 46, 0xffb7c5, 0.2)
-    this.add.circle(width - 70, 90, 56, 0xffe08a, 0.18)
-    this.add.text(width / 2, 34, '选择你的第一位伙伴', { fontSize: '24px', color: '#fff6e8' }).setOrigin(0.5)
+    if (!addBackdrop(this, 'bg-starter', 0.35)) {
+      this.add.rectangle(0, 0, width, height, 0x1a2e28).setOrigin(0)
+      this.add.circle(90, 70, 46, 0xffb7c5, 0.2)
+      this.add.circle(width - 70, 90, 56, 0xffe08a, 0.18)
+    }
+    this.add.text(width / 2, 34, '选择你的第一位伙伴', { fontSize: '24px', color: '#fff6e8' }).setOrigin(0.5).setStroke('#2a1a10', 5)
     this.add
-      .text(width / 2, 64, '旅长阿禾：「火种熄灭之前，总要有人陪你走这一程。」', { fontSize: '13px', color: '#b8f0d0' })
+      .text(width / 2, 64, '旅长阿禾：「火种熄灭之前，总要有人陪你走这一程。」', { fontSize: '13px', color: '#e8f8ee' })
       .setOrigin(0.5)
+      .setStroke('#2a1a10', 4)
 
     STARTERS.forEach((id, i) => this.makeCard(id, i))
 
@@ -72,7 +76,7 @@ export class StarterScene extends Phaser.Scene {
     const x = this.scale.width / 2 + (i - 1) * (CARD_W + 16)
     const top = 96
     const bg = this.add
-      .rectangle(x, top + CARD_H / 2, CARD_W, CARD_H, 0x22463a)
+      .rectangle(x, top + CARD_H / 2, CARD_W, CARD_H, 0x22463a, 0.86)
       .setStrokeStyle(2, 0x4a7a60)
       .setInteractive({ useHandCursor: true })
       .on('pointerover', () => {

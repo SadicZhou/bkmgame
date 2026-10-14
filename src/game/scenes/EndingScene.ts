@@ -6,6 +6,7 @@
 
 import Phaser from 'phaser'
 import { setCreatureScale } from '../graphics/CreatureArt'
+import { addBackdrop } from '../graphics/SceneArt'
 import { DEX_ORDER, battleName, spriteKey } from '../data/creatures'
 import { GameState } from '../state/GameState'
 import { Sfx } from '../systems/AudioBeeps'
@@ -37,7 +38,7 @@ export class EndingScene extends Phaser.Scene {
     GameState.setFlag('game_cleared', true)
     GameState.persist()
 
-    this.add.rectangle(0, 0, width, height, 0x1a1020).setOrigin(0)
+    if (!addBackdrop(this, 'bg-ending', 0.3)) this.add.rectangle(0, 0, width, height, 0x1a1020).setOrigin(0)
     // 缓缓上升的余烬
     for (let i = 0; i < 40; i++) {
       const e = this.add.circle(
