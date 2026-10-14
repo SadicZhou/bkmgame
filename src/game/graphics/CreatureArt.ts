@@ -1,7 +1,7 @@
 /**
  * 伙伴立绘素材：有 PNG 的物种优先使用图片，其余沿用 PixelFactory 程序绘制。
  * 所有伙伴按 48px 基准排版，图片立绘分辨率更高，显示时按实际宽度折算缩放。
- * 新增立绘：把 AI 原图放进 art-src/creatures/<物种id>.jpg，运行 scripts/process-sprites.py，再把 id 加进 ART_SPECIES。
+ * 新增物种立绘：把 AI 原图放进 art-src/creatures/<物种id>.jpg，运行 scripts/process-sprites.py 即可（规范见 docs/art-guide.md）。
  * @author zjh
  * @date 2026-10-14
  */
@@ -12,12 +12,8 @@ import { SPECIES } from '../data/species'
 /** 伙伴贴图的排版基准边长 */
 export const CREATURE_BASE = 48
 
-/** 已有图片立绘的物种（同时提供 -shiny 异色版） */
-export const ART_SPECIES = [
-  'flarehorn', 'blazehorn', 'pyrecrown',
-  'tideback', 'torrentshell', 'abyssshell',
-  'leafkit', 'grovefox', 'sylvanfox',
-]
+/** 已有图片立绘的物种（同时提供 -shiny 异色版）；全部物种均已配图，缺图时加载失败会回退到程序绘制 */
+export const ART_SPECIES = Object.keys(SPECIES)
 
 /**
  * 在场景 preload 阶段加载立绘；贴图 key 与程序绘制版一致（spr-物种id / spr-物种id-shiny）

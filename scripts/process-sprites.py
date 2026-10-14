@@ -22,6 +22,8 @@ SIZE = 144
 PAD = 0.06
 # 与 CritterPalettes.shinyPalette 一致的色相偏移
 SHINY_HUE_SHIFT = 0.42
+# 半透明雾气 / 水花在品红底上会染成粉紫色，这些物种需要去溢色
+DESPILL = {"mistnewt", "wavefin"}
 
 
 def is_key(r: int, g: int, b: int) -> bool:
@@ -38,6 +40,17 @@ def key_out(img: Image.Image) -> Image.Image:
             r, g, b, _ = px[x, y]
             if is_key(r, g, b):
                 px[x, y] = (40, 24, 24, 0)
+    return img
+
+
+def despill(img: Image.Image) -> Image.Image:
+    """把红、蓝都明显高于绿的粉紫色像素拉回冷白（腮红的蓝绿差小，不受影响）"""
+    px = img.load()
+    for y in range(img.height):
+        for x in range(img.width):
+            r, g, b, a = px[x, y]
+            if a and r - g > 40 and b - g > 40:
+                px[x, y] = (g, g + (b - g) // 3, max(b, g), a)
     return img
 
 
@@ -77,7 +90,10 @@ def main() -> None:
         print(f"没有找到原图：{SRC}")
         return
     for f in files:
-        sprite = fit_square(key_out(Image.open(f)))
+        keyed = key_out(Image.open(f))
+        if f.stem in DESPILL:
+            keyed = despill(keyed)
+        sprite = fit_square(keyed)
         sprite.save(OUT / f"{f.stem}.png")
         shiny(sprite).save(OUT / f"{f.stem}-shiny.png")
         print(f"{f.stem}: ok")

@@ -58,8 +58,8 @@ v1 **不依赖外部美术包**，保证克隆即可绿构建：
 
 | 资源 | 来源 | 说明 |
 |------|------|------|
-| 初始伙伴三条进化链立绘（焰角兔→炽角兔→焰冕兔 / 碧波龟→涌潮龟→沧甲龟 / 翠叶狐→森冠狐→万木狐，含异色，共 18 张） | **AI 生成原创像素图**（原图 `art-src/creatures/`，处理后 `public/assets/creatures/`） | 144×144 透明 PNG；处理脚本 `python scripts/process-sprites.py` |
-| 其余伙伴 / 地砖 / 玩家 / NPC / 物件 | **仓库内运行时生成**（`src/game/graphics/`） | 原创可爱像素占位，无 IP 风险；有 PNG 的物种自动优先使用图片 |
+| 全部 29 种伙伴立绘（含守护兽与 3 只唯一伙伴，每种含异色，共 58 张） | **AI 生成原创像素图**（原图 `art-src/creatures/`，处理后 `public/assets/creatures/`） | 144×144 透明 PNG；处理脚本 `python scripts/process-sprites.py` |
+| 地砖 / 玩家 / NPC / 物件 | **仓库内运行时生成**（`src/game/graphics/`） | 原创可爱像素占位，无 IP 风险；伙伴立绘缺图时也会回退到程序绘制 |
 | 音效 | **Web Audio 合成短音**（`src/game/systems/AudioBeeps.ts`） | 无外部 OST，无扒曲 |
 | 背景音乐 | 暂无（静音 + 提示音） | 可后续加 1～2 条 CC0 loop |
 
