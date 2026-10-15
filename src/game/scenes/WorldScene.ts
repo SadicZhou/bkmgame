@@ -34,7 +34,8 @@ import { WorldMenus } from '../ui/WorldMenus'
 import { FishingController } from './world/FishingController'
 import { LIGHT_UP_FLAG, beforeLightUp, needsLightUp, playLighthouseLightUp, playWhaleLeap } from './world/LakeCutscenes'
 import { NpcInteract } from './world/NpcInteract'
-import { spawnNpcs } from './world/NpcLayer'
+import { NpcChatter } from './world/NpcChatter'
+import { NpcRoster } from './world/NpcRoster'
 import { NpcWalkers } from './world/NpcWalkers'
 import { FOREST_INTRO_LINES, type StoryHost } from './world/StoryEvents'
 import { Toaster, playBridgeCutscene, rustleAt, showMapBanner } from './world/WorldFx'
@@ -78,6 +79,10 @@ export class WorldScene extends Phaser.Scene {
   private fishing!: FishingController
   private interact!: NpcInteract
   private walkers!: NpcWalkers
+  private roster!: NpcRoster
+  private chatter!: NpcChatter
+  /** 排队等出生格空出来的 NPC：每隔一段时间重试 */
+  private rosterRetry = 0
   private toaster!: Toaster
   /** 本次进图要先播放灯台点亮演出（装饰按「未点亮」铺设） */
   private lightUpPending = false
@@ -103,7 +108,8 @@ export class WorldScene extends Phaser.Scene {
     const decorFlag = this.decorFlag()
     renderMap(this, this.map, hasFlag)
     renderDecor(this, this.map, decorFlag)
-    const walkerBodies = spawnNpcs(this, this.map, hasFlag)
+    this.roster = new NpcRoster(this, this.map)
+    const walkerBodies = this.roster.spawnAll(hasFlag)
     this.eventView = new WorldEventsView(this, this.map)
     this.eventView.refresh()
     this.walkers = new NpcWalkers(this, walkerBodies, {
@@ -115,6 +121,9 @@ export class WorldScene extends Phaser.Scene {
       canSpot: (npc) => this.canBeSpotted(npc),
       onSpotted: (npc) => this.spottedBy(npc),
     })
+    this.roster.bind(this.walkers)
+    this.chatter = new NpcChatter(this, this.walkers)
+    this.rosterRetry = 0
 
     registerCharAnims(this)
     this.charArt = hasCharArt(this, 'char-player')
@@ -271,6 +280,11 @@ export class WorldScene extends Phaser.Scene {
     const input = this.keys.poll()
     if (!this.moving && input.dx === 0 && input.dy === 0) this.stopWalk()
     this.walkers.update(time, delta, !this.idle())
+    this.chatter.update(delta, !this.idle())
+    if (this.roster.hasPending && (this.rosterRetry -= delta) <= 0) {
+      this.rosterRetry = 1000
+      this.syncNpcs()
+    }
     if (this.busy) return
 
     if (this.dialogue.isOpen) {
@@ -328,7 +342,16 @@ export class WorldScene extends Phaser.Scene {
 
   /** 不闲逛的 NPC（站在地图定义的位置上） */
   private staticNpcAt(x: number, y: number): NpcDef | null {
-    return visibleNpcs(this.map, hasFlag).find((n) => n.x === x && n.y === y && !this.walkers.owns(n)) ?? null
+    return this.roster.staticAt(x, y)
+  }
+
+  /**
+   * 旗标（昼夜 / 天气 / 剧情）变化后同步 NPC：路人回家 / 出门、采集点消失等，不重进地图
+   * @author zjh
+   * @date 2026-10-15
+   */
+  private syncNpcs(): void {
+    this.roster.sync(hasFlag, (x, y) => (x === this.tileX && y === this.tileY) || !!this.eventView.uniqueAt(x, y))
   }
 
   /** 没有对话、菜单、钓鱼、过场在进行 */
@@ -435,7 +458,11 @@ export class WorldScene extends Phaser.Scene {
       const wt = GameState.weatherAt(this.map.id)
       if (wt) this.flashToast(`${WEATHER_INFO[wt].icon} 天气变成了「${WEATHER_INFO[wt].label}」`)
     }
-    if (res.clock.phaseChanged || res.clock.weatherChanged) this.refreshAtmosphere()
+    if (res.clock.phaseChanged || res.clock.weatherChanged) {
+      this.refreshAtmosphere()
+      GameState.snapshotSceneFlags(this.map.id)
+      this.syncNpcs()
+    }
 
     if (res.phenomenonFaded) {
       this.flashToast(`「${res.phenomenonFaded.name}」渐渐消散了……`)
@@ -564,6 +591,7 @@ export class WorldScene extends Phaser.Scene {
         )
       },
       redraw: () => this.restartMap(),
+      refreshNpcs: () => this.syncNpcs(),
     }
   }
 
@@ -571,13 +599,14 @@ export class WorldScene extends Phaser.Scene {
     this.toaster.show(msg)
   }
 
-  /** 夜晚光源：玩家提灯 + 地图上的火光（世界坐标换算为屏幕坐标） */
+  /** 夜晚光源：玩家提灯 + 地图上的火光 + 发光菇（世界坐标换算为屏幕坐标） */
   private updateLights(): void {
     const cam = this.cameras.main
     const toScreen = (x: number, y: number, r: number) => ({ x: x - cam.scrollX, y: y - cam.scrollY, r })
     this.weather.setLights([
       toScreen(this.player.x, this.player.y - 4, 84),
       ...this.fireLights.map((l) => toScreen(l.x, l.y, 70)),
+      ...this.roster.glows().map((l) => toScreen(l.x, l.y, 30)),
     ])
   }
 

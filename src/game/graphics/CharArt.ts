@@ -9,6 +9,7 @@
  */
 
 import Phaser from 'phaser'
+import { MUSHROOMS, mushTexture } from '../data/mushrooms'
 import type { Facing } from '../state/GameState'
 
 const FRAME_W = 32
@@ -70,6 +71,7 @@ const NPC_ACTOR: Record<string, string> = {
   forest_patrol: 'patrol',
   kindler: 'kindler',
   forest_herbalist: 'herbalist',
+  mushroom_granny: 'mushgranny',
 }
 
 export type CharSheet = 'char-player' | 'char-npcs' | 'char-npcs2' | 'char-npcs3'
@@ -89,6 +91,8 @@ export function preloadCharArt(scene: Phaser.Scene): void {
   for (const name of new Set(Object.values(NPC_ACTOR))) {
     scene.load.spritesheet(`actor-${name}`, `assets/chars/actor-${name}.png`, frame)
   }
+  // 菇菇派对的采集点（scripts/process-props.py 生成）
+  for (const m of MUSHROOMS) scene.load.image(mushTexture(m.id), `assets/props/mush-${m.id}.png`)
 }
 
 /** 玩家实际使用的图集：有生成的行走帧就用它（站立帧相同，迈步帧更明显） */

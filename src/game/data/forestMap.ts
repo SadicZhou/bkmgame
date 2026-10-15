@@ -7,6 +7,7 @@
 
 import { TS, parseAscii } from './mapKit'
 import type { MapDef, NpcDef } from './maps'
+import { MUSH_GRANNY, mushroomSpots } from './mushrooms'
 
 /** 第三章旗标 */
 export const FOREST_FLAGS = {
@@ -190,6 +191,7 @@ export function buildForest(): MapDef {
         patrol: [{ x: 17, y: 17 }],
         patrolLook: 'up',
         sight: 3,
+        rematchDays: 2,
         lines: [],
         team: [
           { speciesId: 'sproutcap', level: 21 },
@@ -201,6 +203,8 @@ export function buildForest(): MapDef {
       },
       ...signs(),
       ...stones(),
+      MUSH_GRANNY,
+      ...mushroomSpots(),
       {
         id: 'forest_vines',
         name: '藤蔓',

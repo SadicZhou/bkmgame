@@ -26,10 +26,12 @@ export function showEmote(
   hold = 1400,
 ): Phaser.GameObjects.Text {
   const style = EMOTE_STYLE[text] ?? DEFAULT_STYLE
+  // 闲聊短句比单个表情长：字号小一些、不加粗
+  const line = text.length > 2
   const t = scene.add
     .text(follow.x, follow.y + dy, text, {
-      fontSize: '14px',
-      fontStyle: 'bold',
+      fontSize: line ? '11px' : '14px',
+      fontStyle: line ? 'normal' : 'bold',
       color: style.color,
       backgroundColor: style.bg,
       padding: { x: 5, y: 2 },

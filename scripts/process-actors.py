@@ -31,7 +31,7 @@ FRAME_W, FRAME_H = walk.FRAME_W, walk.FRAME_H
 # 第 3 行站立帧的朝向
 SIDE = {"kid": "right"}
 # 身高系数（相对撑满 40px 帧高）
-SCALE = {"kid": 0.84, "florist": 0.92, "washer": 0.92, "farmer": 0.94, "angler": 0.92, "fishergirl": 0.9}
+SCALE = {"kid": 0.84, "florist": 0.92, "washer": 0.92, "farmer": 0.94, "angler": 0.92, "fishergirl": 0.9, "mushgranny": 0.86}
 # 个别原图某方向画错了列：方向行号 → 改用的列号
 COL = {"scout2": {1: 1}}
 

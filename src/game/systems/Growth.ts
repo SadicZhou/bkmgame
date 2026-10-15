@@ -185,6 +185,7 @@ export function normalizeCreature(raw: LegacyCreature): CreatureInstance {
     shiny: raw.shiny ?? false,
     strong: raw.strong,
     friendship: raw.friendship ?? Math.min(150, level * 5),
+    fruitUsed: raw.fruitUsed ?? 0,
     status: raw.status ?? null,
     caughtInfo: raw.caughtInfo,
   }

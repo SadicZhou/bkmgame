@@ -62,6 +62,8 @@ export interface CreatureInstance {
   strong?: boolean
   /** 亲密度 0~255 */
   friendship: number
+  /** 已使用资质果次数 */
+  fruitUsed?: number
   /** 主状态异常（战斗外保留，回血点解除） */
   status?: StatusId | null
   caughtInfo?: CaughtInfo

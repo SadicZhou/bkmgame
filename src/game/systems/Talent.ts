@@ -86,3 +86,37 @@ export function awakenBonus(grade: TalentGrade): number {
 
 /** 觉醒等级 */
 export const AWAKEN_LEVEL = 25
+
+/** 每只伙伴最多使用资质果次数 */
+export const FRUIT_LIMIT = 5
+
+/** 资质果作用对象：只需资质与已用次数 */
+export interface FruitTarget {
+  talent: Talent
+  fruitUsed?: number
+}
+
+/**
+ * 检查能否对某项资质使用资质果；可用返回 null，否则返回原因
+ * @author zjh
+ * @date 2026-10-15
+ */
+export function fruitBlock(c: FruitTarget, stat?: StatKey): string | null {
+  if ((c.fruitUsed ?? 0) >= FRUIT_LIMIT) return `已经吃过 ${FRUIT_LIMIT} 颗资质果了`
+  if (stat && c.talent[stat] >= TALENT_MAX) return '这项资质已经满了'
+  if (!stat && STAT_KEYS.every((k) => c.talent[k] >= TALENT_MAX)) return '资质已经全满了'
+  return null
+}
+
+/**
+ * 使用资质果：指定一项 +gain（上限 20），计入次数；返回实际增加量（不可用时为 0）
+ * @author zjh
+ * @date 2026-10-15
+ */
+export function applyFruit(c: FruitTarget, stat: StatKey, gain = 2): number {
+  if (fruitBlock(c, stat)) return 0
+  const before = c.talent[stat]
+  c.talent[stat] = Math.min(TALENT_MAX, before + gain)
+  c.fruitUsed = (c.fruitUsed ?? 0) + 1
+  return c.talent[stat] - before
+}

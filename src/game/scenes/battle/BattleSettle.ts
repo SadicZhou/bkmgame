@@ -14,6 +14,8 @@ import { settleStoryBattle, type StoryOutcome } from '../../systems/BattleOutcom
 import { FRIENDSHIP_GAIN } from '../../systems/Bond'
 import { addFriendship } from '../../systems/Growth'
 import { endPhenomenon } from '../../systems/Phenomenon'
+import { rematchCountKey, winDayKey } from '../../systems/Rematch'
+import { dayOf } from '../../systems/WorldClock'
 
 /** 战斗结束后要去的场景（不填为回到大地图） */
 export type BattleNext = StoryOutcome['next']
@@ -68,7 +70,14 @@ export function settleBattle(b: BattleState, pending: PendingBattle): BattleSett
   if (b.won || b.fled || pending.allyParty) {
     if (b.won) {
       GameState.coins += b.coinsEarned
-      if (pending.flagOnWin) GameState.setFlag(pending.flagOnWin, true)
+      if (pending.flagOnWin) {
+        GameState.setFlag(pending.flagOnWin, true)
+        if (pending.kind === 'trainer') GameState.setFlag(winDayKey(pending.flagOnWin), dayOf(GameState.world.totalSteps))
+        if (pending.rematch) {
+          const k = rematchCountKey(pending.flagOnWin)
+          GameState.setFlag(k, Number(GameState.getFlag(k) ?? 0) + 1)
+        }
+      }
       for (const f of pending.winFlags ?? []) GameState.setFlag(f, true)
       if (pending.winLines?.length) GameState.notices.push(...pending.winLines)
     } else if (pending.allyParty) {

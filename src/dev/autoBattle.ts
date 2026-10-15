@@ -79,7 +79,7 @@ export function healPlan(b: BattleState, count: (id: string) => number): { bagRo
   if (me.hp <= 0 || me.hp / me.maxHp >= HEAL_BELOW) return null
   const itemId = HEAL_ITEMS.find((id) => count(id) > 0)
   if (!itemId) return null
-  const bag = ITEM_ORDER.filter((id) => count(id) > 0 && ITEMS[id].kind !== 'key')
+  const bag = ITEM_ORDER.filter((id) => count(id) > 0 && ITEMS[id].kind !== 'key' && ITEMS[id].kind !== 'talent')
   return { bagRow: bag.indexOf(itemId), target: b.activeIndex }
 }
 

@@ -10,6 +10,7 @@ import { BRIDGE_FLAG } from '../../data/lakeMap'
 import { GameState } from '../../state/GameState'
 import { anglerStory } from './AnglerStory'
 import { FOREST_STORIES } from './ForestStory'
+import { MUSHROOM_STORIES } from './MushroomStory'
 
 /** WorldScene 提供给剧情脚本的能力 */
 export interface StoryHost {
@@ -22,6 +23,8 @@ export interface StoryHost {
   playBridge(): void
   /** 剧情改变了地图（NPC 出现 / 消失、装饰切换）后淡出重进当前地图 */
   redraw(): void
+  /** 剧情只增减了 NPC / 采集点：原地淡入淡出，不重进地图 */
+  refreshNpcs(): void
 }
 
 /** 第三章开场：灯台点亮后，泉守汐指向回音林 */
@@ -94,7 +97,7 @@ function lakeShio(host: StoryHost, name: string): void {
   say(['湖面的冰化了，灯台又亮了。', '沧澜鲸说，好钓竿是它送给你的谢礼——湖底深处的伙伴也会被吸引过来哦。', '回音林就在湖畔东边，苔应该也在那里。'])
 }
 
-const STORIES: Record<string, StoryFn> = { lake_shio: lakeShio, angler: anglerStory, ...FOREST_STORIES }
+const STORIES: Record<string, StoryFn> = { lake_shio: lakeShio, angler: anglerStory, ...FOREST_STORIES, ...MUSHROOM_STORIES }
 
 /**
  * 执行 NPC 的剧情脚本；没有对应脚本返回 false

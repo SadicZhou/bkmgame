@@ -9,6 +9,7 @@ import { DEX_ORDER, SPECIES, TYPE_LABEL, UNIQUE_ORDER, battleName, spriteKey, ty
 import { BADGES, ownedBadges } from '../data/badges'
 import { FISH_ORDER } from '../data/fishing'
 import { ITEMS, ITEM_ORDER, SHOP_STOCK } from '../data/items'
+import { MUSH_FLAGS } from '../data/mushrooms'
 import { PHENOMENA } from '../data/phenomena'
 import { GameState } from '../state/GameState'
 import { Sfx } from '../systems/AudioBeeps'
@@ -17,6 +18,7 @@ import { BOND_FLAG, FRIENDSHIP_GAIN, bondBar, bondStage, nextBondStage } from '.
 import { anglerRecord, beatsRecord, fishLogCount, todayContest } from '../systems/FishLog'
 import { abilityDetail, creatureDetail, rowLabel } from './CreatureInfo'
 import { ListPanel, type ListRow } from './ListPanel'
+import { openTalentFruit } from './TalentFruitMenu'
 
 export interface WorldMenuHooks {
   toast: (msg: string) => void
@@ -63,7 +65,9 @@ export class WorldMenus {
         {
           label: '徽记',
           right: `${badges.length}/${Object.keys(BADGES).length}`,
-          detail: badges.length ? badges.map((b) => `◆ ${b.name}：${b.desc}`).join('\n') : '击败各章节的守护兽后可以获得徽记。',
+          detail:
+            (badges.length ? badges.map((b) => `◆ ${b.name}：${b.desc}`).join('\n') : '击败各章节的守护兽后可以获得徽记。') +
+            (GameState.hasFlag(MUSH_FLAGS.title) ? '\n称号：菇菇朋友（伞灵菇老奶奶）' : ''),
           onSelect: () => Sfx.cancel(),
         },
         {
@@ -171,6 +175,10 @@ export class WorldMenus {
           }
           if (it.kind === 'lure' || it.kind === 'repel') {
             this.useFieldItem(id, i)
+            return
+          }
+          if (it.kind === 'talent') {
+            openTalentFruit(this.panel, id, { ...this.hooks, back: () => this.openBag(0) })
             return
           }
           this.openItemTarget(id, i)

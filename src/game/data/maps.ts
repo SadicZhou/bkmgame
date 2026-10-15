@@ -70,8 +70,8 @@ export interface NpcDef {
   challengeLines?: string[]
   /** 被击败后的台词 */
   afterLines?: string[]
-  /** 需要该旗标才出现 */
-  showIf?: string
+  /** 需要该旗标（数组时需全部满足）才出现；「@」开头的含义同 hideIf */
+  showIf?: string | string[]
   /**
    * 有该旗标（任一）后消失。以「@」开头的是进图时的时间 / 天气：
    * @night 夜晚、@rain 当前地图下雨（如路人夜里回家、雨天收摊）
@@ -105,6 +105,12 @@ export interface NpcDef {
   sight?: number
   /** 玩家停在身边时冒出的表情（如「♪」）；不填则只转身 */
   emote?: string
+  /** 路人闲聊：和附近的路人面对面时轮流冒出的短句（不填则只用 emote 互动） */
+  chat?: string[]
+  /** prop 贴图轻轻上下浮动（如采集点） */
+  bob?: boolean
+  /** 训练家再战：击败后隔这么多天可以再次挑战（等级随队伍成长） */
+  rematchDays?: number
 }
 
 export interface MapDef {
@@ -172,6 +178,7 @@ function buildTown(): MapDef {
         color: 0xc49a6c,
         wander: 1,
         emote: '…',
+        chat: ['今天风真暖。', '嗯，嗯。', '年轻真好啊。'],
         lines: [
           '欢迎来到晨曦小镇，焰迹旅人。',
           '余烬山巅的火种最近忽明忽暗，守护它的熔鬃狮变得焦躁不安。',
@@ -215,6 +222,7 @@ function buildTown(): MapDef {
         color: 0xf0a0c0,
         wander: 3,
         emote: '♪',
+        chat: ['一起玩吧！', '翠叶狐！', '嘿嘿～'],
         hideIf: '@night',
         lines: [
           '我在草丛里看见一只翠叶狐！',
@@ -229,6 +237,7 @@ function buildTown(): MapDef {
         color: 0x5a7ec8,
         wander: 2,
         emote: '♪',
+        chat: ['番茄红啦！', '吃饭了没？', '哈哈哈！'],
         hideIf: '@night',
         lines: ['今年的番茄长得特别好！都是托了火种的福。', '草地上的岩甲虫老爱啃我的篱笆……不过它们挺可爱的。'],
         progressLines: [
@@ -244,6 +253,7 @@ function buildTown(): MapDef {
         color: 0xf0a040,
         wander: 2,
         emote: '♥',
+        chat: ['要花吗？', '好香呀～', '送你一朵！'],
         hideIf: ['@night', '@rain'],
         lines: ['要来一朵晨曦花吗？据说能让伙伴心情变好哦。', '傍晚的时候，花香会飘满整条街～'],
         progressLines: [
@@ -358,6 +368,7 @@ function buildMeadow(): MapDef {
         patrol: [{ x: 6, y: 5 }],
         patrolLook: 'down',
         sight: 3,
+        rematchDays: 2,
         lines: [],
         team: [
           { speciesId: 'leafkit', level: 5 },
@@ -428,6 +439,7 @@ function buildPass(): MapDef {
         patrol: [{ x: 3, y: 11 }],
         patrolLook: 'down',
         sight: 3,
+        rematchDays: 2,
         lines: [],
         team: [
           { speciesId: 'mistnewt', level: 9 },
@@ -586,7 +598,8 @@ export function resolveTile(map: MapDef, x: number, y: number, hasFlag: HasFlag)
  */
 export function visibleNpcs(map: MapDef, hasFlag: HasFlag): NpcDef[] {
   const hidden = (h: NpcDef['hideIf']) => (Array.isArray(h) ? h.some(hasFlag) : !!h && hasFlag(h))
-  return map.npcs.filter((n) => (!n.showIf || hasFlag(n.showIf)) && !hidden(n.hideIf))
+  const shown = (s: NpcDef['showIf']) => (Array.isArray(s) ? s.every(hasFlag) : !s || hasFlag(s))
+  return map.npcs.filter((n) => shown(n.showIf) && !hidden(n.hideIf))
 }
 
 /**

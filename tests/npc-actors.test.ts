@@ -145,9 +145,9 @@ describe('路人与行走图', () => {
     }
   })
 
-  it('A-06 四方向行走图已生成（14 人）', () => {
+  it('A-06 四方向行走图已生成（15 人）', () => {
     const names = ['elder', 'kid', 'ranger', 'hiker', 'farmer', 'florist', 'washer']
-    names.push('angler', 'scout1', 'scout2', 'patrol', 'kindler', 'fishergirl', 'herbalist')
+    names.push('angler', 'scout1', 'scout2', 'patrol', 'kindler', 'fishergirl', 'herbalist', 'mushgranny')
     for (const name of names) {
       expect(existsSync(resolve(__dirname, `../public/assets/chars/actor-${name}.png`)), name).toBe(true)
     }

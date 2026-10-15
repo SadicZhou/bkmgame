@@ -142,7 +142,7 @@ export class BattleMenus {
    */
   bag(): void {
     const { host, battle } = this
-    const ids = ITEM_ORDER.filter((id) => GameState.itemCount(id) > 0 && ITEMS[id].kind !== 'key')
+    const ids = ITEM_ORDER.filter((id) => GameState.itemCount(id) > 0 && ITEMS[id].kind !== 'key' && ITEMS[id].kind !== 'talent')
     const rows: ListRow[] = ids.map((id) => {
       const it = ITEMS[id]
       const targetless = it.kind === 'catch' || it.kind === 'lure' || it.kind === 'repel'

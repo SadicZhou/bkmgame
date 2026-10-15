@@ -7,7 +7,8 @@
 import type { StatusId } from './moves'
 
 /** key：重要物品（剧情获得，不能出售、不能在战斗中使用） */
-export type ItemKind = 'heal' | 'revive' | 'cure' | 'pp' | 'catch' | 'lure' | 'repel' | 'key'
+/** talent：资质果（野外对伙伴使用，指定一项资质 +value） */
+export type ItemKind = 'heal' | 'revive' | 'cure' | 'pp' | 'catch' | 'lure' | 'repel' | 'talent' | 'key'
 
 export interface ItemDef {
   id: string
@@ -33,6 +34,7 @@ export const ITEMS: Record<string, ItemDef> = {
   honey_berry: { id: 'honey_berry', name: '蜜安抚果', kind: 'catch', value: 1.8, price: 150, desc: '更香甜的安抚果，成功率约为普通安抚果的 1.8 倍。' },
   lure_bell: { id: 'lure_bell', name: '引兽铃', kind: 'lure', value: 100, price: 100, desc: '100 步内遇敌率 ×1.5，稀有伙伴出现率 ×2。' },
   repel: { id: 'repel', name: '驱兽香', kind: 'repel', value: 200, price: 80, desc: '200 步内，比首发等级低的野生伙伴不会靠近。' },
+  talent_fruit: { id: 'talent_fruit', name: '资质果', kind: 'talent', value: 2, price: 0, desc: '饱满的林间果实。指定伙伴的一项资质 +2（上限 20，每只最多 5 次）。只能在野外使用。' },
   old_rod: { id: 'old_rod', name: '旧钓竿', kind: 'key', value: 0, price: 0, desc: '泉守汐送的钓竿。面朝水面按确认就能钓鱼。' },
   good_rod: { id: 'good_rod', name: '好钓竿', kind: 'key', value: 0, price: 0, desc: '沧澜鲸的鳞片缠在竿头，能钓到更深处的伙伴。' },
 }
@@ -55,7 +57,7 @@ export const SHOP_STOCK: string[] = [
 ]
 
 /** 背包展示顺序 */
-export const ITEM_ORDER: string[] = [...SHOP_STOCK, ...KEY_ITEMS]
+export const ITEM_ORDER: string[] = [...SHOP_STOCK, 'talent_fruit', ...KEY_ITEMS]
 
 /** 队伍上限 */
 export const PARTY_LIMIT = 6

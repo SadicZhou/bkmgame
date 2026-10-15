@@ -5,6 +5,8 @@
  * - 原地（有四方向行走图的其余 NPC）：偶尔左右张望；
  * - 训练家视线（sight）：正前方 N 格内看见玩家就报告给场景；
  * - 玩家停在身边：转身面对玩家，并按 emote 冒表情。
+ * - 闲聊：chatPairs / faceOff 供 NpcChatter 让相邻路人面对面互动；
+ * - 昼夜 / 天气变化时由 NpcRoster 调用 add / remove 让路人出门或回家。
  * 对话 / 菜单 / 过场时原地停下。NPC 的「当前格子」以这里记录的为准（交互、碰撞都查这里）
  * @author zjh
  * @date 2026-10-15
@@ -85,7 +87,11 @@ export class NpcWalkers {
     this.scene = scene
     this.host = host
     this.sightLayer = scene.add.graphics().setDepth(SIGHT_DEPTH)
-    this.walkers = bodies.map((body) => ({
+    this.walkers = bodies.map((body) => this.makeWalker(body))
+  }
+
+  private makeWalker(body: WalkerBody): Walker {
+    return {
       body,
       x: body.npc.x,
       y: body.npc.y,
@@ -97,7 +103,63 @@ export class NpcWalkers {
       leg: 1,
       legDir: 1,
       emoteCd: 0,
-    }))
+    }
+  }
+
+  /** 中途加入（如天亮后路人出门） */
+  add(body: WalkerBody): void {
+    this.walkers.push(this.makeWalker(body))
+  }
+
+  /**
+   * 中途移除（如入夜后路人回家）：从系统中摘除并返回显示部件，由调用方淡出销毁
+   * @author zjh
+   * @date 2026-10-15
+   */
+  remove(npc: NpcDef): WalkerBody | null {
+    const i = this.walkers.findIndex((w) => w.body.npc === npc)
+    if (i < 0) return null
+    const [w] = this.walkers.splice(i, 1)
+    this.scene.tweens.killTweensOf([w.body.spr, w.body.shadow])
+    w.body.spr.anims.stop()
+    return w.body
+  }
+
+  /**
+   * 闲聊候选：都停着、都设了表情、彼此相距 1～2 格且之间没有阻挡的一对路人
+   * @author zjh
+   * @date 2026-10-15
+   */
+  chatPairs(): [NpcDef, NpcDef][] {
+    const idle = this.walkers.filter((w) => !w.moving && !w.route.length && !w.body.npc.sight && w.body.npc.emote && w.emoteCd <= 0)
+    const pairs: [NpcDef, NpcDef][] = []
+    for (let i = 0; i < idle.length; i++) {
+      for (let j = i + 1; j < idle.length; j++) {
+        const a = idle[i]
+        const b = idle[j]
+        const d = Math.abs(a.x - b.x) + Math.abs(a.y - b.y)
+        if (d >= 1 && d <= 2 && (a.x === b.x || a.y === b.y)) pairs.push([a.body.npc, b.body.npc])
+      }
+    }
+    return pairs
+  }
+
+  /**
+   * 两人面对面停下来聊一会儿；返回双方的精灵（用于冒气泡），任一方不可用时返回 null
+   * @author zjh
+   * @date 2026-10-15
+   */
+  faceOff(a: NpcDef, b: NpcDef, holdMs: number, cooldown: number): [Phaser.GameObjects.Sprite, Phaser.GameObjects.Sprite] | null {
+    const wa = this.find(a)
+    const wb = this.find(b)
+    if (!wa || !wb || wa.moving || wb.moving) return null
+    this.face(wa, towards(wa.x, wa.y, wb.x, wb.y))
+    this.face(wb, towards(wb.x, wb.y, wa.x, wa.y))
+    for (const w of [wa, wb]) {
+      w.wait = Math.max(w.wait, holdMs)
+      w.emoteCd = cooldown
+    }
+    return [wa.body.spr, wb.body.spr]
   }
 
   /** 某格上的 NPC（含正在走向该格的） */

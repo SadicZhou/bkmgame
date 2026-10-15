@@ -43,6 +43,8 @@ export interface PendingBattle {
   winLines?: string[]
   /** 胜利后额外写入的旗标 */
   winFlags?: string[]
+  /** 训练家再战（胜利后累计再战次数） */
+  rematch?: boolean
   /** 战斗场地天气（室内 / 城镇为 null） */
   weather: Weather | null
   night: boolean

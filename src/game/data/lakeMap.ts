@@ -115,6 +115,7 @@ export function buildLake(): MapDef {
         patrol: [{ x: 12, y: 13 }],
         patrolLook: 'up',
         sight: 3,
+        rematchDays: 2,
         hideIf: '@night',
         lines: [],
         team: [

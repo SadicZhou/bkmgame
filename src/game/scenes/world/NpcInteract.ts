@@ -11,6 +11,8 @@ import type { PhenomenonDef } from '../../data/phenomena'
 import { GameState } from '../../state/GameState'
 import { Sfx } from '../../systems/AudioBeeps'
 import { uniqueForBattle } from '../../systems/Phenomenon'
+import { rematchCountKey, rematchReady, rematchTeam } from '../../systems/Rematch'
+import { dayOf } from '../../systems/WorldClock'
 import { runStory, type StoryHost } from './StoryEvents'
 import type { WorldHost } from './WorldHost'
 
@@ -97,6 +99,14 @@ export class NpcInteract {
    */
   private talkFighter(npc: NpcDef, say: (lines: string[], after?: () => void) => void): void {
     const beaten = npc.defeatedKey ? GameState.getFlag(npc.defeatedKey) : true
+    if (beaten && rematchReady(npc, (k) => GameState.getFlag(k), dayOf(GameState.world.totalSteps))) {
+      if (!this.host.hasAbleCreature()) {
+        say(['又见面了！不过你的伙伴们看起来很累……休息好了再来找我比一场吧。'])
+        return
+      }
+      say(['又见面了！这几天我和伙伴们也练了不少。', '再来比一场吧——这次可不会输给你！'], () => this.startTrainerBattle(npc, true))
+      return
+    }
     if (beaten) {
       say(npc.afterLines ?? npc.lines)
       return
@@ -116,12 +126,15 @@ export class NpcInteract {
    * @author zjh
    * @date 2026-10-14
    */
-  private startTrainerBattle(npc: NpcDef): void {
+  private startTrainerBattle(npc: NpcDef, rematch = false): void {
     if (!npc.team?.length) return
     const first = npc.chainFirst ? this.host.map.npcs.find((n) => n.id === npc.chainFirst) : undefined
+    const top = Math.max(...GameState.party.map((c) => c.level))
+    const team = rematch && npc.defeatedKey ? rematchTeam(npc.team, top, Number(GameState.getFlag(rematchCountKey(npc.defeatedKey)) ?? 0)) : npc.team
     this.host.enterBattle({
       kind: npc.role === 'boss' ? 'boss' : 'trainer',
-      enemies: npc.team.map((m) => createCreature(m.speciesId, m.level)),
+      rematch,
+      enemies: team.map((m) => createCreature(m.speciesId, m.level)),
       trainerName: npc.name,
       flagOnWin: npc.defeatedKey,
       isBoss: npc.role === 'boss',
@@ -129,7 +142,7 @@ export class NpcInteract {
       chainResetFlags: first?.defeatedKey ? [first.defeatedKey] : undefined,
       allyParty: npc.ally?.team.map((m) => createCreature(m.speciesId, m.level)),
       allyName: npc.ally?.name,
-      winLines: npc.winLines,
+      winLines: rematch ? [`${npc.name}：还是你厉害！过几天我再来找你切磋。`] : npc.winLines,
       winFlags: npc.winFlags,
       ...this.host.returnInfo(),
     })
