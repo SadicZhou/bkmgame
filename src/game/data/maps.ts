@@ -5,9 +5,15 @@
  */
 
 import { decorBlocks } from './decor'
+import { buildLake } from './lakeMap'
+import { TS, borderWalls, fill, parseAscii, setRect } from './mapKit'
 
+/** ice 冰面（霜粒鹅遭遇格）· bridge 浮桥（开放前视为水面）· dock 码头木板 */
 export type TileKind =
   | 'grass'
+  | 'ice'
+  | 'bridge'
+  | 'dock'
   | 'path'
   | 'wall'
   | 'water'
@@ -61,6 +67,16 @@ export interface NpcDef {
   challengeLines?: string[]
   /** 被击败后的台词 */
   afterLines?: string[]
+  /** 需要该旗标才出现 */
+  showIf?: string
+  /** 有该旗标后消失 */
+  hideIf?: string
+  /** 剧情对话脚本 id（见 scenes/world/StoryEvents） */
+  story?: string
+  /** 连战：赢下本场后立即挑战的 NPC id */
+  chainNext?: string
+  /** 连战：本场是第二战，需先赢下的 NPC id（否则从第一战开始） */
+  chainFirst?: string
 }
 
 export interface MapDef {
@@ -81,67 +97,8 @@ export interface MapDef {
   bgColor: number
   /** 覆盖默认 path 地砖贴图（如山路） */
   pathTexture?: string
-}
-
-const TS = 32
-
-function fill(w: number, h: number, kind: TileKind): TileKind[] {
-  return Array.from({ length: w * h }, () => kind)
-}
-
-function setRect(
-  tiles: TileKind[],
-  w: number,
-  x0: number,
-  y0: number,
-  x1: number,
-  y1: number,
-  kind: TileKind,
-): void {
-  for (let y = y0; y <= y1; y++) {
-    for (let x = x0; x <= x1; x++) {
-      tiles[y * w + x] = kind
-    }
-  }
-}
-
-function borderWalls(tiles: TileKind[], w: number, h: number): void {
-  for (let x = 0; x < w; x++) {
-    tiles[x] = 'wall'
-    tiles[(h - 1) * w + x] = 'wall'
-  }
-  for (let y = 0; y < h; y++) {
-    tiles[y * w] = 'wall'
-    tiles[y * w + (w - 1)] = 'wall'
-  }
-}
-
-/** ASCII 图例 */
-const LEGEND: Record<string, TileKind> = {
-  '#': 'wall',
-  R: 'rock',
-  '.': 'path',
-  ',': 'grass',
-  '"': 'tall',
-  '^': 'ash',
-  '~': 'water',
-  W: 'warp',
-  D: 'door',
-  _: 'floor',
-}
-
-/**
- * 把等宽 ASCII 行解析为格子数组；行宽不足按墙补齐
- * @author zjh
- * @date 2026-10-14
- */
-function parseAscii(rows: string[]): { width: number; height: number; tiles: TileKind[] } {
-  const width = Math.max(...rows.map((r) => r.length))
-  const tiles: TileKind[] = []
-  for (const row of rows) {
-    for (let x = 0; x < width; x++) tiles.push(LEGEND[row[x] ?? '#'] ?? 'wall')
-  }
-  return { width, height: rows.length, tiles }
+  /** bridge 格在该旗标达成前视为水面 */
+  bridgeFlag?: string
 }
 
 /**
@@ -193,9 +150,18 @@ function buildTown(): MapDef {
         ],
         progressLines: [
           {
+            flag: 'whale_beaten',
+            lines: [
+              '山巅的火种、湖心的灯台都亮起来了。你和伙伴们真了不起！',
+              '可那些黑色灯罩……「熄灯会」到底想做什么呢？',
+              '各地的异象还在出现，有空就去旅人告示板看看吧。',
+            ],
+          },
+          {
             flag: 'boss_beaten',
             lines: [
               '火种又恢复了温暖的光，谢谢你，焰迹旅人！',
+              '泉守汐托人捎信来，说南边的雾泉湖畔结了怪冰——从青苔草地南口就能过去。',
               '不过……最近各地的心火波动得厉害，总有人说看见了奇怪的「异象」。',
               '流星、花海、地火……据说每种异象都会唤来一只独一无二的伙伴。',
               '去东边的旅人告示板看看传闻吧。',
@@ -284,10 +250,19 @@ function buildMeadow(): MapDef {
   }
   tiles[6 * w + 16] = 'warp'
   tiles[7 * w + 16] = 'warp'
+  // 南口：通往雾泉湖畔（第二章）
+  for (let x = 8; x <= 9; x++) {
+    tiles[10 * w + x] = 'path'
+    tiles[11 * w + x] = 'warp'
+  }
 
   const passLock = {
     requireFlag: 'ranger_beaten',
     lockedLines: ['前方是余烬山道，山路险峻。', '（巡护员苔守在这一带——先向他证明你的实力吧。）'],
+  }
+  const lakeLock = {
+    requireFlag: 'lake_unlocked',
+    lockedLines: ['南边的小路被浓雾挡住了，什么也看不清。', '（等余烬山巅的火种安定下来，再来看看吧。）'],
   }
 
   return {
@@ -305,6 +280,8 @@ function buildMeadow(): MapDef {
       { x: 1, y: 7, targetMap: 'town', targetX: 13, targetY: 7, label: '晨曦小镇' },
       { x: 16, y: 6, targetMap: 'pass', targetX: 2, targetY: 18, label: '余烬山道', ...passLock },
       { x: 16, y: 7, targetMap: 'pass', targetX: 2, targetY: 18, label: '余烬山道', ...passLock },
+      { x: 8, y: 11, targetMap: 'lake', targetX: 9, targetY: 13, label: '雾泉湖畔', ...lakeLock },
+      { x: 9, y: 11, targetMap: 'lake', targetX: 10, targetY: 13, label: '雾泉湖畔', ...lakeLock },
     ],
     npcs: [
       {
@@ -478,6 +455,7 @@ export const MAPS: Record<string, MapDef> = {
   meadow: buildMeadow(),
   pass: buildPass(),
   cabin: buildCabin(),
+  lake: buildLake(),
 }
 
 /**
@@ -490,7 +468,7 @@ export function openTiles(map: MapDef): { x: number; y: number }[] {
   for (let y = 0; y < map.height; y++) {
     for (let x = 0; x < map.width; x++) {
       const k = map.tiles[y * map.width + x]
-      if (isSolid(k) || k === 'warp' || k === 'door' || decorBlocks(map.id, x, y)) continue
+      if (isSolid(k) || k === 'warp' || k === 'door' || k === 'bridge' || decorBlocks(map.id, x, y)) continue
       if (map.npcs.some((n) => n.x === x && n.y === y)) continue
       if (map.warps.some((w) => w.x === x && w.y === y)) continue
       out.push({ x, y })
@@ -499,6 +477,7 @@ export function openTiles(map: MapDef): { x: number; y: number }[] {
   return out
 }
 
+/** bridge 只在 resolveTile 之后出现，此时已确定可走 */
 export function isSolid(kind: TileKind): boolean {
   return kind === 'wall' || kind === 'water' || kind === 'rock'
 }
@@ -508,9 +487,33 @@ export function isTallGrass(kind: TileKind): boolean {
   return kind === 'tall' || kind === 'ash'
 }
 
+/** 原始格子（不考虑剧情旗标） */
 export function tileAt(map: MapDef, x: number, y: number): TileKind | null {
   if (x < 0 || y < 0 || x >= map.width || y >= map.height) return null
   return map.tiles[y * map.width + x]
+}
+
+/** 剧情旗标判定 */
+export type HasFlag = (k: string) => boolean
+
+/**
+ * 按剧情状态解析后的格子：浮桥未开放时为水面。碰撞、渲染、钓鱼判定都应使用它
+ * @author zjh
+ * @date 2026-10-15
+ */
+export function resolveTile(map: MapDef, x: number, y: number, hasFlag: HasFlag): TileKind | null {
+  const k = tileAt(map, x, y)
+  if (k === 'bridge' && map.bridgeFlag && !hasFlag(map.bridgeFlag)) return 'water'
+  return k
+}
+
+/**
+ * 当前剧情状态下可见的 NPC
+ * @author zjh
+ * @date 2026-10-15
+ */
+export function visibleNpcs(map: MapDef, hasFlag: HasFlag): NpcDef[] {
+  return map.npcs.filter((n) => (!n.showIf || hasFlag(n.showIf)) && !(n.hideIf && hasFlag(n.hideIf)))
 }
 
 /**

@@ -23,7 +23,7 @@ PAD = 0.06
 # 与 CritterPalettes.shinyPalette 一致的色相偏移
 SHINY_HUE_SHIFT = 0.42
 # 半透明雾气 / 水花在品红底上会染成粉紫色，这些物种需要去溢色
-DESPILL = {"mistnewt", "wavefin"}
+DESPILL = {"mistnewt", "wavefin", "bubblefin", "coralfin", "tidewhale"}
 
 
 def is_key(r: int, g: int, b: int) -> bool:

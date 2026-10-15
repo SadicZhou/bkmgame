@@ -63,7 +63,7 @@ export class EndingScene extends Phaser.Scene {
     }
 
     const title = this.add
-      .text(width / 2, 60, '火种重燃', {
+      .text(width / 2, 60, '雾散灯明', {
         fontFamily: 'Georgia, "Songti SC", serif',
         fontSize: '40px',
         color: '#ffe08a',
@@ -73,9 +73,9 @@ export class EndingScene extends Phaser.Scene {
     this.tweens.add({ targets: title, alpha: 1, y: 70, duration: 1200 })
 
     const lines = [
-      '你和伙伴们平息了熔鬃狮的躁动，',
-      '余烬山巅的火种重新温暖了晨曦小镇。',
-      '焰迹旅人的故事，被镇上的孩子们传唱开来。',
+      '山巅的火种重燃，湖心的灯台也再次亮起。',
+      '沧澜鲸的长鸣让雾泉湖畔恢复了平静。',
+      '可那些黑色灯罩是谁留下的？焰迹旅人的旅途，还在继续……',
     ]
     lines.forEach((l, i) => {
       const t = this.add

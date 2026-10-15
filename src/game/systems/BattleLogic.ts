@@ -14,6 +14,7 @@ import {
   type MoveDef,
 } from '../data/creatures'
 import { ITEMS, PARTY_LIMIT, catchChance } from '../data/items'
+import type { ElementType } from '../data/types'
 import { WEATHER_INFO, type Weather } from '../data/weather'
 import { guaranteedEscape, isType, onContact, onEnter, onFaint, onHit, onTurnEnd, tryEndure } from './AbilityHooks'
 import { chooseEnemyMove } from './BattleAI'
@@ -47,6 +48,8 @@ export interface BattleOptions {
   weather?: Weather | null
   night?: boolean
   token?: boolean
+  /** 玩家徽记属性 */
+  badges?: ElementType[]
 }
 
 /**
@@ -79,6 +82,7 @@ export function startBattle(
     mapWeather: opts.weather ?? null,
     night: !!opts.night,
     token: !!opts.token,
+    badges: opts.badges ?? [],
     vol: {},
     pendingLearns: [],
     turn: 1,

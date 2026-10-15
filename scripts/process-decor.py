@@ -27,6 +27,7 @@ SINGLE = {
 # 素材表：原图名 → 从左到右每段的（名称, 宽度）
 SHEETS = {
     "props": [("plant", 26), ("well", 40), ("stall", 70)],
+    "lakeprops": [("lighthouse-dark", 60), ("lighthouse", 60), ("reeds", 30)],
 }
 
 

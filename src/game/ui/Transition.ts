@@ -18,9 +18,9 @@ export function fadeIn(scene: Phaser.Scene, ms = FADE_MS): void {
  * @author zjh
  * @date 2026-10-14
  */
-export function fadeToScene(scene: Phaser.Scene, key: string, ms = FADE_MS): void {
+export function fadeToScene(scene: Phaser.Scene, key: string, ms = FADE_MS, data?: object): void {
   const cam = scene.cameras.main
-  cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => scene.scene.start(key))
+  cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => scene.scene.start(key, data))
   cam.fadeOut(ms, 0, 0, 0)
 }
 

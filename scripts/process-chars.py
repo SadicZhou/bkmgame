@@ -22,6 +22,7 @@ FRAME_H = 40
 SHEETS = {
     "player": (3, 4),
     "npcs": (3, 3),
+    "npcs2": (3, 1),
 }
 
 

@@ -6,19 +6,34 @@
  */
 
 import Phaser from 'phaser'
-import { NPC_FRAME, anchorFeet, hasCharArt, idleFrame, registerCharAnims } from '../graphics/CharArt'
+import { anchorFeet, hasCharArt, idleFrame, npcArt, registerCharAnims } from '../graphics/CharArt'
 import { setCreatureScale } from '../graphics/CreatureArt'
 import { SPECIES, battleName, createCreature, type CreatureInstance } from '../data/creatures'
 import { decorBlocks } from '../data/decor'
 import { ITEMS } from '../data/items'
-import { MAPS, isSolid, isTallGrass, npcLines, tileAt, type MapDef, type NpcDef, type TileKind, type WarpDef } from '../data/maps'
+import {
+  MAPS,
+  isSolid,
+  isTallGrass,
+  npcLines,
+  resolveTile,
+  visibleNpcs,
+  type MapDef,
+  type NpcDef,
+  type TileKind,
+  type WarpDef,
+} from '../data/maps'
+import { canFishAt, rodKindOf } from '../systems/Fishing'
+import { FishingOverlay } from '../ui/FishingOverlay'
+import { runStory } from './world/StoryEvents'
+import { Toaster, playBridgeCutscene, rustleAt, showMapBanner } from './world/WorldFx'
 import { MINOR_EVENTS, PHENOMENON_RULES, type PhenomenonDef } from '../data/phenomena'
 import { WEATHER_INFO } from '../data/weather'
 import { GameState, type Facing } from '../state/GameState'
 import { Sfx } from '../systems/AudioBeeps'
 import { activePhenomenon, uniqueForBattle } from '../systems/Phenomenon'
 import { isFullMoon, timeLabel } from '../systems/WorldClock'
-import { stepWorld, type StepResult } from '../systems/WorldTick'
+import { hasFishing, rollFishing, stepWorld, type StepResult } from '../systems/WorldTick'
 import { decorLights, renderDecor } from '../ui/DecorLayer'
 import { DialogueBox } from '../ui/DialogueBox'
 import { renderMap } from '../ui/MapRenderer'
@@ -49,7 +64,13 @@ const AMBIENT_BY_MAP: Record<string, AmbientKind> = {
   town: 'fireflies',
   meadow: 'fireflies',
   pass: 'embers',
+  lake: 'fireflies',
 }
+
+const hasFlag = GameState.hasFlag
+
+/** 大地图上守护兽立绘的缩放（默认 0.8；沧澜鲸是巨鲸，要大一些） */
+const BOSS_MAP_SCALE: Record<string, number> = { tidewhale: 1.5 }
 
 /** 唯一精灵等级范围 */
 const UNIQUE_LEVEL = { min: 12, max: 50 }
@@ -74,8 +95,10 @@ export class WorldScene extends Phaser.Scene {
   /** 是否使用 AI 行走图（缺图时回退到代码绘制） */
   private charArt = false
   private playerShadow!: Phaser.GameObjects.Ellipse
-  /** 火盆 / 壁炉位置（世界坐标），夜里照亮周围 */
+  /** 火盆 / 壁炉 / 灯台位置（世界坐标），夜里照亮周围 */
   private fireLights: { x: number; y: number }[] = []
+  private fishing!: FishingOverlay
+  private toaster!: Toaster
 
   constructor() {
     super('World')
@@ -121,7 +144,9 @@ export class WorldScene extends Phaser.Scene {
 
     this.weather = new WeatherLayer(this, 400)
     this.weather.setAmbient(AMBIENT_BY_MAP[this.map.id] ?? null)
-    this.fireLights = decorLights(this.map)
+    this.fireLights = decorLights(this.map, hasFlag)
+    this.fishing = new FishingOverlay(this)
+    this.toaster = new Toaster(this)
     this.refreshAtmosphere()
 
     this.hudText = this.add
@@ -164,7 +189,26 @@ export class WorldScene extends Phaser.Scene {
     })
 
     fadeIn(this)
-    this.showMapBanner()
+    showMapBanner(this, this.map.name)
+    this.time.delayedCall(450, () => this.resumeStory())
+  }
+
+  /**
+   * 进入地图后：先播放待提示的说明（读档补齐、章节奖励），再接上连战的下一场
+   * @author zjh
+   * @date 2026-10-15
+   */
+  private resumeStory(): void {
+    const notices = GameState.notices.splice(0)
+    const chainId = GameState.chainNpcId
+    GameState.chainNpcId = null
+    const next = chainId ? visibleNpcs(this.map, hasFlag).find((n) => n.id === chainId) : undefined
+    const chain = () => {
+      if (!next || !this.hasAbleCreature()) return
+      this.dialogue.open((next.challengeLines ?? ['来对战吧！']).map((l) => `${next.name}：${l}`), () => this.startTrainerBattle(next))
+    }
+    if (notices.length) this.dialogue.open(notices, chain)
+    else chain()
   }
 
   update(_time: number, delta: number): void {
@@ -177,6 +221,11 @@ export class WorldScene extends Phaser.Scene {
 
     if (this.dialogue.isOpen) {
       if (input.confirm) this.dialogue.advance()
+      return
+    }
+    if (this.fishing.active) {
+      this.fishing.update()
+      if (input.confirm) this.fishing.confirm()
       return
     }
     if (this.menus.isOpen) {
@@ -197,8 +246,8 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private drawMap(): void {
-    renderMap(this, this.map)
-    renderDecor(this, this.map)
+    renderMap(this, this.map, hasFlag)
+    renderDecor(this, this.map, hasFlag)
   }
 
   /**
@@ -208,12 +257,12 @@ export class WorldScene extends Phaser.Scene {
    */
   private spawnNpcs(): void {
     const ts = this.map.tileSize
-    for (const npc of this.map.npcs) {
+    for (const npc of visibleNpcs(this.map, hasFlag)) {
       const cx = npc.x * ts + ts / 2
       const cy = npc.y * ts + ts / 2
       if (npc.role === 'boss') {
         const bossSpecies = npc.team?.[npc.team.length - 1]?.speciesId ?? 'magmane'
-        const spr = setCreatureScale(this.add.image(cx, cy, `spr-${bossSpecies}`), 0.8).setDepth(9)
+        const spr = setCreatureScale(this.add.image(cx, cy, `spr-${bossSpecies}`), BOSS_MAP_SCALE[bossSpecies] ?? 0.8).setDepth(9)
         this.tweens.add({ targets: spr, y: cy - 3, yoyo: true, repeat: -1, duration: 700 })
       } else if (npc.role === 'board') {
         this.add.image(cx, cy, 'spr-board').setDepth(9)
@@ -221,7 +270,7 @@ export class WorldScene extends Phaser.Scene {
         this.spawnPerson(npc, cx, cy)
       }
 
-      const tall = npc.role !== 'boss' && npc.role !== 'board' && this.npcHasArt(npc)
+      const tall = npc.role !== 'boss' && npc.role !== 'board' && !!npcArt(this, npc.id)
       const markY = tall ? cy - 32 : cy - 22
       const mark = this.npcMarkText(npc)
       if (mark) {
@@ -239,22 +288,19 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
-  private npcHasArt(npc: NpcDef): boolean {
-    return hasCharArt(this, 'char-npcs') && NPC_FRAME[npc.id] !== undefined
-  }
-
   /**
    * 人类 NPC：有行走图时用对应帧 + 脚下阴影 + 呼吸起伏，否则用着色的代码小人
    * @author zjh
    * @date 2026-10-14
    */
   private spawnPerson(npc: NpcDef, cx: number, cy: number): void {
-    if (!this.npcHasArt(npc)) {
+    const art = npcArt(this, npc.id)
+    if (!art) {
       this.add.sprite(cx, cy, 'spr-npc').setTint(npc.color).setDepth(9)
       return
     }
     this.add.ellipse(cx, cy + 13, 20, 7, 0x000000, 0.22).setDepth(8)
-    const spr = anchorFeet(this.add.sprite(cx, cy, 'char-npcs', NPC_FRAME[npc.id])).setDepth(9)
+    const spr = anchorFeet(this.add.sprite(cx, cy, art.key, art.frame)).setDepth(9)
     this.tweens.add({
       targets: spr,
       scaleY: 1.035,
@@ -296,7 +342,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private occupiedByNpc(x: number, y: number): NpcDef | null {
-    return this.map.npcs.find((n) => n.x === x && n.y === y) ?? null
+    return visibleNpcs(this.map, hasFlag).find((n) => n.x === x && n.y === y) ?? null
   }
 
   private tryMove(dx: number, dy: number): void {
@@ -304,7 +350,7 @@ export class WorldScene extends Phaser.Scene {
 
     const nx = this.tileX + dx
     const ny = this.tileY + dy
-    const tile = tileAt(this.map, nx, ny)
+    const tile = resolveTile(this.map, nx, ny, hasFlag)
     if (!tile || isSolid(tile) || decorBlocks(this.map.id, nx, ny) || this.occupiedByNpc(nx, ny) || this.eventView.uniqueAt(nx, ny)) return
 
     const fromX = this.tileX
@@ -344,9 +390,14 @@ export class WorldScene extends Phaser.Scene {
       return
     }
     const grass = isTallGrass(tile)
-    if (grass) this.rustleGrass()
-    const res = stepWorld(this.map.id, this.tileX, this.tileY, grass && this.map.outdoor)
-    this.handleStep(res)
+    const ice = tile === 'ice'
+    if (grass || ice) {
+      const ts = this.map.tileSize
+      const color = ice ? 0xe8f8ff : this.map.id === 'pass' ? 0xffb050 : 0x8fd99a
+      rustleAt(this, this.tileX * ts + ts / 2, this.tileY * ts + ts / 2, color)
+    }
+    const source = !this.map.outdoor ? null : grass ? 'grass' : ice ? 'ice' : null
+    this.handleStep(stepWorld(this.map.id, this.tileX, this.tileY, source))
   }
 
   private handleStep(res: StepResult): void {
@@ -429,25 +480,6 @@ export class WorldScene extends Phaser.Scene {
     cam.fadeOut(220, 0, 0, 0)
   }
 
-  /** 踩草时冒出几片小叶子 */
-  private rustleGrass(): void {
-    const ts = this.map.tileSize
-    const color = this.map.id === 'pass' ? 0xffb050 : 0x8fd99a
-    for (let i = 0; i < 3; i++) {
-      const leaf = this.add
-        .rectangle(this.tileX * ts + ts / 2, this.tileY * ts + ts / 2 + 6, 4, 4, color)
-        .setDepth(12)
-      this.tweens.add({
-        targets: leaf,
-        x: leaf.x + Phaser.Math.Between(-12, 12),
-        y: leaf.y - Phaser.Math.Between(8, 16),
-        alpha: 0,
-        duration: 320,
-        onComplete: () => leaf.destroy(),
-      })
-    }
-  }
-
   private facingTile(): { x: number; y: number } {
     const d = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] }[this.facing]
     return { x: this.tileX + d[0], y: this.tileY + d[1] }
@@ -466,9 +498,13 @@ export class WorldScene extends Phaser.Scene {
       return
     }
     const npc = this.occupiedByNpc(x, y)
-    if (!npc) return
+    if (!npc) {
+      this.tryFish(x, y)
+      return
+    }
     const say = (lines: string[], after?: () => void) =>
       this.dialogue.open(lines.map((l) => `${npc.name}：${l}`), after)
+    if (npc.story && runStory(npc.story, this.storyHost(), npc.name)) return
 
     switch (npc.role) {
       case 'healer':
@@ -505,7 +541,11 @@ export class WorldScene extends Phaser.Scene {
           say(['你的伙伴们都累坏了，先去休息吧。'])
           return
         }
-        say(npc.challengeLines ?? ['来对战吧！'], () => this.startTrainerBattle(npc))
+        // 连战第二位：第一位还没赢下时，从第一位开始
+        const first = npc.chainFirst ? this.map.npcs.find((n) => n.id === npc.chainFirst) : undefined
+        const foe = first?.defeatedKey && !GameState.getFlag(first.defeatedKey) ? first : npc
+        if (foe !== npc) say(['先过我同伴那一关吧。'], () => this.challenge(foe))
+        else this.challenge(npc)
         return
       }
       default:
@@ -533,18 +573,81 @@ export class WorldScene extends Phaser.Scene {
     battleTransition(this)
   }
 
+  /** 训练家开场台词 → 开战 */
+  private challenge(npc: NpcDef): void {
+    this.dialogue.open((npc.challengeLines ?? ['来对战吧！']).map((l) => `${npc.name}：${l}`), () => this.startTrainerBattle(npc))
+  }
+
+  /**
+   * 开启训练家 / 守护兽战；连战会带上下一位对手与失败时要回滚的旗标
+   * @author zjh
+   * @date 2026-10-14
+   */
   private startTrainerBattle(npc: NpcDef): void {
     if (!npc.team?.length) return
+    const first = npc.chainFirst ? this.map.npcs.find((n) => n.id === npc.chainFirst) : undefined
     GameState.pendingBattle = {
       kind: npc.role === 'boss' ? 'boss' : 'trainer',
       enemies: npc.team.map((m) => createCreature(m.speciesId, m.level)),
       trainerName: npc.name,
       flagOnWin: npc.defeatedKey,
       isBoss: npc.role === 'boss',
+      chainNpcId: npc.chainNext,
+      chainResetFlags: first?.defeatedKey ? [first.defeatedKey] : undefined,
       ...this.returnInfo(),
     }
     this.busy = true
     battleTransition(this)
+  }
+
+  /** 剧情脚本可调用的能力 */
+  private storyHost() {
+    return {
+      say: (lines: string[], after?: () => void) => this.dialogue.open(lines, after),
+      healParty: () => {
+        GameState.healAll()
+        this.refreshHud()
+        this.cameras.main.flash(250, 255, 240, 255)
+      },
+      toast: (m: string) => this.flashToast(m),
+      playBridge: () => {
+        this.busy = true
+        playBridgeCutscene(this, this.map, () => {
+          GameState.persist()
+          this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.restart())
+          this.cameras.main.fadeOut(400, 255, 255, 255)
+        })
+      },
+    }
+  }
+
+  /**
+   * 面朝水面按确认：有钓竿且本地图有钓鱼遭遇表时开始钓鱼
+   * @author zjh
+   * @date 2026-10-15
+   */
+  private tryFish(x: number, y: number): void {
+    if (!canFishAt(this.map, x, y, hasFlag)) return
+    const rod = rodKindOf((id) => GameState.itemCount(id))
+    if (!rod || !hasFishing(this.map.id, rod)) {
+      if (hasFishing(this.map.id, 'rod')) this.flashToast('水里好像有伙伴在游……要是有钓竿就好了')
+      return
+    }
+    if (!this.hasAbleCreature()) {
+      this.flashToast('伙伴们都累坏了，先去休息吧')
+      return
+    }
+    const ts = this.map.tileSize
+    this.fishing.start({ x: this.player.x, y: this.player.y }, { x: x * ts + ts / 2, y: y * ts + ts / 2 }, {
+      onEnd: (result) => {
+        if (result === 'early') return this.flashToast('还没咬钩……')
+        if (result === 'escaped') return this.flashToast('鱼溜走了……再试一次吧')
+        const enemy = rollFishing(this.map.id, rod)
+        if (!enemy) return this.flashToast('钓上来的小家伙看了你一眼，游走了（驱兽香生效中）')
+        GameState.setFlag('lake_first_fish', true)
+        this.dialogue.open([`钓到了！是${SPECIES[enemy.speciesId].name}！`], () => this.startWildBattle(enemy))
+      },
+    })
   }
 
   /**
@@ -575,55 +678,8 @@ export class WorldScene extends Phaser.Scene {
     })
   }
 
-  /** 进入地图时顶部滑入地图名 */
-  private showMapBanner(): void {
-    const w = this.scale.width
-    const banner = this.add
-      .text(w / 2, -30, `— ${this.map.name} —`, {
-        fontSize: '18px',
-        color: '#fff6e8',
-        backgroundColor: '#1a2e28dd',
-        padding: { x: 16, y: 8 },
-      })
-      .setOrigin(0.5)
-      .setScrollFactor(0)
-      .setDepth(800)
-    this.tweens.add({
-      targets: banner,
-      y: 64,
-      duration: 350,
-      ease: 'Back.easeOut',
-      hold: 1100,
-      yoyo: true,
-      onComplete: () => banner.destroy(),
-    })
-  }
-
-  /** 屏幕中上方的短提示；连续多条时向下错开 */
-  private toastCount = 0
   private flashToast(msg: string): void {
-    const offset = (this.toastCount++ % 3) * 30
-    const t = this.add
-      .text(this.scale.width / 2, 60 + offset, msg, {
-        fontSize: '14px',
-        color: '#fff',
-        backgroundColor: '#000000aa',
-        padding: { x: 10, y: 6 },
-      })
-      .setScrollFactor(0)
-      .setOrigin(0.5)
-      // 高于 ListPanel（1100），在面板中操作时的反馈也能看清
-      .setDepth(1200)
-    this.tweens.add({
-      targets: t,
-      alpha: 0,
-      delay: 1300,
-      duration: 400,
-      onComplete: () => {
-        t.destroy()
-        this.toastCount = Math.max(0, this.toastCount - 1)
-      },
-    })
+    this.toaster.show(msg)
   }
 
   /** 夜晚光源：玩家提灯 + 地图上的火光（世界坐标换算为屏幕坐标） */

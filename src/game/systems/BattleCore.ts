@@ -12,6 +12,7 @@ import {
   type CreatureInstance,
 } from '../data/creatures'
 import type { StageKey, StatusId } from '../data/moves'
+import type { ElementType } from '../data/types'
 import type { Weather } from '../data/weather'
 
 export type BattleKind = 'wild' | 'trainer' | 'boss' | 'unique'
@@ -112,6 +113,8 @@ export interface BattleState {
   night: boolean
   /** 是否持有异象信物（收服 ×2） */
   token: boolean
+  /** 玩家持有徽记对应的属性（招式威力 ×1.1） */
+  badges?: ElementType[]
   vol: Record<string, Volatile>
   pendingLearns: PendingLearn[]
   turn: number

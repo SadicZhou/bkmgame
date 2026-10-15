@@ -7,8 +7,8 @@
  */
 
 import Phaser from 'phaser'
-import { DECOR, type DecorFx } from '../data/decor'
-import type { MapDef } from '../data/maps'
+import { DECOR, decorVisible, type DecorFx } from '../data/decor'
+import type { HasFlag, MapDef } from '../data/maps'
 
 /** 温泉蒸汽：白色柔光团缓慢上升、变大、淡出 */
 function steam(scene: Phaser.Scene, x: number, y: number): void {
@@ -53,29 +53,40 @@ function flame(scene: Phaser.Scene, x: number, y: number): void {
     .setDepth(6)
 }
 
-const FX: Record<DecorFx, (scene: Phaser.Scene, x: number, y: number) => void> = { steam, flame }
+/** 灯台：大片暖白光晕缓慢呼吸，外圈一道淡淡的光环向外扩散 */
+function beacon(scene: Phaser.Scene, x: number, y: number): void {
+  const glow = scene.add.image(x, y, 'fx-soft').setTint(0xfff0b0).setBlendMode(Phaser.BlendModes.ADD).setScale(4).setAlpha(0.5).setDepth(6)
+  scene.tweens.add({ targets: glow, alpha: { from: 0.35, to: 0.6 }, scale: { from: 3.6, to: 4.6 }, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+  const ring = scene.add.image(x, y, 'fx-ring').setTint(0xffe8a0).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0).setDepth(6)
+  scene.tweens.add({ targets: ring, scale: { from: 1, to: 6 }, alpha: { from: 0.6, to: 0 }, duration: 1800, repeat: -1 })
+}
+
+const FX: Record<DecorFx, (scene: Phaser.Scene, x: number, y: number) => void> = { steam, flame, beacon }
+
+/** 会发光的动效（夜里作为光源） */
+const LIGHT_FX = new Set<DecorFx>(['flame', 'beacon'])
 
 /**
- * 当前地图的火光位置（世界坐标），夜里用作光源
+ * 当前地图的火光 / 灯光位置（世界坐标），夜里用作光源
  * @author zjh
  * @date 2026-10-14
  */
-export function decorLights(map: MapDef): { x: number; y: number }[] {
+export function decorLights(map: MapDef, hasFlag: HasFlag): { x: number; y: number }[] {
   const ts = map.tileSize
   return (DECOR[map.id] ?? [])
-    .filter((d) => d.fx === 'flame')
+    .filter((d) => d.fx && LIGHT_FX.has(d.fx) && decorVisible(d, hasFlag))
     .map((d) => ({ x: (d.x + d.w / 2) * ts + (d.fxAt?.x ?? 0), y: (d.y + d.h) * ts + (d.fxAt?.y ?? 0) }))
 }
 
 /**
- * 铺设当前地图的装饰物
+ * 铺设当前地图的装饰物（按剧情旗标切换显示，如灯台熄灭 / 点亮）
  * @author zjh
  * @date 2026-10-14
  */
-export function renderDecor(scene: Phaser.Scene, map: MapDef): void {
+export function renderDecor(scene: Phaser.Scene, map: MapDef, hasFlag: HasFlag): void {
   const ts = map.tileSize
   for (const d of DECOR[map.id] ?? []) {
-    if (!scene.textures.exists(d.key)) continue
+    if (!scene.textures.exists(d.key) || !decorVisible(d, hasFlag)) continue
     const bx = (d.x + d.w / 2) * ts
     if (d.flat) {
       scene.add.image(bx, (d.y + d.h / 2) * ts, d.key).setDepth(0.6)

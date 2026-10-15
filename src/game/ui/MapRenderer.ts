@@ -8,7 +8,7 @@
  */
 
 import Phaser from 'phaser'
-import { tileAt, type MapDef, type TileKind } from '../data/maps'
+import { resolveTile, type HasFlag, type MapDef, type TileKind } from '../data/maps'
 import { TILE_ANIMS, registerTileAnims, type TileAnimId } from '../graphics/tiles/AnimatedTiles'
 import { GRASS_VARIANTS } from '../graphics/tiles/GroundTiles'
 
@@ -18,7 +18,14 @@ const WALL_BY_MAP: Record<string, string[]> = {
   meadow: ['tile-tree-0', 'tile-tree-1', 'tile-tree-2'],
   pass: ['tile-cliff-0', 'tile-cliff-1'],
   cabin: ['tile-woodwall-0'],
+  lake: ['tile-tree-1', 'tile-tree-2', 'tile-tree-0'],
 }
+
+/** 木板通道：底下先铺一层水面动画 */
+const PLANKS: Partial<Record<TileKind, string>> = { dock: 'tile-dock-0', bridge: 'tile-bridge-0' }
+
+/** 岸线判定时视为水域的格子（木板下面也是水） */
+const WATERY = new Set<TileKind>(['water', 'dock', 'bridge'])
 
 /** 有动画的图块类型 */
 const ANIMATED: Partial<Record<TileKind, TileAnimId>> = { water: 'water', tall: 'tall', ash: 'ash', warp: 'warp' }
@@ -52,13 +59,15 @@ function staticKey(map: MapDef, kind: TileKind, x: number, y: number): string {
       return 'tile-floor-0'
     case 'door':
       return 'tile-door-0'
+    case 'ice':
+      return `tile-ice-${h % 2}`
     default:
       return 'tile-grass-0'
   }
 }
 
 /** 水面四周非水的边叠加岸线 */
-function addShores(scene: Phaser.Scene, map: MapDef, x: number, y: number, cx: number, cy: number): void {
+function addShores(scene: Phaser.Scene, map: MapDef, x: number, y: number, cx: number, cy: number, hasFlag: HasFlag): void {
   const sides: [string, number, number][] = [
     ['n', 0, -1],
     ['s', 0, 1],
@@ -66,29 +75,38 @@ function addShores(scene: Phaser.Scene, map: MapDef, x: number, y: number, cx: n
     ['e', 1, 0],
   ]
   for (const [side, dx, dy] of sides) {
-    const n = tileAt(map, x + dx, y + dy)
-    if (n && n !== 'water') scene.add.image(cx, cy, `tile-shore-${side}`).setDepth(0.5)
+    const n = resolveTile(map, x + dx, y + dy, hasFlag)
+    if (n && !WATERY.has(n)) scene.add.image(cx, cy, `tile-shore-${side}`).setDepth(0.5)
   }
 }
 
+/** 一格动画图块（水面 / 高草 / 灰烬草 / 传送点） */
+function addAnimated(scene: Phaser.Scene, anim: TileAnimId, x: number, y: number, cx: number, cy: number): void {
+  const def = TILE_ANIMS[anim]
+  scene.add.sprite(cx, cy, `${def.prefix}-0`).play({ key: `anim-${anim}`, startFrame: (x + y * 2) % def.frames })
+}
+
 /**
- * 铺设整张地图（深度 0；岸线 0.5）
+ * 铺设整张地图（深度 0；岸线 0.5；木板 0.55）。格子按剧情状态解析（浮桥开放前画成水面）
  * @author zjh
  * @date 2026-10-14
  */
-export function renderMap(scene: Phaser.Scene, map: MapDef): void {
+export function renderMap(scene: Phaser.Scene, map: MapDef, hasFlag: HasFlag): void {
   registerTileAnims(scene)
   const ts = map.tileSize
   for (let y = 0; y < map.height; y++) {
     for (let x = 0; x < map.width; x++) {
-      const kind = map.tiles[y * map.width + x]
+      const kind = resolveTile(map, x, y, hasFlag) as TileKind
       const cx = x * ts + ts / 2
       const cy = y * ts + ts / 2
       const anim = ANIMATED[kind]
-      if (anim) {
-        const def = TILE_ANIMS[anim]
-        scene.add.sprite(cx, cy, `${def.prefix}-0`).play({ key: `anim-${anim}`, startFrame: (x + y * 2) % def.frames })
-        if (kind === 'water') addShores(scene, map, x, y, cx, cy)
+      const plank = PLANKS[kind]
+      if (plank) {
+        addAnimated(scene, 'water', x, y, cx, cy)
+        scene.add.image(cx, cy, plank).setDepth(0.55)
+      } else if (anim) {
+        addAnimated(scene, anim, x, y, cx, cy)
+        if (kind === 'water') addShores(scene, map, x, y, cx, cy, hasFlag)
       } else {
         scene.add.image(cx, cy, staticKey(map, kind, x, y))
       }

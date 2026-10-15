@@ -7,6 +7,7 @@
 
 import Phaser from 'phaser'
 import { MOVES, SPECIES, TYPE_LABEL, battleName, outOfPp, spriteKey, typeMultiplier } from '../data/creatures'
+import { ownedBadgeTypes } from '../data/badges'
 import { ITEMS, ITEM_ORDER } from '../data/items'
 import { PHENOMENON_BY_ID, PHENOMENON_RULES } from '../data/phenomena'
 import { WEATHER_INFO } from '../data/weather'
@@ -28,6 +29,7 @@ import {
   type BattleState,
   type SideSnap,
 } from '../systems/BattleLogic'
+import { settleStoryBattle } from '../systems/BattleOutcome'
 import { endPhenomenon } from '../systems/Phenomenon'
 import { STATUS_LABEL } from '../systems/StatusEffects'
 import { isFullMoon } from '../systems/WorldClock'
@@ -126,6 +128,7 @@ export class BattleScene extends Phaser.Scene {
       weather: pending.weather,
       night: pending.night,
       token,
+      badges: ownedBadgeTypes(GameState.hasFlag),
     })
 
     this.fx = new BattleFx(this)
@@ -646,7 +649,7 @@ export class BattleScene extends Phaser.Scene {
    * @date 2026-10-14
    */
   private showBag(): void {
-    const ids = ITEM_ORDER.filter((id) => GameState.itemCount(id) > 0)
+    const ids = ITEM_ORDER.filter((id) => GameState.itemCount(id) > 0 && ITEMS[id].kind !== 'key')
     const rows: ListRow[] = ids.map((id) => {
       const it = ITEMS[id]
       const check =
@@ -738,11 +741,12 @@ export class BattleScene extends Phaser.Scene {
       GameState.mapId = pending.returnMapId
       GameState.playerX = pending.returnX
       GameState.playerY = pending.returnY
-      if (b.won && pending.isBoss) {
-        notes.push('熔鬃狮安静下来，山巅的火种重新亮起温暖的光……')
-        next = () => fadeToScene(this, 'Ending', 900)
-      }
+      const story = settleStoryBattle(pending, b.won)
+      notes.push(...story.notes)
+      const to = story.next
+      if (to) next = () => fadeToScene(this, to.scene, 900, to.scene === 'Chapter' ? to.data : undefined)
     } else {
+      notes.push(...settleStoryBattle(pending, false).notes)
       const lost = Math.floor(GameState.coins / 2)
       GameState.coins -= lost
       GameState.healAll()

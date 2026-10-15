@@ -6,7 +6,8 @@
 
 import type { StatusId } from './moves'
 
-export type ItemKind = 'heal' | 'revive' | 'cure' | 'pp' | 'catch' | 'lure' | 'repel'
+/** key：重要物品（剧情获得，不能出售、不能在战斗中使用） */
+export type ItemKind = 'heal' | 'revive' | 'cure' | 'pp' | 'catch' | 'lure' | 'repel' | 'key'
 
 export interface ItemDef {
   id: string
@@ -32,7 +33,12 @@ export const ITEMS: Record<string, ItemDef> = {
   honey_berry: { id: 'honey_berry', name: '蜜安抚果', kind: 'catch', value: 1.8, price: 150, desc: '更香甜的安抚果，成功率约为普通安抚果的 1.8 倍。' },
   lure_bell: { id: 'lure_bell', name: '引兽铃', kind: 'lure', value: 100, price: 100, desc: '100 步内遇敌率 ×1.5，稀有伙伴出现率 ×2。' },
   repel: { id: 'repel', name: '驱兽香', kind: 'repel', value: 200, price: 80, desc: '200 步内，比首发等级低的野生伙伴不会靠近。' },
+  old_rod: { id: 'old_rod', name: '旧钓竿', kind: 'key', value: 0, price: 0, desc: '泉守汐送的钓竿。面朝水面按确认就能钓鱼。' },
+  good_rod: { id: 'good_rod', name: '好钓竿', kind: 'key', value: 0, price: 0, desc: '沧澜鲸的鳞片缠在竿头，能钓到更深处的伙伴。' },
 }
+
+/** 重要物品（背包末尾展示） */
+export const KEY_ITEMS: string[] = ['old_rod', 'good_rod']
 
 /** 商店货架顺序 */
 export const SHOP_STOCK: string[] = [
@@ -49,7 +55,7 @@ export const SHOP_STOCK: string[] = [
 ]
 
 /** 背包展示顺序 */
-export const ITEM_ORDER: string[] = SHOP_STOCK
+export const ITEM_ORDER: string[] = [...SHOP_STOCK, ...KEY_ITEMS]
 
 /** 队伍上限 */
 export const PARTY_LIMIT = 6

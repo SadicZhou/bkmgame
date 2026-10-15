@@ -28,6 +28,7 @@ export const WEATHER_INFO: Record<Weather, WeatherInfo> = {
 export const WEATHER_TABLES: Record<string, Partial<Record<Weather, number>>> = {
   meadow: { sunny: 60, rain: 25, fog: 15 },
   pass: { sunny: 70, rain: 10, sand: 20 },
+  lake: { sunny: 25, rain: 30, fog: 45 },
 }
 
 /** 天气每隔多少步（全局步数）重掷 */

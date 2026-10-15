@@ -6,6 +6,7 @@
  */
 
 import { DEX_ORDER, SPECIES, TYPE_LABEL, UNIQUE_ORDER, battleName, spriteKey, type CreatureInstance } from '../data/creatures'
+import { BADGES, ownedBadges } from '../data/badges'
 import { ITEMS, ITEM_ORDER, SHOP_STOCK } from '../data/items'
 import { PHENOMENA } from '../data/phenomena'
 import { GameState } from '../state/GameState'
@@ -46,6 +47,7 @@ export class WorldMenus {
     Sfx.confirm()
     const caught = GameState.dex.caught.filter((id) => DEX_ORDER.includes(id)).length
     const uniques = GameState.world.phenomenon.caught.length
+    const badges = ownedBadges(GameState.hasFlag)
     this.panel.open({
       title: '菜单',
       footer: this.coinsFooter(),
@@ -55,6 +57,12 @@ export class WorldMenus {
         { label: '背包', detail: '使用伤药、万灵药、PP 果、引兽铃等道具。', onSelect: () => this.openBag() },
         { label: '图鉴', right: `${caught}/${DEX_ORDER.length}`, detail: '记录遇见与收服过的伙伴。', onSelect: () => this.openDex() },
         { label: '异象录', right: `${uniques}/${UNIQUE_ORDER.length}`, detail: '记录在异象中邂逅的唯一精灵。', onSelect: () => this.openUniqueDex() },
+        {
+          label: '徽记',
+          right: `${badges.length}/${Object.keys(BADGES).length}`,
+          detail: badges.length ? badges.map((b) => `◆ ${b.name}：${b.desc}`).join('\n') : '击败各章节的守护兽后可以获得徽记。',
+          onSelect: () => Sfx.cancel(),
+        },
         {
           label: '保存进度',
           detail: '存到本机浏览器（localStorage）。',
@@ -139,6 +147,11 @@ export class WorldMenus {
         right: `×${GameState.itemCount(id)}`,
         detail: `${it.desc}${active}`,
         onSelect: () => {
+          if (it.kind === 'key') {
+            this.hooks.toast(id.endsWith('_rod') ? '面朝水面按确认就能钓鱼' : '这是重要物品')
+            Sfx.cancel()
+            return
+          }
           if (it.kind === 'catch') {
             this.hooks.toast('只能在野生战斗中使用')
             Sfx.cancel()

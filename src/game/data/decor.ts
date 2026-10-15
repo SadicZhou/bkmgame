@@ -6,8 +6,8 @@
  * @date 2026-10-14
  */
 
-/** 装饰动效：温泉蒸汽 / 火焰跳动 */
-export type DecorFx = 'steam' | 'flame'
+/** 装饰动效：温泉蒸汽 / 火焰跳动 / 灯台光晕 */
+export type DecorFx = 'steam' | 'flame' | 'beacon'
 
 export interface DecorDef {
   key: string
@@ -23,6 +23,10 @@ export interface DecorDef {
   fx?: DecorFx
   /** 动效锚点相对贴图底边中心的偏移（px） */
   fxAt?: { x: number; y: number }
+  /** 需要该旗标才显示 */
+  showIf?: string
+  /** 有该旗标后隐藏 */
+  hideIf?: string
 }
 
 /** 全部装饰物贴图 key（文件名同 key） */
@@ -36,6 +40,9 @@ export const DECOR_KEYS = [
   'decor-plant',
   'decor-well',
   'decor-stall',
+  'decor-lighthouse',
+  'decor-lighthouse-dark',
+  'decor-reeds',
 ] as const
 
 export const DECOR: Record<string, DecorDef[]> = {
@@ -56,6 +63,22 @@ export const DECOR: Record<string, DecorDef[]> = {
     { key: 'decor-plant', x: 8, y: 1, w: 1, h: 1, solid: true },
     { key: 'decor-plant', x: 1, y: 6, w: 1, h: 1, solid: true },
   ],
+  lake: [
+    { key: 'decor-lighthouse-dark', x: 11, y: 2, w: 2, h: 2, solid: true, hideIf: 'whale_beaten' },
+    { key: 'decor-lighthouse', x: 11, y: 2, w: 2, h: 2, solid: true, showIf: 'whale_beaten', fx: 'beacon', fxAt: { x: 0, y: -86 } },
+    { key: 'decor-reeds', x: 5, y: 8, w: 1, h: 1, solid: true },
+    { key: 'decor-reeds', x: 18, y: 9, w: 1, h: 1, solid: true },
+    { key: 'decor-reeds', x: 1, y: 13, w: 1, h: 1, solid: true },
+  ],
+}
+
+/**
+ * 当前剧情状态下是否显示该装饰物
+ * @author zjh
+ * @date 2026-10-15
+ */
+export function decorVisible(d: DecorDef, hasFlag: (k: string) => boolean): boolean {
+  return (!d.showIf || hasFlag(d.showIf)) && !(d.hideIf && hasFlag(d.hideIf))
 }
 
 /**

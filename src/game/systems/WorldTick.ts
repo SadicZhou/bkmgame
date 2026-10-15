@@ -6,11 +6,11 @@
  */
 
 import { createCreature, type CreatureInstance } from '../data/creatures'
-import { ENCOUNTERS } from '../data/encounters'
+import { ENCOUNTERS, tableFor, type EncounterSource } from '../data/encounters'
 import { MAPS, openTiles } from '../data/maps'
 import type { MinorEventId, PhenomenonDef } from '../data/phenomena'
 import { GameState } from '../state/GameState'
-import { encounterRate, hasRare, pickEncounter } from './Encounter'
+import { encounterRate, hasRare, pickEncounter, type EncounterContext } from './Encounter'
 import {
   activePhenomenon,
   collectCrystalAt,
@@ -47,17 +47,18 @@ export function phenomenonEnv(): PhenomenonEnv {
 }
 
 /**
- * 掷一次野外遇敌，返回生成的野生伙伴
+ * 组装遭遇判定上下文；该地图没有此来源的遭遇表时返回 null
  * @author zjh
- * @date 2026-10-14
+ * @date 2026-10-15
  */
-function rollEncounter(mapId: string): CreatureInstance | undefined {
-  const table = ENCOUNTERS[mapId]
+function encounterCtx(mapId: string, source: EncounterSource): EncounterContext | null {
+  const base = ENCOUNTERS[mapId]
+  const table = base ? tableFor(base, source) : null
   const w = GameState.world
   const lead = GameState.party.find((c) => c.hp > 0)
-  if (!table || !lead) return undefined
+  if (!table || !lead) return null
   const minor = w.minor.mapId === mapId ? w.minor : null
-  const ctx = {
+  return {
     table,
     weather: GameState.weatherAt(mapId),
     night: isNight(w.totalSteps),
@@ -71,12 +72,42 @@ function rollEncounter(mapId: string): CreatureInstance | undefined {
     migrationSpecies: minor?.id === 'migration' ? minor.speciesId : undefined,
     shimmer: minor?.id === 'shimmer',
   }
-  if (Math.random() >= encounterRate(ctx)) return undefined
+}
+
+/** 抽出物种并生成野生伙伴，同时更新稀有保底 */
+function spawnFrom(mapId: string, ctx: EncounterContext): CreatureInstance | undefined {
+  const w = GameState.world
   const pick = pickEncounter(ctx)
   if (!pick) return undefined
   w.stepsSinceEncounter = 0
-  if (hasRare(table)) w.rarePity[mapId] = pick.rare ? 0 : (w.rarePity[mapId] ?? 0) + 1
+  if (hasRare(ctx.table)) w.rarePity[mapId] = pick.rare ? 0 : (w.rarePity[mapId] ?? 0) + 1
   return createCreature(pick.speciesId, pick.level, { strong: pick.strong, shiny: pick.shiny })
+}
+
+/**
+ * 掷一次野外遇敌（草丛 / 冰面），返回生成的野生伙伴
+ * @author zjh
+ * @date 2026-10-14
+ */
+function rollEncounter(mapId: string, source: 'grass' | 'ice'): CreatureInstance | undefined {
+  const ctx = encounterCtx(mapId, source)
+  if (!ctx || Math.random() >= encounterRate(ctx)) return undefined
+  return spawnFrom(mapId, ctx)
+}
+
+/**
+ * 钓鱼上钩：直接从钓竿遭遇表抽取（不受安全步数影响；驱兽香仍会赶走弱小的伙伴）
+ * @author zjh
+ * @date 2026-10-15
+ */
+export function rollFishing(mapId: string, rod: 'rod' | 'goodRod'): CreatureInstance | undefined {
+  const ctx = encounterCtx(mapId, rod)
+  return ctx ? spawnFrom(mapId, ctx) : undefined
+}
+
+/** 地图是否有该钓竿的遭遇表 */
+export function hasFishing(mapId: string, rod: 'rod' | 'goodRod'): boolean {
+  return !!ENCOUNTERS[mapId]?.[rod]?.length
 }
 
 /**
@@ -84,7 +115,7 @@ function rollEncounter(mapId: string): CreatureInstance | undefined {
  * @author zjh
  * @date 2026-10-14
  */
-export function stepWorld(mapId: string, x: number, y: number, onEncounterTile: boolean): StepResult {
+export function stepWorld(mapId: string, x: number, y: number, encounterSource: 'grass' | 'ice' | null): StepResult {
   const map = MAPS[mapId]
   const w = GameState.world
   const env = phenomenonEnv()
@@ -109,6 +140,6 @@ export function stepWorld(mapId: string, x: number, y: number, onEncounterTile: 
   }
 
   w.stepsSinceEncounter += 1
-  if (onEncounterTile && !res.goal && !res.crystal) res.encounter = rollEncounter(mapId)
+  if (encounterSource && !res.goal && !res.crystal) res.encounter = rollEncounter(mapId, encounterSource)
   return res
 }

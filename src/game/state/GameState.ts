@@ -20,6 +20,7 @@ import {
   type SaveData,
 } from '../systems/SaveSystem'
 import { createWorld, dayOf, isNight, weatherOf, type WorldSave } from '../systems/WorldClock'
+import { migrateChapters } from './saveMigrate'
 
 export interface PendingBattle {
   kind: BattleKind
@@ -27,8 +28,12 @@ export interface PendingBattle {
   enemies: CreatureInstance[]
   trainerName?: string
   flagOnWin?: string
-  /** BOSS 战胜利后进入结局 */
+  /** 守护兽战（胜利后按 data/chapters 收尾） */
   isBoss?: boolean
+  /** 连战：胜利后回到世界立即挑战的下一位 NPC id */
+  chainNpcId?: string
+  /** 连战：失败时需要清除的旗标（让整组连战重来） */
+  chainResetFlags?: string[]
   /** 异象战对应的异象 id */
   phenomenonId?: string
   /** 战斗场地天气（室内 / 城镇为 null） */
@@ -48,6 +53,7 @@ export const RESPAWN = { mapId: 'cabin', x: 4, y: 5 }
 export const OUTDOOR_MAPS: { mapId: string; requireFlag?: string }[] = [
   { mapId: 'meadow' },
   { mapId: 'pass', requireFlag: 'ranger_beaten' },
+  { mapId: 'lake', requireFlag: 'lake_unlocked' },
 ]
 
 class GameStateStore {
@@ -66,6 +72,10 @@ class GameStateStore {
   world: WorldSave = createWorld()
   pendingBattle: PendingBattle | null = null
   startedAt = Date.now()
+  /** 连战中下一位对手（运行时，不存档） */
+  chainNpcId: string | null = null
+  /** 进入世界时要提示一次的说明（读档补齐、章节奖励等，不存档） */
+  notices: string[] = []
 
   /**
    * 新开局：以选择的初始伙伴出发，附赠少量道具
@@ -88,6 +98,8 @@ class GameStateStore {
     this.world = createWorld()
     this.pendingBattle = null
     this.startedAt = Date.now()
+    this.chainNpcId = null
+    this.notices = []
   }
 
   tryLoad(): boolean {
@@ -113,6 +125,8 @@ class GameStateStore {
     this.world = structuredClone(data.world)
     this.pendingBattle = null
     this.startedAt = Date.now()
+    this.chainNpcId = null
+    this.notices = migrateChapters(this)
   }
 
   /** 累计游玩秒数（含本次会话未落盘部分） */
@@ -160,6 +174,12 @@ class GameStateStore {
   getFlag(key: string): boolean | number | string | undefined {
     return this.flags[key]
   }
+
+  clearFlag(key: string): void {
+    delete this.flags[key]
+  }
+
+  hasFlag = (key: string): boolean => !!this.flags[key]
 
   itemCount(id: string): number {
     return this.bag[id] ?? 0

@@ -5,6 +5,7 @@
  */
 
 import { SPECIES, typeMultiplier, type CreatureInstance, type MoveDef } from '../data/creatures'
+import { BADGE_POWER } from '../data/badges'
 import { weatherPowerMod } from '../data/weather'
 import { attackerPowerMod, critRate, defenderDamageMod, evasionMod, speedMod } from './AbilityHooks'
 import { volOf, type BattleState } from './BattleCore'
@@ -13,6 +14,16 @@ import type { Rng } from './Talent'
 
 /** 本系加成 */
 export const STAB = 1.2
+
+/**
+ * 徽记加成：攻击方在玩家队伍里、且持有该招式属性的徽记时 ×1.1
+ * @author zjh
+ * @date 2026-10-15
+ */
+export function badgePowerMod(s: BattleState, attacker: CreatureInstance, move: MoveDef): number {
+  if (!s.badges?.includes(move.type)) return 1
+  return s.playerParty.includes(attacker) ? BADGE_POWER : 1
+}
 
 /**
  * 实际速度：能力阶段、麻痹减半、特性
@@ -87,6 +98,7 @@ export function calcDamage(
     stab *
     (crit ? 1.5 : 1) *
     attackerPowerMod(s, attacker, move) *
+    badgePowerMod(s, attacker, move) *
     defenderDamageMod(defender, move, mult) *
     weatherPowerMod(s.weather, move.type) *
     night *

@@ -93,6 +93,9 @@ const LIST: CreatureSpecies[] = [
   sp({ id: 'abyssshell', dexNo: '14', name: '沧甲龟', type: 'tide', rarity: 'starter', learnset: TIDE_STARTER(11), expYield: 66, abilities: ['torrent_heart', 'hard_shell'], hiddenAbility: 'kindred', catchRate: 1, desc: '背负一整片深湖，据说龟甲深处藏着沉没的古镇。' }, [58, 18, 24, 12]),
   sp({ id: 'mistnewt', dexNo: '17', name: '雾泉螈', type: 'tide', rarity: 'uncommon', learnset: learn([1, 'tackle'], [1, 'splash'], [5, 'bubble_roll'], [9, 'tide_crash'], [13, 'aqua_ring'], [18, 'torrent']), expYield: 33, evolvesTo: 'wavefin', evolveLevel: 20, abilities: ['bubble', 'torrent_heart'], hiddenAbility: 'regen', catchRate: 1, desc: '住在山间温泉边，身上总缭绕着薄雾。' }, [33, 13, 13, 12]),
   sp({ id: 'wavefin', dexNo: '18', name: '澜鳍螈', type: 'tide', rarity: 'uncommon', learnset: learn([1, 'tackle'], [1, 'splash'], [5, 'bubble_roll'], [9, 'tide_crash'], [13, 'aqua_ring'], [18, 'torrent'], [22, 'frost_breath']), expYield: 49, abilities: ['bubble', 'torrent_heart'], hiddenAbility: 'regen', catchRate: 1, desc: '鳍边薄如蝉翼，划水时会在湖面留下一道彩虹。' }, [42, 17, 17, 16]),
+  sp({ id: 'bubblefin', dexNo: '15', name: '泡泡鱼', type: 'tide', rarity: 'common', learnset: learn([1, 'splash'], [1, 'growl'], [5, 'bubble_roll'], [10, 'quick_jab'], [14, 'aqua_ring'], [19, 'tide_crash']), expYield: 28, evolvesTo: 'coralfin', evolveLevel: 16, abilities: ['bubble', 'timid'], hiddenAbility: 'lucky', catchRate: 1, desc: '圆滚滚的小鱼，紧张时会吐出一串泡泡把自己藏起来。' }, [28, 11, 11, 14]),
+  sp({ id: 'coralfin', dexNo: '16', name: '珊冠鱼', type: 'tide', rarity: 'common', learnset: learn([1, 'splash'], [1, 'growl'], [5, 'bubble_roll'], [10, 'quick_jab'], [14, 'aqua_ring'], [16, 'tide_crash'], [22, 'torrent']), expYield: 46, abilities: ['bubble', 'swift'], hiddenAbility: 'lucky', catchRate: 1, desc: '头顶的珊瑚冠会随心情变色，雾泉湖的孩子们都想看它变成粉色。' }, [38, 16, 15, 19]),
+  sp({ id: 'tidewhale', dexNo: '19', name: '沧澜鲸', type: 'tide', rarity: 'guardian', learnset: learn([1, 'splash'], [1, 'tide_crash'], [10, 'aqua_ring'], [14, 'torrent'], [18, 'abyss_roar']), expYield: 90, abilities: ['regen', 'hard_shell'], hiddenAbility: 'guardian', catchRate: 0, desc: '雾泉湖的守护者，一声长鸣能让整片湖面平静下来。' }, [62, 18, 18, 10]),
 
   // ── 叶 ──
   sp({ id: 'leafkit', dexNo: '20', name: '翠叶狐', type: 'leaf', rarity: 'starter', learnset: LEAF_STARTER(15), expYield: 27, evolvesTo: 'grovefox', evolveLevel: 9, abilities: ['overgrow', 'swift'], hiddenAbility: 'kindred', catchRate: 1, desc: '尾巴是一片大叶子，害羞时会把脸藏进去。' }, [30, 13, 11, 15]),
@@ -111,6 +114,10 @@ const LIST: CreatureSpecies[] = [
   sp({ id: 'skylark', dexNo: '33', name: '云雀羽', type: 'gale', rarity: 'common', learnset: learn([1, 'gust'], [1, 'growl'], [4, 'quick_jab'], [7, 'aerial'], [11, 'tailwind'], [15, 'feather_blade'], [22, 'hurricane']), expYield: 27, evolvesTo: 'skyfinch', evolveLevel: 16, abilities: ['swift', 'tailwind_born'], hiddenAbility: 'guide', catchRate: 1, desc: '清晨第一个唱歌的就是它，歌声能把晨雾吹散。' }, [28, 13, 9, 18]),
   sp({ id: 'skyfinch', dexNo: '34', name: '穹翼雀', type: 'gale', rarity: 'common', learnset: learn([1, 'gust'], [1, 'growl'], [4, 'quick_jab'], [7, 'aerial'], [11, 'tailwind'], [15, 'feather_blade'], [22, 'hurricane']), expYield: 44, abilities: ['swift', 'tailwind_born'], hiddenAbility: 'guide', catchRate: 1, desc: '翼展像一片小小的天空，飞过雪峰时不会留下影子。' }, [36, 18, 12, 23]),
 
+  // ── 霜 ──
+  sp({ id: 'frostgoose', dexNo: '36', name: '霜粒鹅', type: 'frost', rarity: 'uncommon', learnset: learn([1, 'tackle'], [1, 'ice_shard'], [5, 'growl'], [9, 'frost_breath'], [13, 'cold_mist'], [17, 'icicle'], [21, 'frost_wall'], [26, 'blizzard']), expYield: 34, evolvesTo: 'icecrown', evolveLevel: 22, abilities: ['snow_cloak', 'fluffy'], hiddenAbility: 'guide', catchRate: 1, desc: '绒毛里藏着细小的冰粒，走在冰面上会发出沙沙的声响。' }, [34, 14, 13, 11]),
+  sp({ id: 'icecrown', dexNo: '37', name: '冰冕鹅', type: 'frost', rarity: 'uncommon', learnset: learn([1, 'tackle'], [1, 'ice_shard'], [5, 'growl'], [9, 'frost_breath'], [13, 'cold_mist'], [17, 'icicle'], [21, 'frost_wall'], [24, 'feather_blade'], [26, 'blizzard']), expYield: 52, abilities: ['snow_cloak', 'fluffy'], hiddenAbility: 'guide', catchRate: 1, desc: '冠羽结成剔透的冰冕，展翅时会落下一场小小的雪。' }, [46, 19, 18, 14]),
+
   // ── 唯一精灵（异象） ──
   sp({ id: 'starmarten', dexNo: 'U01', name: '坠星貂', type: 'normal', rarity: 'unique', learnset: learn([1, 'quick_jab'], [1, 'growl'], [1, 'falling_star'], [1, 'body_slam'], [20, 'rally'], [30, 'double_edge']), expYield: 90, abilities: ['wish', 'wish'], hiddenAbility: 'wish', catchRate: 0.4, desc: '它是流星落地时溅起的那一点光。据说追着它跑一整夜，就能许下一个愿望。' }, [26, 28, 24, 32]),
   sp({ id: 'bloomdeer', dexNo: 'U02', name: '花冠鹿', type: 'leaf', rarity: 'unique', learnset: learn([1, 'leaf_tap'], [1, 'thousand_bloom'], [1, 'synthesis'], [1, 'leech_seed'], [25, 'grove_beam']), expYield: 90, abilities: ['bloom_scent', 'bloom_scent'], hiddenAbility: 'bloom_scent', catchRate: 0.4, desc: '花海盛放的清晨才会现身，鹿角上的花一年只开一次。' }, [30, 24, 28, 26]),
@@ -120,7 +127,9 @@ const LIST: CreatureSpecies[] = [
 export const SPECIES: Record<string, CreatureSpecies> = Object.fromEntries(LIST.map((s) => [s.id, s]))
 
 /** 主图鉴顺序（按编号；唯一精灵另列） */
-export const DEX_ORDER: string[] = LIST.filter((s) => s.rarity !== 'unique').map((s) => s.id)
+export const DEX_ORDER: string[] = LIST.filter((s) => s.rarity !== 'unique')
+  .sort((a, b) => Number(a.dexNo) - Number(b.dexNo))
+  .map((s) => s.id)
 
 /** 异象录顺序 */
 export const UNIQUE_ORDER: string[] = LIST.filter((s) => s.rarity === 'unique').map((s) => s.id)
