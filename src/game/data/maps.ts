@@ -89,6 +89,8 @@ export interface NpcDef {
   winFlags?: string[]
   /** prop 的贴图（不填则不显示，由装饰物负责外观） */
   texture?: string
+  /** 闲逛半径（格，曼哈顿距离）：在出生点附近随机走动；不填则原地站立 */
+  wander?: number
 }
 
 export interface MapDef {
@@ -154,6 +156,7 @@ function buildTown(): MapDef {
         x: 8,
         y: 4,
         color: 0xc49a6c,
+        wander: 1,
         lines: [
           '欢迎来到晨曦小镇，焰迹旅人。',
           '余烬山巅的火种最近忽明忽暗，守护它的熔鬃狮变得焦躁不安。',
@@ -195,6 +198,7 @@ function buildTown(): MapDef {
         x: 11,
         y: 8,
         color: 0xf0a0c0,
+        wander: 3,
         lines: [
           '我在草丛里看见一只翠叶狐！',
           '听说伙伴到 9 级左右会进化，样子会变得超帅！',

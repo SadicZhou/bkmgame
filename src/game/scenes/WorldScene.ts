@@ -7,7 +7,7 @@
  */
 
 import Phaser from 'phaser'
-import { anchorFeet, hasCharArt, idleFrame, registerCharAnims } from '../graphics/CharArt'
+import { anchorFeet, hasCharArt, idleFrame, playerSheet, registerCharAnims, stepBob } from '../graphics/CharArt'
 import { SPECIES, battleName, type CreatureInstance } from '../data/creatures'
 import { decorBlocks } from '../data/decor'
 import { ITEMS } from '../data/items'
@@ -35,6 +35,7 @@ import { FishingController } from './world/FishingController'
 import { LIGHT_UP_FLAG, beforeLightUp, needsLightUp, playLighthouseLightUp, playWhaleLeap } from './world/LakeCutscenes'
 import { NpcInteract } from './world/NpcInteract'
 import { spawnNpcs } from './world/NpcLayer'
+import { NpcWalkers } from './world/NpcWalkers'
 import { FOREST_INTRO_LINES, type StoryHost } from './world/StoryEvents'
 import { Toaster, playBridgeCutscene, rustleAt, showMapBanner } from './world/WorldFx'
 import type { ReturnInfo, WorldHost } from './world/WorldHost'
@@ -76,6 +77,7 @@ export class WorldScene extends Phaser.Scene {
   private fireLights: { x: number; y: number }[] = []
   private fishing!: FishingController
   private interact!: NpcInteract
+  private walkers!: NpcWalkers
   private toaster!: Toaster
   /** 本次进图要先播放灯台点亮演出（装饰按「未点亮」铺设） */
   private lightUpPending = false
@@ -100,15 +102,21 @@ export class WorldScene extends Phaser.Scene {
     const decorFlag = this.decorFlag()
     renderMap(this, this.map, hasFlag)
     renderDecor(this, this.map, decorFlag)
-    spawnNpcs(this, this.map, hasFlag)
+    const walkerBodies = spawnNpcs(this, this.map, hasFlag)
     this.eventView = new WorldEventsView(this, this.map)
     this.eventView.refresh()
+    this.walkers = new NpcWalkers(this, walkerBodies, {
+      map: this.map,
+      hasFlag,
+      playerTile: () => ({ x: this.tileX, y: this.tileY }),
+      blockedByOthers: (x, y) => !!this.staticNpcAt(x, y) || !!this.eventView.uniqueAt(x, y),
+    })
 
     registerCharAnims(this)
     this.charArt = hasCharArt(this, 'char-player')
     this.playerShadow = this.add.ellipse(0, 0, 20, 7, 0x000000, 0.22).setDepth(8)
     this.player = this.charArt
-      ? anchorFeet(this.add.sprite(0, 0, 'char-player', idleFrame(this.facing))).setDepth(10)
+      ? anchorFeet(this.add.sprite(0, 0, playerSheet(this), idleFrame(this.facing))).setDepth(10)
       : this.add.sprite(0, 0, `spr-player-${this.facing}`).setDepth(10)
     this.placePlayerVisual()
     this.setupCamera()
@@ -258,6 +266,7 @@ export class WorldScene extends Phaser.Scene {
     this.weather?.update(delta)
     const input = this.keys.poll()
     if (!this.moving && input.dx === 0 && input.dy === 0) this.stopWalk()
+    this.walkers.update(delta, this.busy || this.dialogue.isOpen || this.menus.isOpen || this.fishing.active)
     if (this.busy) return
 
     if (this.dialogue.isOpen) {
@@ -308,8 +317,14 @@ export class WorldScene extends Phaser.Scene {
     this.player.setFrame(idleFrame(this.facing))
   }
 
+  /** 某格上的 NPC：闲逛 NPC 按当前位置算，其余按地图定义的位置 */
   private occupiedByNpc(x: number, y: number): NpcDef | null {
-    return visibleNpcs(this.map, hasFlag).find((n) => n.x === x && n.y === y) ?? null
+    return this.walkers.npcAt(x, y) ?? this.staticNpcAt(x, y)
+  }
+
+  /** 不闲逛的 NPC（站在地图定义的位置上） */
+  private staticNpcAt(x: number, y: number): NpcDef | null {
+    return visibleNpcs(this.map, hasFlag).find((n) => n.x === x && n.y === y && !this.walkers.owns(n)) ?? null
   }
 
   private tryMove(dx: number, dy: number): void {
@@ -340,7 +355,10 @@ export class WorldScene extends Phaser.Scene {
         this.afterStep(tile, fromX, fromY)
       },
     })
-    if (this.charArt) this.player.play(`walk-${this.facing}`, true)
+    if (this.charArt) {
+      this.player.play(`walk-${this.facing}`, true)
+      stepBob(this, this.player, MOVE_MS)
+    }
     // 代码绘制的小人没有行走帧，用轻微弹跳代替
     else this.tweens.add({ targets: this.player, scaleY: 0.9, yoyo: true, duration: MOVE_MS / 2 })
   }
@@ -455,7 +473,9 @@ export class WorldScene extends Phaser.Scene {
   /** 面前有唯一精灵 / NPC 则互动，否则尝试钓鱼 */
   private tryInteract(): void {
     const { x, y } = this.facingTile()
-    if (this.interact.handle(this.eventView.uniqueAt(x, y), this.occupiedByNpc(x, y))) return
+    const npc = this.occupiedByNpc(x, y)
+    if (npc) this.walkers.hold(npc)
+    if (this.interact.handle(this.eventView.uniqueAt(x, y), npc)) return
     this.fishing.tryFish(x, y)
   }
 

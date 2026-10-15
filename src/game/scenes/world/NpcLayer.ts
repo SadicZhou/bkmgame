@@ -6,7 +6,7 @@
  */
 
 import Phaser from 'phaser'
-import { anchorFeet, npcArt } from '../../graphics/CharArt'
+import { anchorFeet, npcArt, npcWalkAnim } from '../../graphics/CharArt'
 import { setCreatureScale } from '../../graphics/CreatureArt'
 import { visibleNpcs, type HasFlag, type MapDef, type NpcDef } from '../../data/maps'
 import { GameState } from '../../state/GameState'
@@ -39,19 +39,31 @@ function markText(npc: NpcDef): string | null {
   return npc.role ? ROLE_MARK[npc.role] ?? null : null
 }
 
+/** 会闲逛的 NPC 的显示部件（交给 NpcWalkers 驱动） */
+export interface WalkerBody {
+  npc: NpcDef
+  spr: Phaser.GameObjects.Sprite
+  shadow: Phaser.GameObjects.Ellipse
+  /** 行走动画 key 与站立帧 */
+  anim: string
+  idle: number
+}
+
 /**
- * 人类 NPC：有行走图时用对应帧 + 脚下阴影 + 呼吸起伏，否则用着色的代码小人
+ * 人类 NPC：有行走图时用对应帧 + 脚下阴影 + 呼吸起伏，否则用着色的代码小人。
+ * 会闲逛（wander）且有行走帧的 NPC 改用 -walk 图集并返回显示部件
  * @author zjh
- * @date 2026-10-14
+ * @date 2026-10-15
  */
-function spawnPerson(scene: Phaser.Scene, npc: NpcDef, cx: number, cy: number): void {
+function spawnPerson(scene: Phaser.Scene, npc: NpcDef, cx: number, cy: number): WalkerBody | null {
   const art = npcArt(scene, npc.id)
   if (!art) {
     scene.add.sprite(cx, cy, 'spr-npc').setTint(npc.color).setDepth(9)
-    return
+    return null
   }
-  scene.add.ellipse(cx, cy + 13, 20, 7, 0x000000, 0.22).setDepth(8)
-  const spr = anchorFeet(scene.add.sprite(cx, cy, art.key, art.frame)).setDepth(9)
+  const walk = npc.wander ? npcWalkAnim(scene, art) : null
+  const shadow = scene.add.ellipse(cx, cy + 13, 20, 7, 0x000000, 0.22).setDepth(8)
+  const spr = anchorFeet(scene.add.sprite(cx, cy, walk?.sheet ?? art.key, walk?.idle ?? art.frame)).setDepth(9)
   scene.tweens.add({
     targets: spr,
     scaleY: 1.035,
@@ -60,15 +72,17 @@ function spawnPerson(scene: Phaser.Scene, npc: NpcDef, cx: number, cy: number): 
     duration: 900 + ((npc.x * 7 + npc.y * 13) % 5) * 120,
     ease: 'Sine.easeInOut',
   })
+  return walk ? { npc, spr, shadow, anim: walk.anim, idle: walk.idle } : null
 }
 
 /**
- * 生成当前地图所有可见 NPC
+ * 生成当前地图所有可见 NPC；返回会闲逛的 NPC 的显示部件
  * @author zjh
- * @date 2026-10-14
+ * @date 2026-10-15
  */
-export function spawnNpcs(scene: Phaser.Scene, map: MapDef, hasFlag: HasFlag): void {
+export function spawnNpcs(scene: Phaser.Scene, map: MapDef, hasFlag: HasFlag): WalkerBody[] {
   const ts = map.tileSize
+  const walkers: WalkerBody[] = []
   for (const npc of visibleNpcs(map, hasFlag)) {
     const cx = npc.x * ts + ts / 2
     const cy = npc.y * ts + ts / 2
@@ -81,7 +95,10 @@ export function spawnNpcs(scene: Phaser.Scene, map: MapDef, hasFlag: HasFlag): v
     } else if (npc.role === 'prop') {
       if (npc.texture && scene.textures.exists(npc.texture)) scene.add.image(cx, cy, npc.texture).setDepth(9)
     } else {
-      spawnPerson(scene, npc, cx, cy)
+      const mark = markText(npc)
+      const body = spawnPerson(scene, npc, cx, cy)
+      // 头顶有标记的 NPC（训练家、店主等）原地不动
+      if (body && !mark) walkers.push(body)
     }
 
     const tall = !OBJECT_ROLES.has(npc.role ?? 'talk') && !!npcArt(scene, npc.id)
@@ -94,4 +111,5 @@ export function spawnNpcs(scene: Phaser.Scene, map: MapDef, hasFlag: HasFlag): v
       .setDepth(11)
     scene.tweens.add({ targets: t, y: markY - 3, yoyo: true, repeat: -1, duration: 500 })
   }
+  return walkers
 }

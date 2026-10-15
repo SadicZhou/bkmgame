@@ -57,10 +57,16 @@ export type CharSheet = 'char-player' | 'char-npcs' | 'char-npcs2' | 'char-npcs3
  */
 export function preloadCharArt(scene: Phaser.Scene): void {
   const frame = { frameWidth: FRAME_W, frameHeight: FRAME_H }
-  scene.load.spritesheet('char-player', 'assets/chars/char-player.png', frame)
-  scene.load.spritesheet('char-npcs', 'assets/chars/char-npcs.png', frame)
-  scene.load.spritesheet('char-npcs2', 'assets/chars/char-npcs2.png', frame)
-  scene.load.spritesheet('char-npcs3', 'assets/chars/char-npcs3.png', frame)
+  for (const key of ['char-player', 'char-npcs', 'char-npcs2', 'char-npcs3']) {
+    scene.load.spritesheet(key, `assets/chars/${key}.png`, frame)
+    // 行走帧（scripts/make-walk-frames.py 生成）：玩家布局不变；NPC 每人 3 帧
+    scene.load.spritesheet(`${key}-walk`, `assets/chars/${key}-walk.png`, frame)
+  }
+}
+
+/** 玩家实际使用的图集：有生成的行走帧就用它（站立帧相同，迈步帧更明显） */
+export function playerSheet(scene: Phaser.Scene): string {
+  return scene.textures.exists('char-player-walk') ? 'char-player-walk' : 'char-player'
 }
 
 /** 行走图是否已加载 */
@@ -98,15 +104,60 @@ export function anchorFeet<T extends Phaser.GameObjects.Components.Origin>(spr: 
  */
 export function registerCharAnims(scene: Phaser.Scene): void {
   if (!hasCharArt(scene, 'char-player')) return
+  const sheet = playerSheet(scene)
   for (const [dir, row] of Object.entries(DIR_ROW)) {
     const key = `walk-${dir}`
     if (scene.anims.exists(key)) continue
     const base = row * 3
     scene.anims.create({
       key,
-      frames: scene.anims.generateFrameNumbers('char-player', { frames: [base + 1, base, base + 2, base] }),
-      frameRate: 10,
+      frames: scene.anims.generateFrameNumbers(sheet, { frames: [base + 1, base, base + 2, base] }),
+      frameRate: WALK_FPS,
       repeat: -1,
     })
   }
+}
+
+/** 行走动画帧率：一格走一个「迈脚 → 站立」，两格完成一次左右脚循环 */
+export const WALK_FPS = 14
+
+/**
+ * NPC 的行走动画（按需注册）：迈左脚 → 站立 → 迈右脚 → 站立。缺行走图时返回 null
+ * @returns 动画 key 与站立帧（在 -walk 图集中的帧号）
+ * @author zjh
+ * @date 2026-10-15
+ */
+export function npcWalkAnim(scene: Phaser.Scene, art: { key: CharSheet; frame: number }): { anim: string; sheet: string; idle: number } | null {
+  const sheet = `${art.key}-walk`
+  if (!scene.textures.exists(sheet)) return null
+  const base = art.frame * 3
+  const anim = `npcwalk-${art.key}-${art.frame}`
+  if (!scene.anims.exists(anim)) {
+    scene.anims.create({
+      key: anim,
+      frames: scene.anims.generateFrameNumbers(sheet, { frames: [base + 1, base, base + 2, base] }),
+      frameRate: WALK_FPS * 0.6,
+      repeat: -1,
+    })
+  }
+  return { anim, sheet, idle: base }
+}
+
+/**
+ * 走一步时身体轻微上下起伏（改锚点，不和位移补间抢 y）
+ * @author zjh
+ * @date 2026-10-15
+ */
+export function stepBob(scene: Phaser.Scene, spr: Phaser.GameObjects.Sprite, ms: number): void {
+  const base = 1 - FOOT_OFFSET / FRAME_H
+  const lift = { px: 0 }
+  scene.tweens.add({
+    targets: lift,
+    px: 1.5,
+    duration: ms / 2,
+    yoyo: true,
+    ease: 'Sine.easeOut',
+    onUpdate: () => spr.setOrigin(0.5, base + lift.px / FRAME_H),
+    onComplete: () => spr.setOrigin(0.5, base),
+  })
 }

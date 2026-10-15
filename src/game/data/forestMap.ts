@@ -152,6 +152,7 @@ export function buildForest(): MapDef {
         x: 5,
         y: 22,
         color: 0x5b8c5a,
+        wander: 1,
         showIf: FOREST_FLAGS.metMoss,
         lines: [],
       },
