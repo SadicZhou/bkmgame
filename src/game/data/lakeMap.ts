@@ -70,6 +70,20 @@ export function buildLake(): MapDef {
         lines: ['湖心的灯台还亮着吗……'],
       },
       {
+        id: 'lake_washer',
+        name: '洗衣婶澜',
+        x: 14,
+        y: 8,
+        color: 0x3aa0a0,
+        facing: 'up',
+        emote: '♪',
+        lines: ['湖水清凉凉的，洗出来的衣裳有股好闻的雾味儿。', '冰冻那阵子可把我愁坏了，衣裳只能拿回家里搓。'],
+        progressLines: [
+          { flag: 'forest_unlocked', lines: ['灯台亮了以后，晚上洗衣裳都不用点灯啦。', '东边林子里传来叮叮咚咚的声音，是石头在唱歌吗？'] },
+          { flag: 'whale_beaten', lines: ['冰化了！我又能在湖边洗衣裳了。', '刚才沧澜鲸从湖心跃起来，溅了我一身水，哈哈！'] },
+        ],
+      },
+      {
         id: 'angler',
         name: '钓鱼少年澈',
         story: 'angler',

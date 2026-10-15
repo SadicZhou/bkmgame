@@ -110,6 +110,8 @@ export class WorldScene extends Phaser.Scene {
       hasFlag,
       playerTile: () => ({ x: this.tileX, y: this.tileY }),
       blockedByOthers: (x, y) => !!this.staticNpcAt(x, y) || !!this.eventView.uniqueAt(x, y),
+      canSpot: (npc) => this.canBeSpotted(npc),
+      onSpotted: (npc) => this.spottedBy(npc),
     })
 
     registerCharAnims(this)
@@ -260,13 +262,13 @@ export class WorldScene extends Phaser.Scene {
     this.cameras.main.fadeOut(400, rgb.r, rgb.g, rgb.b)
   }
 
-  update(_time: number, delta: number): void {
+  update(time: number, delta: number): void {
     this.playerShadow.setPosition(this.player.x, this.player.y + 13)
     this.updateLights()
     this.weather?.update(delta)
     const input = this.keys.poll()
     if (!this.moving && input.dx === 0 && input.dy === 0) this.stopWalk()
-    this.walkers.update(delta, this.busy || this.dialogue.isOpen || this.menus.isOpen || this.fishing.active)
+    this.walkers.update(time, delta, !this.idle())
     if (this.busy) return
 
     if (this.dialogue.isOpen) {
@@ -327,6 +329,34 @@ export class WorldScene extends Phaser.Scene {
     return visibleNpcs(this.map, hasFlag).find((n) => n.x === x && n.y === y && !this.walkers.owns(n)) ?? null
   }
 
+  /** 没有对话、菜单、钓鱼、过场在进行 */
+  private idle(): boolean {
+    return !this.busy && !this.dialogue.isOpen && !this.menus.isOpen && !this.fishing.active
+  }
+
+  /** 训练家能否发起视线对战：未被击败、玩家站定且有可战伙伴 */
+  private canBeSpotted(npc: NpcDef): boolean {
+    if (!npc.defeatedKey || GameState.getFlag(npc.defeatedKey)) return false
+    return this.idle() && !this.moving && this.hasAbleCreature()
+  }
+
+  /**
+   * 被训练家看见：玩家停下 → 训练家冒「!」走过来 → 面对面开始对话 / 对战
+   * @author zjh
+   * @date 2026-10-15
+   */
+  private spottedBy(npc: NpcDef): void {
+    if (this.busy) return
+    this.busy = true
+    this.stopWalk()
+    Sfx.confirm()
+    this.walkers.approach(npc, (at) => {
+      this.setFacing(at.x < this.tileX ? 'left' : at.x > this.tileX ? 'right' : at.y < this.tileY ? 'up' : 'down')
+      this.busy = false
+      this.interact.handle(null, npc)
+    })
+  }
+
   private tryMove(dx: number, dy: number): void {
     this.setFacing(dx < 0 ? 'left' : dx > 0 ? 'right' : dy < 0 ? 'up' : 'down')
 
@@ -372,6 +402,12 @@ export class WorldScene extends Phaser.Scene {
     const warp = this.map.warps.find((w) => w.x === this.tileX && w.y === this.tileY)
     if (warp) {
       this.useWarp(warp, fromX, fromY)
+      return
+    }
+    this.walkers.react()
+    const spotter = this.walkers.spotter()
+    if (spotter) {
+      this.spottedBy(spotter)
       return
     }
     const grass = isTallGrass(tile)
@@ -474,7 +510,7 @@ export class WorldScene extends Phaser.Scene {
   private tryInteract(): void {
     const { x, y } = this.facingTile()
     const npc = this.occupiedByNpc(x, y)
-    if (npc) this.walkers.hold(npc)
+    if (npc) this.walkers.greet(npc)
     if (this.interact.handle(this.eventView.uniqueAt(x, y), npc)) return
     this.fishing.tryFish(x, y)
   }

@@ -4,6 +4,7 @@
  * @date 2026-10-14
  */
 
+import type { Facing } from '../state/GameState'
 import { decorBlocks } from './decor'
 import { buildForest } from './forestMap'
 import { buildLake } from './lakeMap'
@@ -91,6 +92,16 @@ export interface NpcDef {
   texture?: string
   /** 闲逛半径（格，曼哈顿距离）：在出生点附近随机走动；不填则原地站立 */
   wander?: number
+  /** 初始朝向（有四方向行走图时生效，默认朝下） */
+  facing?: Facing
+  /** 巡逻路线：从出生点出发，依次直线走到各路点再原路折返（与 wander 二选一） */
+  patrol?: { x: number; y: number }[]
+  /** 巡逻到路点时停下张望的方向（默认朝下） */
+  patrolLook?: Facing
+  /** 训练家视线（格）：未被击败时，玩家走进正前方这么远就会被发现并开战 */
+  sight?: number
+  /** 玩家停在身边时冒出的表情（如「♪」）；不填则只转身 */
+  emote?: string
 }
 
 export interface MapDef {
@@ -157,6 +168,7 @@ function buildTown(): MapDef {
         y: 4,
         color: 0xc49a6c,
         wander: 1,
+        emote: '…',
         lines: [
           '欢迎来到晨曦小镇，焰迹旅人。',
           '余烬山巅的火种最近忽明忽暗，守护它的熔鬃狮变得焦躁不安。',
@@ -199,9 +211,38 @@ function buildTown(): MapDef {
         y: 8,
         color: 0xf0a0c0,
         wander: 3,
+        emote: '♪',
         lines: [
           '我在草丛里看见一只翠叶狐！',
           '听说伙伴到 9 级左右会进化，样子会变得超帅！',
+        ],
+      },
+      {
+        id: 'town_farmer',
+        name: '农夫阿田',
+        x: 11,
+        y: 2,
+        color: 0x5a7ec8,
+        wander: 2,
+        emote: '♪',
+        lines: ['今年的番茄长得特别好！都是托了火种的福。', '草地上的岩甲虫老爱啃我的篱笆……不过它们挺可爱的。'],
+        progressLines: [
+          { flag: 'whale_beaten', lines: ['湖边的冰化了，浇地的水也甜了！', '等收成了，送你一筐番茄尝尝。'] },
+          { flag: 'boss_beaten', lines: ['山上的火种稳下来，地里也暖和了。', '你就是那位焰迹旅人吧？谢谢你啊！'] },
+        ],
+      },
+      {
+        id: 'town_florist',
+        name: '卖花姑娘铃',
+        x: 7,
+        y: 10,
+        color: 0xf0a040,
+        wander: 2,
+        emote: '♥',
+        lines: ['要来一朵晨曦花吗？据说能让伙伴心情变好哦。', '傍晚的时候，花香会飘满整条街～'],
+        progressLines: [
+          { flag: 'deer_beaten', lines: ['回音林的叶子会唱歌？好想去听一听！', '要是能采到那里的花就好了……'] },
+          { flag: 'whale_beaten', lines: ['湖畔开了好多雾铃花，我每天都去采！', '你的伙伴看起来和你越来越亲了呢。'] },
         ],
       },
       {
@@ -304,9 +345,13 @@ function buildMeadow(): MapDef {
         id: 'ranger',
         name: '巡护员苔',
         role: 'trainer',
-        x: 9,
+        x: 12,
         y: 5,
         color: 0x5b8c5a,
+        facing: 'down',
+        patrol: [{ x: 6, y: 5 }],
+        patrolLook: 'down',
+        sight: 3,
         lines: [],
         team: [
           { speciesId: 'leafkit', level: 5 },
@@ -373,6 +418,10 @@ function buildPass(): MapDef {
         x: 8,
         y: 11,
         color: 0x8a6a4a,
+        facing: 'down',
+        patrol: [{ x: 3, y: 11 }],
+        patrolLook: 'down',
+        sight: 3,
         lines: [],
         team: [
           { speciesId: 'mistnewt', level: 9 },
