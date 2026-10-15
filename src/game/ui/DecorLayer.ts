@@ -61,10 +61,16 @@ function beacon(scene: Phaser.Scene, x: number, y: number): void {
   scene.tweens.add({ targets: ring, scale: { from: 1, to: 6 }, alpha: { from: 0.6, to: 0 }, duration: 1800, repeat: -1 })
 }
 
-const FX: Record<DecorFx, (scene: Phaser.Scene, x: number, y: number) => void> = { steam, flame, beacon }
+/** 发光蘑菇：一小团青色柔光慢慢明灭 */
+function glow(scene: Phaser.Scene, x: number, y: number): void {
+  const g = scene.add.image(x, y, 'fx-soft').setTint(0x8af0e0).setBlendMode(Phaser.BlendModes.ADD).setScale(1.4).setAlpha(0.35).setDepth(6)
+  scene.tweens.add({ targets: g, alpha: { from: 0.2, to: 0.5 }, duration: 1400 + ((x + y) % 5) * 150, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+}
+
+const FX: Record<DecorFx, (scene: Phaser.Scene, x: number, y: number) => void> = { steam, flame, beacon, glow }
 
 /** 会发光的动效（夜里作为光源） */
-const LIGHT_FX = new Set<DecorFx>(['flame', 'beacon'])
+const LIGHT_FX = new Set<DecorFx>(['flame', 'beacon', 'glow'])
 
 /**
  * 当前地图的火光 / 灯光位置（世界坐标），夜里用作光源

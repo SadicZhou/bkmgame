@@ -9,6 +9,7 @@ import { BADGE_POWER } from '../data/badges'
 import { weatherPowerMod } from '../data/weather'
 import { attackerPowerMod, critRate, defenderDamageMod, evasionMod, speedMod } from './AbilityHooks'
 import { volOf, type BattleState } from './BattleCore'
+import { bondCritBonus } from './Bond'
 import { stageMultiplier } from './StatusEffects'
 import type { Rng } from './Talent'
 
@@ -77,7 +78,7 @@ export function calcDamage(
   const defType = SPECIES[defender.speciesId].type
   const mult = typeMultiplier(move.type, defType)
   const stab = move.type === atkType ? STAB : 1
-  const crit = rng() < critRate(attacker, move)
+  const crit = rng() < critRate(attacker, move) + bondCritBonus(s, attacker)
 
   const atkStage = volOf(s, attacker).stages.atk
   const defStage = volOf(s, defender).stages.def

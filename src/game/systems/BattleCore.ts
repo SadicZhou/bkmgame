@@ -81,6 +81,8 @@ export interface Volatile {
   echo: number
   guardianUsed: boolean
   rebirthUsed: boolean
+  /** 羁绊「咬牙撑住」本场已判定过 */
+  bondUsed: boolean
 }
 
 /** 升级时想学但槽满的技能，战后交给玩家决定 */
@@ -115,6 +117,8 @@ export interface BattleState {
   token: boolean
   /** 玩家持有徽记对应的属性（招式威力 ×1.1） */
   badges?: ElementType[]
+  /** 羁绊系统已开放（玩家伙伴享受亲密度阶段效果） */
+  bond?: boolean
   vol: Record<string, Volatile>
   pendingLearns: PendingLearn[]
   turn: number
@@ -131,6 +135,7 @@ export function freshVolatile(): Volatile {
     echo: 0,
     guardianUsed: false,
     rebirthUsed: false,
+    bondUsed: false,
   }
 }
 
@@ -143,7 +148,7 @@ export function volOf(s: BattleState, c: CreatureInstance): Volatile {
 /** 换下场：清空能力阶段、混乱、寄生等，保留每场一次的标记 */
 export function resetVolatile(s: BattleState, c: CreatureInstance): void {
   const old = s.vol[c.uid]
-  s.vol[c.uid] = { ...freshVolatile(), guardianUsed: !!old?.guardianUsed, rebirthUsed: !!old?.rebirthUsed }
+  s.vol[c.uid] = { ...freshVolatile(), guardianUsed: !!old?.guardianUsed, rebirthUsed: !!old?.rebirthUsed, bondUsed: !!old?.bondUsed }
 }
 
 export function activePlayer(s: BattleState): CreatureInstance {

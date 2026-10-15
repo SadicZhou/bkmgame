@@ -30,6 +30,8 @@ export const NPC_FRAME: Record<string, number> = {
   spring: 7,
   healer: 8,
   lake_shio: 7,
+  forest_moss: 5,
+  forest_moss2: 5,
 }
 
 /** 第二章 NPC（art-src/chars/npcs2.jpg，一行 3 人） */
@@ -39,7 +41,14 @@ const NPC2_FRAME: Record<string, number> = {
   angler: 2,
 }
 
-export type CharSheet = 'char-player' | 'char-npcs' | 'char-npcs2'
+/** 第三章 NPC（art-src/chars/npcs3.jpg：绯 / 巡林者 / 菇菇奶奶） */
+const NPC3_FRAME: Record<string, number> = {
+  kindler: 0,
+  forest_patrol: 1,
+  mushroom_granny: 2,
+}
+
+export type CharSheet = 'char-player' | 'char-npcs' | 'char-npcs2' | 'char-npcs3'
 
 /**
  * 在 preload 阶段加载行走图
@@ -51,6 +60,7 @@ export function preloadCharArt(scene: Phaser.Scene): void {
   scene.load.spritesheet('char-player', 'assets/chars/char-player.png', frame)
   scene.load.spritesheet('char-npcs', 'assets/chars/char-npcs.png', frame)
   scene.load.spritesheet('char-npcs2', 'assets/chars/char-npcs2.png', frame)
+  scene.load.spritesheet('char-npcs3', 'assets/chars/char-npcs3.png', frame)
 }
 
 /** 行走图是否已加载 */
@@ -64,6 +74,7 @@ export function hasCharArt(scene: Phaser.Scene, key: CharSheet): boolean {
  * @date 2026-10-15
  */
 export function npcArt(scene: Phaser.Scene, npcId: string): { key: CharSheet; frame: number } | null {
+  if (NPC3_FRAME[npcId] !== undefined && hasCharArt(scene, 'char-npcs3')) return { key: 'char-npcs3', frame: NPC3_FRAME[npcId] }
   if (NPC2_FRAME[npcId] !== undefined && hasCharArt(scene, 'char-npcs2')) return { key: 'char-npcs2', frame: NPC2_FRAME[npcId] }
   if (NPC_FRAME[npcId] !== undefined && hasCharArt(scene, 'char-npcs')) return { key: 'char-npcs', frame: NPC_FRAME[npcId] }
   return null

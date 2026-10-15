@@ -10,7 +10,9 @@ import { ENCOUNTERS, tableFor, type EncounterSource } from '../data/encounters'
 import { MAPS, openTiles } from '../data/maps'
 import type { MinorEventId, PhenomenonDef } from '../data/phenomena'
 import { GameState } from '../state/GameState'
+import { FRIENDSHIP_GAIN } from './Bond'
 import { encounterRate, hasRare, pickEncounter, type EncounterContext } from './Encounter'
+import { addFriendship } from './Growth'
 import {
   activePhenomenon,
   collectCrystalAt,
@@ -130,6 +132,8 @@ export function stepWorld(mapId: string, x: number, y: number, encounterSource: 
   const lockedWeather = active ? w.weatherByMap[active.mapId] : undefined
   const res: StepResult = { clock: advanceClock(w, !!map?.outdoor) }
   if (active && lockedWeather) w.weatherByMap[active.mapId] = lockedWeather
+  const lead = GameState.party[0]
+  if (lead && w.totalSteps % FRIENDSHIP_GAIN.walkSteps === 0) addFriendship(lead, FRIENDSHIP_GAIN.walk)
 
   res.phenomenonFaded = tickPhenomenon(w, env) ?? undefined
   res.minorEnded = tickMinor(w) ?? undefined

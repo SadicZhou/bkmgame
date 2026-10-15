@@ -1,6 +1,7 @@
 /**
  * 一键剧情回归（仅开发模式）：打开 http://127.0.0.1:45321/?regress=1 自动运行
  * 第一章头目 → 章节卡 → 湖畔 → 泉守汐 → 钓鱼 → 斥候连战 → 浮桥与鲸跃 → 沧澜鲸 → Ending → 灯台点亮
+ * → 回音林 → 苔 → 临时组队 → 四音石 → 执灯·绯 → 林语鹿 → 第三章章节卡 → 羁绊页
  * 驱动真实场景（对话、移动、开战）。两种战斗方式：
  * - 快速（?regress=1）：胜负直接写入结果后走正常结算，只验证剧情流程；
  * - 慢速（?regress=slow）：用接近实际进度的队伍逐回合真实出招，记录回合数与剩余 HP，用来检查战斗数值。
@@ -11,6 +12,7 @@
 
 import type Phaser from 'phaser'
 import { createCreature, type CreatureInstance } from '../game/data/creatures'
+import { ECHO_STONES, FOREST_FLAGS, stoneLitFlag } from '../game/data/forestMap'
 import type { Facing } from '../game/state/GameState'
 import { GameState } from '../game/state/GameState'
 import { SAVE_KEY } from '../game/systems/SaveSystem'
@@ -178,6 +180,130 @@ class Runner {
 
 const check = (cond: boolean, msg: string): string | true => (cond ? true : msg)
 
+/** 慢速模式挑战沧澜鲸的队伍：按泉守汐的提示练到 Lv20 以上 */
+const SLOW_WHALE_PARTY = () => [createCreature('torrentshell', 21), createCreature('grovefox', 19), createCreature('pebblepup', 18)]
+
+/** 慢速模式进入第三章时的队伍：练到 Lv22~24，并在林中收了一只旋叶蝠 */
+const SLOW_CH3_PARTY = () => [createCreature('torrentshell', 24), createCreature('whirlbat', 22), createCreature('grovefox', 22)]
+
+/** 音石旁的站位与朝向 */
+const STONE_SPOTS: Record<string, [number, number, Facing]> = {
+  earth: [6, 16, 'left'],
+  water: [24, 16, 'right'],
+  leaf: [24, 11, 'right'],
+  bird: [5, 11, 'left'],
+}
+
+/**
+ * 第三章「回音」节拍：湖畔东口 → 苔 → 临时组队 → 四音石 → 绯 → 林语鹿 → 章节卡 → 羁绊页
+ * @author zjh
+ * @date 2026-10-15
+ */
+function chapter3Steps(r: Runner): [string, () => Promise<string | true>][] {
+  const has = GameState.hasFlag
+  /** 战后剧情台词（GameState.notices）会在回到大地图后弹出，点完再继续 */
+  const settle = async () => {
+    await r.until(() => r.active('World') && !r.world().busy, 8000)
+    await r.wait(400)
+    await r.closeDialogue(r.world())
+    await r.until(() => !r.world().busy, 5000)
+  }
+  const knock = async (id: string) => {
+    const [x, y, f] = STONE_SPOTS[id]
+    const ws = await r.enterWorld('forest', x, y, f)
+    ws.tryInteract()
+    await r.wait(300)
+    await r.closeDialogue(ws)
+    await r.until(() => r.active('World') && !r.world().busy, 5000)
+  }
+  return [
+    [
+      '湖畔东口 → 回音林',
+      async () => {
+        if (r.real) GameState.party = SLOW_CH3_PARTY()
+        const ws = await r.enterWorld('lake', 18, 9, 'right')
+        ws.tryMove(1, 0)
+        await r.wait(800)
+        await r.until(() => r.active('World') && !r.world().busy)
+        return check(GameState.mapId === 'forest', `停在 ${GameState.mapId}`)
+      },
+    ],
+    [
+      '遇见巡护员苔',
+      async () => {
+        const ws = await r.enterWorld('forest', 2, 26, 'up')
+        ws.tryInteract()
+        await r.wait(300)
+        await r.closeDialogue(ws)
+        return check(has(FOREST_FLAGS.metMoss), '没有写入 forest_met_moss')
+      },
+    ],
+    [
+      '临时组队：苔的森冠狐出战，玩家队伍不受影响',
+      async () => {
+        const before = GameState.party.map((c) => `${c.uid}:${c.hp}:${c.exp}`).join()
+        const ws = await r.enterWorld('forest', 6, 21, 'right')
+        ws.tryInteract()
+        if (!(await r.toBattle(ws))) return '巡林者没有开战'
+        const lead = r.scene<BattleProbe>('Battle').battle!.playerParty[0]
+        if (lead.speciesId !== 'grovefox' || GameState.party.includes(lead)) return `出战的不是苔的伙伴（${lead.speciesId}）`
+        if ((await r.winBattle()) === 'lost') return '苔的森冠狐输了'
+        await settle()
+        const after = GameState.party.map((c) => `${c.uid}:${c.hp}:${c.exp}`).join()
+        return check(has(FOREST_FLAGS.teamBattle) && before === after, '旗标缺失或玩家队伍被改动')
+      },
+    ],
+    [
+      '四音石：敲错全灭 → 按刻字顺序解开 → 藤蔓退开',
+      async () => {
+        await knock('earth')
+        await knock('leaf')
+        if (has(stoneLitFlag('earth'))) return '敲错后音石没有熄灭'
+        for (const s of ECHO_STONES) await knock(s.id)
+        return check(has(FOREST_FLAGS.stonesSolved), '没有写入 forest_stones_solved')
+      },
+    ],
+    [
+      '执灯·绯 → 战后真相台词',
+      async () => {
+        const ws = await r.enterWorld('forest', 15, 8, 'up')
+        ws.tryInteract()
+        if (!(await r.toBattle(ws))) return '绯没有开战'
+        if ((await r.winBattle()) === 'lost') return '输给了绯'
+        await settle()
+        return check(has(FOREST_FLAGS.kindler) && has(FOREST_FLAGS.kindlerStory), '旗标不完整')
+      },
+    ],
+    [
+      '林语鹿胜利 → 第三章章节卡 + 叶之徽记',
+      async () => {
+        const ws = await r.enterWorld('forest', 15, 5, 'up')
+        ws.tryInteract()
+        if (!(await r.toBattle(ws))) return '没有进入林语鹿战'
+        const next = await r.winBattle()
+        if (next === 'lost') return '输给了林语鹿'
+        return check(next === 'Chapter' && has('chapter3_done') && has('badge_leaf'), `去向 ${next}，旗标不完整`)
+      },
+    ],
+    [
+      '章节卡 → 菜单出现「羁绊」页',
+      async () => {
+        await r.wait(2000)
+        r.scene<Phaser.Scene & { leave(): void }>('Chapter').leave()
+        if (!(await r.until(() => r.active('World') && !r.world().busy))) return '没有回到大地图'
+        const ws = r.world() as WorldProbe & { menus: { openMain(): void; panel: { close(): void } } }
+        ws.menus.openMain()
+        const panel = ws.menus.panel as unknown as { opts: { title: string; rows: { label: string; onSelect?: () => void }[] } }
+        const row = panel.opts.rows.find((x) => x.label === '羁绊')
+        row?.onSelect?.()
+        const ok = !!row && panel.opts.title === '羁绊' && panel.opts.rows.length >= GameState.party.length
+        ws.menus.panel.close()
+        return check(ok, row ? '羁绊页内容不完整' : '菜单里没有「羁绊」')
+      },
+    ],
+  ]
+}
+
 /**
  * 依次执行剧情节拍；某一步失败后跳过后续步骤
  * @author zjh
@@ -274,6 +400,7 @@ async function runSteps(r: Runner): Promise<void> {
     [
       '沧澜鲸胜利 → Ending',
       async () => {
+        if (r.real) GameState.party = SLOW_WHALE_PARTY()
         const ws = await r.enterWorld('lake', 10, 3, 'up')
         ws.tryInteract()
         if (!(await r.toBattle(ws))) return '没有进入沧澜鲸战'
@@ -291,9 +418,10 @@ async function runSteps(r: Runner): Promise<void> {
         if (!(await r.until(() => r.active('World') && r.world().dialogue.isOpen, 15000))) return '没有播放灯台点亮'
         await r.closeDialogue(r.world())
         await r.until(() => r.active('World') && !r.world().busy, 8000)
-        return check(has('lighthouse_lit_seen'), '没有写入 lighthouse_lit_seen')
+        return check(has('lighthouse_lit_seen') && has(FOREST_FLAGS.unlocked), '没有写入 lighthouse_lit_seen / forest_unlocked')
       },
     ],
+    ...chapter3Steps(r),
   ]
   for (const [name, run] of steps) {
     if (!(await r.step(name, run))) break

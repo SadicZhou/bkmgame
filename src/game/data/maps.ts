@@ -5,6 +5,7 @@
  */
 
 import { decorBlocks } from './decor'
+import { buildForest } from './forestMap'
 import { buildLake } from './lakeMap'
 import { TS, borderWalls, fill, parseAscii, setRect } from './mapKit'
 
@@ -40,8 +41,9 @@ export interface WarpDef {
 /**
  * talk 对话 · healer 回血 · clinic 小屋综合服务（回血/鉴定/休息）· shop 商店 · trainer/boss 对战
  * board 旅人告示板 · granny 记忆婆婆（遗忘/回忆技能）· storage 伙伴寄存所
+ * sign 路边木牌（显示 lines）· prop 可调查的场景物件（音石、藤蔓；外观由装饰物或 texture 决定）
  */
-export type NpcRole = 'talk' | 'healer' | 'clinic' | 'shop' | 'trainer' | 'boss' | 'board' | 'granny' | 'storage'
+export type NpcRole = 'talk' | 'healer' | 'clinic' | 'shop' | 'trainer' | 'boss' | 'board' | 'granny' | 'storage' | 'sign' | 'prop'
 
 export interface TeamMember {
   speciesId: string
@@ -77,6 +79,16 @@ export interface NpcDef {
   chainNext?: string
   /** 连战：本场是第二战，需先赢下的 NPC id（否则从第一战开始） */
   chainFirst?: string
+  /** 临时组队：本场由这位同伴的队伍代替玩家出战（胜负都不影响玩家队伍） */
+  ally?: { name: string; team: TeamMember[] }
+  /** 挑战台词之后、开战之前的旁白（不加 NPC 名字前缀） */
+  preBattleLines?: string[]
+  /** 胜利后回到大地图时播放一次的台词 */
+  winLines?: string[]
+  /** 胜利后额外写入的旗标 */
+  winFlags?: string[]
+  /** prop 的贴图（不填则不显示，由装饰物负责外观） */
+  texture?: string
 }
 
 export interface MapDef {
@@ -456,6 +468,7 @@ export const MAPS: Record<string, MapDef> = {
   pass: buildPass(),
   cabin: buildCabin(),
   lake: buildLake(),
+  forest: buildForest(),
 }
 
 /**

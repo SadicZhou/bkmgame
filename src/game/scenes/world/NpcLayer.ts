@@ -21,8 +21,11 @@ const ROLE_MARK: Partial<Record<NonNullable<NpcDef['role']>, string>> = {
   granny: '忆',
 }
 
+/** 不是人物的 NPC（没有行走图，头顶标记放低一些） */
+const OBJECT_ROLES = new Set<NonNullable<NpcDef['role']>>(['boss', 'board', 'sign', 'prop'])
+
 /** 大地图上守护兽立绘的缩放（默认 0.8；沧澜鲸是巨鲸，要大一些） */
-export const BOSS_MAP_SCALE: Record<string, number> = { tidewhale: 1.5 }
+export const BOSS_MAP_SCALE: Record<string, number> = { tidewhale: 1.5, echodeer: 1.0 }
 
 /** 守护兽在大地图上显示的物种（队伍最后一只） */
 export function bossSpecies(npc: NpcDef): string {
@@ -73,13 +76,15 @@ export function spawnNpcs(scene: Phaser.Scene, map: MapDef, hasFlag: HasFlag): v
       const sp = bossSpecies(npc)
       const spr = setCreatureScale(scene.add.image(cx, cy, `spr-${sp}`), BOSS_MAP_SCALE[sp] ?? 0.8).setDepth(9)
       scene.tweens.add({ targets: spr, y: cy - 3, yoyo: true, repeat: -1, duration: 700 })
-    } else if (npc.role === 'board') {
+    } else if (npc.role === 'board' || npc.role === 'sign') {
       scene.add.image(cx, cy, 'spr-board').setDepth(9)
+    } else if (npc.role === 'prop') {
+      if (npc.texture && scene.textures.exists(npc.texture)) scene.add.image(cx, cy, npc.texture).setDepth(9)
     } else {
       spawnPerson(scene, npc, cx, cy)
     }
 
-    const tall = npc.role !== 'boss' && npc.role !== 'board' && !!npcArt(scene, npc.id)
+    const tall = !OBJECT_ROLES.has(npc.role ?? 'talk') && !!npcArt(scene, npc.id)
     const markY = tall ? cy - 32 : cy - 22
     const mark = markText(npc)
     if (!mark) continue

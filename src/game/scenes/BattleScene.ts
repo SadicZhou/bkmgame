@@ -14,6 +14,7 @@ import { setBattleCreatureScale } from '../graphics/CreatureArt'
 import { addBackdrop, battleBackdropKey } from '../graphics/SceneArt'
 import { GameState, type PendingBattle } from '../state/GameState'
 import { Sfx } from '../systems/AudioBeeps'
+import { BOND_FLAG } from '../systems/Bond'
 import { startBattle, type BattleFrame, type BattleState, type SideSnap } from '../systems/BattleLogic'
 import { STATUS_LABEL } from '../systems/StatusEffects'
 import { isFullMoon } from '../systems/WorldClock'
@@ -97,12 +98,14 @@ export class BattleScene extends Phaser.Scene {
     this.endAction = undefined
 
     const token = pending.kind === 'unique' && GameState.world.phenomenon.token
-    this.battle = startBattle(GameState.party, pending.enemies, pending.kind, {
+    this.battle = startBattle(pending.allyParty ?? GameState.party, pending.enemies, pending.kind, {
       trainerName: pending.trainerName,
       weather: pending.weather,
       night: pending.night,
       token,
       badges: ownedBadgeTypes(GameState.hasFlag),
+      bond: !pending.allyParty && GameState.hasFlag(BOND_FLAG),
+      allyName: pending.allyName,
     })
 
     this.fx = new BattleFx(this)

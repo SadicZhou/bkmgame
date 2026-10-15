@@ -95,4 +95,16 @@ export const ENCOUNTERS: Record<string, EncounterTable> = {
       { speciesId: 'lanternray', weight: 12, minLv: 18, maxLv: 21, weather: ['fog'] },
     ],
   },
+  forest: {
+    baseRate: 0.12,
+    grass: [
+      { speciesId: 'bushtail', weight: 30, minLv: 18, maxLv: 21 },
+      { speciesId: 'sproutcap', weight: 30, minLv: 18, maxLv: 20 },
+      { speciesId: 'parashroom', weight: 15, minLv: 21, maxLv: 23 },
+      { speciesId: 'leafkit', weight: 12, minLv: 18, maxLv: 21 },
+      { speciesId: 'whirlbat', weight: 20, minLv: 19, maxLv: 22, time: 'night' },
+      { speciesId: 'wisp', weight: 4, minLv: 20, maxLv: 22, time: 'night' },
+      { speciesId: 'echofrog', weight: 10, minLv: 19, maxLv: 22, weather: ['rain'] },
+    ],
+  },
 }

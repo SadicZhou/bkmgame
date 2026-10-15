@@ -11,6 +11,8 @@ import { WEATHER_INFO } from '../../data/weather'
 import { GameState, RESPAWN, type PendingBattle } from '../../state/GameState'
 import type { BattleState } from '../../systems/BattleLogic'
 import { settleStoryBattle, type StoryOutcome } from '../../systems/BattleOutcome'
+import { FRIENDSHIP_GAIN } from '../../systems/Bond'
+import { addFriendship } from '../../systems/Growth'
 import { endPhenomenon } from '../../systems/Phenomenon'
 
 /** 战斗结束后要去的场景（不填为回到大地图） */
@@ -41,6 +43,7 @@ function settlePhenomenon(b: BattleState, pending: PendingBattle): string[] {
 
 /** 收服登记：收服证书（天 / 地图 / 天气）、寄存所、图鉴 */
 function settleCatch(b: BattleState, pending: PendingBattle): string[] {
+  if (pending.allyParty) return []
   for (const c of b.playerParty) GameState.markCaught(c.speciesId)
   if (!b.caught) return []
   b.caught.caughtInfo = {
@@ -62,10 +65,14 @@ export function settleBattle(b: BattleState, pending: PendingBattle): BattleSett
   const notes = [...settleCatch(b, pending), ...settlePhenomenon(b, pending)]
   let next: BattleNext
 
-  if (b.won || b.fled) {
+  if (b.won || b.fled || pending.allyParty) {
     if (b.won) {
       GameState.coins += b.coinsEarned
       if (pending.flagOnWin) GameState.setFlag(pending.flagOnWin, true)
+      for (const f of pending.winFlags ?? []) GameState.setFlag(f, true)
+      if (pending.winLines?.length) GameState.notices.push(...pending.winLines)
+    } else if (pending.allyParty) {
+      notes.push(`${pending.allyName ?? '同伴'}的伙伴累倒了……休息一下，再来挑战吧。`)
     }
     GameState.mapId = pending.returnMapId
     GameState.playerX = pending.returnX
@@ -74,6 +81,7 @@ export function settleBattle(b: BattleState, pending: PendingBattle): BattleSett
     notes.push(...story.notes)
     next = story.next
   } else {
+    for (const c of GameState.party) addFriendship(c, FRIENDSHIP_GAIN.wipe)
     notes.push(...settleStoryBattle(pending, false).notes)
     const lost = Math.floor(GameState.coins / 2)
     GameState.coins -= lost

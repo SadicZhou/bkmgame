@@ -35,7 +35,7 @@ import { FishingController } from './world/FishingController'
 import { LIGHT_UP_FLAG, beforeLightUp, needsLightUp, playLighthouseLightUp, playWhaleLeap } from './world/LakeCutscenes'
 import { NpcInteract } from './world/NpcInteract'
 import { spawnNpcs } from './world/NpcLayer'
-import type { StoryHost } from './world/StoryEvents'
+import { FOREST_INTRO_LINES, type StoryHost } from './world/StoryEvents'
 import { Toaster, playBridgeCutscene, rustleAt, showMapBanner } from './world/WorldFx'
 import type { ReturnInfo, WorldHost } from './world/WorldHost'
 
@@ -47,6 +47,7 @@ const AMBIENT_BY_MAP: Record<string, AmbientKind> = {
   meadow: 'fireflies',
   pass: 'embers',
   lake: 'fireflies',
+  forest: 'fireflies',
 }
 
 const hasFlag = GameState.hasFlag
@@ -236,7 +237,10 @@ export class WorldScene extends Phaser.Scene {
       GameState.setFlag(LIGHT_UP_FLAG, true)
       GameState.persist()
       this.busy = false
-      this.dialogue.open(['（湖心的灯台重新亮了起来。）', '（温暖的光穿过薄雾，湖面上的冰一点点化开……）'], () => this.restartMap(0xfff6d2))
+      this.dialogue.open(['（湖心的灯台重新亮了起来。）', '（温暖的光穿过薄雾，湖面上的冰一点点化开……）', ...FOREST_INTRO_LINES], () => {
+        GameState.setFlag('forest_unlocked', true)
+        this.restartMap(0xfff6d2)
+      })
     })
   }
 
@@ -501,6 +505,7 @@ export class WorldScene extends Phaser.Scene {
           }),
         )
       },
+      redraw: () => this.restartMap(),
     }
   }
 

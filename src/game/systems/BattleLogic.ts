@@ -16,7 +16,7 @@ import {
 import { ITEMS, PARTY_LIMIT, catchChance } from '../data/items'
 import type { ElementType } from '../data/types'
 import { WEATHER_INFO, type Weather } from '../data/weather'
-import { guaranteedEscape, isType, onContact, onEnter, onFaint, onHit, onTurnEnd, tryEndure } from './AbilityHooks'
+import { guaranteedEscape, isType, onContact, onEnter, onFaint, onHit, onRoundEnd, onTurnEnd, tryEndure } from './AbilityHooks'
 import { chooseEnemyMove } from './BattleAI'
 import { calcDamage, effectiveSpeed, rollHit } from './BattleCalc'
 import {
@@ -34,6 +34,7 @@ import {
   type BattleState,
   type Side,
 } from './BattleCore'
+import { FRIENDSHIP_GAIN, tryBondEndure } from './Bond'
 import { addFriendship, grantExp } from './Growth'
 import { beforeMove, changeStages, tryApplyStatus, tryApplyVolatile } from './StatusEffects'
 
@@ -50,6 +51,10 @@ export interface BattleOptions {
   token?: boolean
   /** 玩家徽记属性 */
   badges?: ElementType[]
+  /** 羁绊系统已开放 */
+  bond?: boolean
+  /** 临时组队时的同伴名字（开场改为「XX：去吧，…！」） */
+  allyName?: string
 }
 
 /**
@@ -83,6 +88,7 @@ export function startBattle(
     night: !!opts.night,
     token: !!opts.token,
     badges: opts.badges ?? [],
+    bond: !!opts.bond,
     vol: {},
     pendingLearns: [],
     turn: 1,
@@ -94,7 +100,8 @@ export function startBattle(
   if (enemy.shiny) say(s, '✦ 它的身体闪闪发光！')
   if (kind === 'unique' && s.token) say(s, '异象信物亮了起来，它被光芒吸引住了！')
   if (s.weather) say(s, `${WEATHER_INFO[s.weather].icon} 场地天气：${WEATHER_INFO[s.weather].label}`, 'weather')
-  say(s, `去吧，${battleName(activePlayer(s))}！`, 'swapPlayer')
+  const go = `去吧，${battleName(activePlayer(s))}！`
+  say(s, opts.allyName ? `${opts.allyName}：${go}（本场由${opts.allyName}的伙伴出战）` : go, 'swapPlayer')
   onEnter(s, 'player')
   onEnter(s, 'enemy')
   return s
@@ -149,7 +156,7 @@ function finishWin(s: BattleState): void {
   s.over = true
   s.won = true
   s.coinsEarned = rewardCoins(s)
-  addFriendship(activePlayer(s), 1)
+  addFriendship(activePlayer(s), FRIENDSHIP_GAIN.win)
   say(s, `战斗胜利！获得 ${s.coinsEarned} 枚焰币。`)
 }
 
@@ -311,9 +318,11 @@ function executeMove(s: BattleState, side: Side, slotIndex: number): void {
   }
   const { dmg, mult, crit } = calcDamage(s, user, target, move)
   const endured = tryEndure(s, target, dmg)
-  const dealt = dealDamage(target, endured ? target.hp - 1 : dmg)
+  const gritted = !endured && tryBondEndure(s, target, dmg)
+  const dealt = dealDamage(target, endured || gritted ? target.hp - 1 : dmg)
   say(s, `${name} 使用 ${move.name}！${effectText(mult, crit)}`, sideAnim(side, 'hitEnemy', 'hitPlayer'), mult)
   if (endured) say(s, `${battleName(target)} 的「守护者」让它撑住了！`)
+  if (gritted) say(s, `${battleName(target)} 不想让你担心，咬牙撑住了！`)
 
   if (target.status === 'freeze' && move.type === 'flame' && target.hp > 0) {
     target.status = null
@@ -369,6 +378,7 @@ function endOfTurn(s: BattleState): void {
     checkFaints(s)
   }
   if (s.over) return
+  onRoundEnd(s)
   if (s.weatherTurns > 0) {
     s.weatherTurns -= 1
     if (s.weatherTurns === 0) {
@@ -539,6 +549,7 @@ export function checkItemOnCreature(itemId: string, target: CreatureInstance): I
 export function applyItemToCreature(itemId: string, target: CreatureInstance): string {
   const item = ITEMS[itemId]
   const name = battleName(target)
+  if (item.kind === 'heal' || item.kind === 'revive' || item.kind === 'cure') addFriendship(target, FRIENDSHIP_GAIN.heal)
   switch (item.kind) {
     case 'heal': {
       const before = target.hp

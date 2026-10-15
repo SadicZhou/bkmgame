@@ -18,6 +18,7 @@ export const BACKGROUNDS = [
   'bg-battle-summit',
   'bg-battle-mystic',
   'bg-battle-lake',
+  'bg-battle-forest',
   'bg-title',
   'bg-starter',
   'bg-ending',
@@ -36,16 +37,19 @@ export function preloadSceneArt(scene: Phaser.Scene): void {
 }
 
 /** 各地图的普通战斗背景 */
-const MAP_BACKDROP: Record<string, BackdropKey> = { pass: 'bg-battle-pass', lake: 'bg-battle-lake' }
+const MAP_BACKDROP: Record<string, BackdropKey> = { pass: 'bg-battle-pass', lake: 'bg-battle-lake', forest: 'bg-battle-forest' }
+
+/** 守护兽战也沿用本地图背景的地图（湖畔的沧澜鲸、回音林的林语鹿） */
+const BOSS_ON_MAP = new Set(['lake', 'forest'])
 
 /**
- * 战斗背景：异象战用星空；湖畔（含沧澜鲸）用湖景；其余 BOSS 战用山顶，普通战按地图区分
+ * 战斗背景：异象战用星空；湖畔 / 回音林（含守护兽）用本地风景；其余 BOSS 战用山顶，普通战按地图区分
  * @author zjh
  * @date 2026-10-14
  */
 export function battleBackdropKey(pending: Pick<PendingBattle, 'kind' | 'returnMapId'>): BackdropKey {
   if (pending.kind === 'unique') return 'bg-battle-mystic'
-  if (pending.returnMapId === 'lake') return 'bg-battle-lake'
+  if (BOSS_ON_MAP.has(pending.returnMapId)) return MAP_BACKDROP[pending.returnMapId]
   if (pending.kind === 'boss') return 'bg-battle-summit'
   return MAP_BACKDROP[pending.returnMapId] ?? 'bg-battle-meadow'
 }

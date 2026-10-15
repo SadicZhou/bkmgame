@@ -13,6 +13,7 @@ import { PHENOMENA } from '../data/phenomena'
 import { GameState } from '../state/GameState'
 import { Sfx } from '../systems/AudioBeeps'
 import { applyItemToCreature, checkItemOnCreature } from '../systems/BattleLogic'
+import { BOND_FLAG, FRIENDSHIP_GAIN, bondBar, bondStage, nextBondStage } from '../systems/Bond'
 import { anglerRecord, beatsRecord, fishLogCount, todayContest } from '../systems/FishLog'
 import { abilityDetail, creatureDetail, rowLabel } from './CreatureInfo'
 import { ListPanel, type ListRow } from './ListPanel'
@@ -71,6 +72,9 @@ export class WorldMenus {
           detail: '雾泉湖畔钓到过的伙伴、次数与最大体长。',
           onSelect: () => this.openFishLog(),
         },
+        ...(GameState.hasFlag(BOND_FLAG)
+          ? [{ label: '羁绊', right: '♥', detail: '伙伴们的亲密度与羁绊阶段。', onSelect: () => this.openBond() }]
+          : []),
         {
           label: '保存进度',
           detail: '存到本机浏览器（localStorage）。',
@@ -298,6 +302,31 @@ export class WorldMenus {
       footer: `${fishLogCount(w)}/${FISH_ORDER.length} · 破纪录 ${broken}`,
       rows,
       onCancel: () => this.openMain(5),
+    })
+  }
+
+  /**
+   * 羁绊页（第三章通关后开放）：心形条、阶段与效果、距离下一阶段还差多少
+   * @author zjh
+   * @date 2026-10-15
+   */
+  openBond(): void {
+    const rows: ListRow[] = GameState.party.map((c) => {
+      const stage = bondStage(c.friendship)
+      const next = nextBondStage(c.friendship)
+      const nextText = next ? `下一阶段「${next.name}」还差 ${next.min - c.friendship}` : '已经心火相连了！'
+      return {
+        label: battleName(c),
+        right: stage.name,
+        icon: spriteKey(c),
+        detail: `${bondBar(c.friendship)} ${c.friendship}/255\n「${stage.name}」${stage.effect}\n${nextText}`,
+      }
+    })
+    this.panel.open({
+      title: '羁绊',
+      footer: `胜利 +${FRIENDSHIP_GAIN.win} · 首发走 ${FRIENDSHIP_GAIN.walkSteps} 步 +${FRIENDSHIP_GAIN.walk} · 用药 +${FRIENDSHIP_GAIN.heal} · 全灭 ${FRIENDSHIP_GAIN.wipe}`,
+      rows,
+      onCancel: () => this.openMain(6),
     })
   }
 

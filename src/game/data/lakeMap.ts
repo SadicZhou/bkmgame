@@ -11,6 +11,12 @@ import type { MapDef } from './maps'
 /** 浮桥开放旗标 */
 export const BRIDGE_FLAG = 'bridge_open'
 
+/** 东侧林间小路：灯台点亮后通往回音林 */
+const FOREST_LOCK = {
+  requireFlag: 'forest_unlocked',
+  lockedLines: ['东边的树林很密，小路被浓雾挡住了。', '（湖心的灯台还暗着……先去湖心看看吧。）'],
+}
+
 /**
  * 建造雾泉湖畔
  * @author zjh
@@ -27,8 +33,8 @@ export function buildLake(): MapDef {
     '#~~~~~~~~~=~~~~~~~~#',
     '#~~~~~~~~---~~~~~~~#',
     '#~~~~,..........~~~#',
-    '#,***,"""...""""",,#',
-    '#****,"""...""""",,#',
+    '#,***,"""...""""",,W',
+    '#****,"""...""""",,W',
     '#,**,,,,.....,,,,,,#',
     '#,,,,"""....,"""",,#',
     '#,,,,,,,,..,,,,,,,,#',
@@ -50,6 +56,8 @@ export function buildLake(): MapDef {
     warps: [
       { x: 9, y: 14, targetMap: 'meadow', targetX: 8, targetY: 10, label: '青苔草地' },
       { x: 10, y: 14, targetMap: 'meadow', targetX: 9, targetY: 10, label: '青苔草地' },
+      { x: 19, y: 9, targetMap: 'forest', targetX: 2, targetY: 26, label: '回音林', ...FOREST_LOCK },
+      { x: 19, y: 10, targetMap: 'forest', targetX: 2, targetY: 26, label: '回音林', ...FOREST_LOCK },
     ],
     npcs: [
       {

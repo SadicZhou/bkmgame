@@ -144,6 +144,26 @@ export function onTurnEnd(s: BattleState, side: Side, c: CreatureInstance): void
   }
 }
 
+/** 林语每隔几回合响一次 */
+export const FOREST_VOICE_EVERY = 3
+
+/**
+ * 全场回合结束：林语（场上有该特性的伙伴时，每 3 回合清空双方能力阶级）
+ * @author zjh
+ * @date 2026-10-15
+ */
+export function onRoundEnd(s: BattleState): void {
+  if (s.turn % FOREST_VOICE_EVERY !== 0) return
+  const sides: Side[] = ['player', 'enemy']
+  const singer = sides.map((side) => actorOf(s, side)).find((c) => c.hp > 0 && c.abilityId === 'forest_voice')
+  if (!singer) return
+  say(s, `${battleName(singer)} 的「林语」！回声响彻全场，双方的能力变化都消失了。`)
+  for (const side of sides) {
+    const c = actorOf(s, side)
+    volOf(s, c).stages = { atk: 0, def: 0, spd: 0 }
+  }
+}
+
 /**
  * 致命伤害前：守护者残留 1 HP（每场一次）。返回是否触发
  * @author zjh

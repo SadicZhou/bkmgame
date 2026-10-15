@@ -43,6 +43,21 @@ export const CHAPTER_ENDS: ChapterEnd[] = [
     items: ['good_rod'],
     ending: true,
   },
+  {
+    bossFlag: 'deer_beaten',
+    card: { title: '第三章完 · 回音', subtitle: '羁绊系统开放 · 新的旅途：磐谷（敬请期待）' },
+    notes: [
+      '黑色灯罩从古树顶端滑落，林心古树亮起了温暖的绿光。',
+      '林语鹿的鹿角铃铛一齐响起，回声传遍了整片林子——蓬尾鼠、旋叶蝠、伞灵菇此起彼伏地回应着。',
+      '林语鹿用鹿角轻轻碰了碰你的伙伴。',
+      '苔：（跑过来）听！整片林子都在唱歌！',
+      '苔：……旅人，你的伙伴刚才看你的眼神，跟林语鹿看古树一模一样。',
+      '苔：那是「羁绊」。以前阿禾旅长教过我——现在，你也能看见了。',
+    ],
+    badge: 'leaf',
+    unlockFlags: ['chapter3_done'],
+    ending: false,
+  },
 ]
 
 /**

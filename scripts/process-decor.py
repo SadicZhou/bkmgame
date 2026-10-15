@@ -28,6 +28,8 @@ SINGLE = {
 SHEETS = {
     "props": [("plant", 26), ("well", 40), ("stall", 70)],
     "lakeprops": [("lighthouse-dark", 60), ("lighthouse", 60), ("reeds", 30)],
+    "forestprops": [("echostone", 30), ("echostone-lit", 30), ("glowshroom", 28)],
+    "eldertree": [("eldertree-dark", 120), ("eldertree", 120)],
 }
 
 

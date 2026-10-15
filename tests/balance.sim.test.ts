@@ -130,6 +130,56 @@ it.runIf(!!process.env.SIM)('tidewhale win rate', () => {
   console.log(rows.join('\n'))
 })
 
+/**
+ * 第三章胜率：苔的临时组队、执灯·绯、林语鹿（带药，模拟普通玩家）
+ * @author zjh
+ * @date 2026-10-15
+ */
+it.runIf(!!process.env.SIM)('chapter3 win rate', () => {
+  const N = 200
+  const patrol = MAPS.forest.npcs.find((n) => n.id === 'forest_patrol')!
+  let allyWins = 0
+  for (let i = 0; i < N; i++) {
+    const ally = patrol.ally!.team.map((m) => createCreature(m.speciesId, m.level))
+    if (fight(ally, team('forest_patrol', 'forest'), 'trainer').won) allyWins++
+  }
+  const rows = [`ally ${patrol.ally!.team.map((m) => `${m.speciesId}${m.level}`).join('+')}: ${((allyWins / N) * 100).toFixed(0)}%`]
+  const withPotions = (party: CreatureInstance[], enemies: CreatureInstance[], kind: 'trainer' | 'boss'): boolean => {
+    const s = startBattle(party, enemies, kind)
+    const bag = { super_potion: 3, potion: 6 } as Record<string, number>
+    let turns = 0
+    while (!s.over && turns++ < 80) {
+      const p = activePlayer(s)
+      const id = p.hp / p.maxHp < 0.35 ? ['super_potion', 'potion'].find((k) => bag[k] > 0) : undefined
+      if (id) {
+        bag[id]--
+        playerUseItem(s, id, s.activeIndex)
+      } else playerFight(s, bestMove(s))
+    }
+    return s.won
+  }
+  for (const [lead, mate] of [
+    ['blazehorn', 'torrentshell'],
+    ['torrentshell', 'grovefox'],
+    ['grovefox', 'lanternray'],
+    ['whirlbat', 'torrentshell'],
+  ]) {
+    for (const foe of ['kindler', 'echodeer']) {
+      const cols: string[] = []
+      for (const lv of [20, 22, 24, 26]) {
+        let wins = 0
+        for (let i = 0; i < N; i++) {
+          const party = [createCreature(lead, lv), createCreature(mate, lv - 2), createCreature('pebblepup', lv - 3)]
+          if (withPotions(party, team(foe, 'forest'), foe === 'kindler' ? 'trainer' : 'boss')) wins++
+        }
+        cols.push(`Lv${lv} ${((wins / N) * 100).toFixed(0)}%`)
+      }
+      rows.push(`${foe} ${lead}+${mate}: ${cols.join(' | ')}`)
+    }
+  }
+  console.log(rows.join('\n'))
+})
+
 it.runIf(!!process.env.SIM)('main line pacing', () => {
   const rows: string[] = []
   for (const starter of STARTERS) {

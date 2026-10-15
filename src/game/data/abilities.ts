@@ -35,6 +35,7 @@ const LIST: AbilityDef[] = [
   { id: 'guardian', name: '守护者', desc: '每场战斗首次受到致命伤害时，残留 1 HP。' },
   { id: 'rebirth', name: '涅槃', desc: '每场战斗限一次，倒下时以 50% HP 复活。' },
   { id: 'kindred', name: '同心', desc: '亲密度 ≥ 220 时，全能力 +5%。' },
+  { id: 'forest_voice', name: '林语', desc: '每 3 回合结束时，回声响彻全场：双方能力阶级清零。' },
   // 唯一精灵专属
   { id: 'wish', name: '许愿', desc: '打出会心后，自身速度 +1 阶。' },
   { id: 'bloom_scent', name: '花香', desc: '每回合结束回复 1/16 HP，并有 30% 解除自身异常状态。' },

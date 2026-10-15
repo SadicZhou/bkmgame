@@ -1,6 +1,7 @@
 /**
- * 第二章剧情节拍（雾泉湖畔·泉守汐）：按旗标推进对话、发放钓竿、触发浮桥演出
- * 1 求助并给旧钓竿 → 2 先去钓一条 → 3 码头斥候 → 4 雾泉螈搭浮桥 → 5 湖心沧澜鲸 → 战后致谢
+ * 剧情脚本入口；第二章节拍（雾泉湖畔·泉守汐）：按旗标推进对话、发放钓竿、触发浮桥演出
+ * 1 求助并给旧钓竿 → 2 先去钓一条 → 3 码头斥候 → 4 雾泉螈搭浮桥 → 5 湖心沧澜鲸 → 战后指向回音林
+ * 第三章（回音林）脚本见 ForestStory。
  * @author zjh
  * @date 2026-10-15
  */
@@ -8,6 +9,7 @@
 import { BRIDGE_FLAG } from '../../data/lakeMap'
 import { GameState } from '../../state/GameState'
 import { anglerStory } from './AnglerStory'
+import { FOREST_STORIES } from './ForestStory'
 
 /** WorldScene 提供给剧情脚本的能力 */
 export interface StoryHost {
@@ -18,7 +20,16 @@ export interface StoryHost {
   refreshHud(): void
   /** 播放雾泉螈搭桥 + 沧澜鲸跃出水面的演出，结束后重绘地图 */
   playBridge(): void
+  /** 剧情改变了地图（NPC 出现 / 消失、装饰切换）后淡出重进当前地图 */
+  redraw(): void
 }
+
+/** 第三章开场：灯台点亮后，泉守汐指向回音林 */
+export const FOREST_INTRO_LINES = [
+  '泉守汐：灯台的光照到东边的林子里去了……那里是回音林。',
+  '泉守汐：以前站在林口喊一声，整片林子都会回应你。可这几天，一点回声都没有。',
+  '泉守汐：拜托了，旅人。去看看吧。（湖畔东侧的林间小路已经可以通行）',
+]
 
 type StoryFn = (host: StoryHost, name: string) => void
 
@@ -69,13 +80,21 @@ function lakeShio(host: StoryHost, name: string): void {
     return
   }
   if (!has('whale_beaten')) {
-    say(['沧澜鲸就在湖心灯台前。', '它不是敌人，只是被灯罩折磨得失控了……请让它平静下来。'])
+    say([
+      '沧澜鲸就在湖心灯台前。',
+      '它不是敌人，只是被灯罩折磨得失控了……请让它平静下来。',
+      '它的力量很强。伙伴最好练到 Lv.20 以上再去，记得带上伤药——我在这里随时帮你们回复。',
+    ])
     return
   }
-  say(['湖面的冰化了，灯台又亮了。', '沧澜鲸说，好钓竿是它送给你的谢礼——湖底深处的伙伴也会被吸引过来哦。'])
+  if (!has('forest_unlocked')) {
+    host.say(FOREST_INTRO_LINES, () => GameState.setFlag('forest_unlocked', true))
+    return
+  }
+  say(['湖面的冰化了，灯台又亮了。', '沧澜鲸说，好钓竿是它送给你的谢礼——湖底深处的伙伴也会被吸引过来哦。', '回音林就在湖畔东边，苔应该也在那里。'])
 }
 
-const STORIES: Record<string, StoryFn> = { lake_shio: lakeShio, angler: anglerStory }
+const STORIES: Record<string, StoryFn> = { lake_shio: lakeShio, angler: anglerStory, ...FOREST_STORIES }
 
 /**
  * 执行 NPC 的剧情脚本；没有对应脚本返回 false

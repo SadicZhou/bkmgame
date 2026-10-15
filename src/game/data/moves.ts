@@ -113,6 +113,7 @@ const LIST: MoveDef[] = [
   sta('synthesis', '光合', 'leaf', -1, 5, '回复 50% HP（晴天 66%）。', { effect: { chance: 100, target: 'self', healRatio: 0.5 } }),
   atk('petal_storm', '花瓣风暴', 'leaf', 30, 95, 15, '卷起花瓣攻击。'),
   atk('grove_beam', '林冠光', 'leaf', 38, 90, 10, '汇聚林间光芒射出。'),
+  atk('bell_chorus', '林铃合鸣', 'leaf', 45, 90, 5, '20% 降低对手攻击 1 阶。林语鹿专属。', { effect: { chance: 20, target: 'foe', stages: { atk: -1 } } }),
 
   // ── 岩 ──
   atk('pebble', '碎石弹', 'stone', 19, 100, 30, '弹出小石子。'),

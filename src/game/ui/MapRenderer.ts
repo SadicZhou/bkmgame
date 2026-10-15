@@ -19,6 +19,7 @@ const WALL_BY_MAP: Record<string, string[]> = {
   pass: ['tile-cliff-0', 'tile-cliff-1'],
   cabin: ['tile-woodwall-0'],
   lake: ['tile-tree-1', 'tile-tree-2', 'tile-tree-0'],
+  forest: ['tile-tree-2', 'tile-tree-1', 'tile-tree-2', 'tile-tree-0'],
 }
 
 /** 木板通道：底下先铺一层水面动画 */

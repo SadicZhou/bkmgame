@@ -41,9 +41,10 @@ export class NpcInteract {
     return true
   }
 
-  /** 训练家开场台词 → 开战 */
+  /** 训练家开场台词（+ 开战前旁白）→ 开战 */
   challenge(npc: NpcDef): void {
-    this.host.dialogue.open((npc.challengeLines ?? ['来对战吧！']).map((l) => `${npc.name}：${l}`), () => this.startTrainerBattle(npc))
+    const lines = [...(npc.challengeLines ?? ['来对战吧！']).map((l) => `${npc.name}：${l}`), ...(npc.preBattleLines ?? [])]
+    this.host.dialogue.open(lines, () => this.startTrainerBattle(npc))
   }
 
   private talk(npc: NpcDef): void {
@@ -79,6 +80,11 @@ export class NpcInteract {
       case 'boss':
         this.talkFighter(npc, say)
         return
+      case 'sign':
+      case 'prop':
+        Sfx.confirm()
+        host.dialogue.open(npc.lines)
+        return
       default:
         say(npcLines(npc, (k) => !!GameState.getFlag(k)))
     }
@@ -95,7 +101,7 @@ export class NpcInteract {
       say(npc.afterLines ?? npc.lines)
       return
     }
-    if (!this.host.hasAbleCreature()) {
+    if (!npc.ally && !this.host.hasAbleCreature()) {
       say(['你的伙伴们都累坏了，先去休息吧。'])
       return
     }
@@ -121,6 +127,10 @@ export class NpcInteract {
       isBoss: npc.role === 'boss',
       chainNpcId: npc.chainNext,
       chainResetFlags: first?.defeatedKey ? [first.defeatedKey] : undefined,
+      allyParty: npc.ally?.team.map((m) => createCreature(m.speciesId, m.level)),
+      allyName: npc.ally?.name,
+      winLines: npc.winLines,
+      winFlags: npc.winFlags,
       ...this.host.returnInfo(),
     })
   }

@@ -36,6 +36,13 @@ export interface PendingBattle {
   chainResetFlags?: string[]
   /** 异象战对应的异象 id */
   phenomenonId?: string
+  /** 临时组队：由同伴的队伍代替玩家出战（胜负都不影响玩家队伍，也不登记图鉴） */
+  allyParty?: CreatureInstance[]
+  allyName?: string
+  /** 胜利后回到大地图时播放一次的台词 */
+  winLines?: string[]
+  /** 胜利后额外写入的旗标 */
+  winFlags?: string[]
   /** 战斗场地天气（室内 / 城镇为 null） */
   weather: Weather | null
   night: boolean
@@ -54,6 +61,7 @@ export const OUTDOOR_MAPS: { mapId: string; requireFlag?: string }[] = [
   { mapId: 'meadow' },
   { mapId: 'pass', requireFlag: 'ranger_beaten' },
   { mapId: 'lake', requireFlag: 'lake_unlocked' },
+  { mapId: 'forest', requireFlag: 'forest_unlocked' },
 ]
 
 class GameStateStore {

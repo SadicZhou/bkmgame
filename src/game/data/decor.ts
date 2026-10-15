@@ -6,8 +6,10 @@
  * @date 2026-10-14
  */
 
-/** 装饰动效：温泉蒸汽 / 火焰跳动 / 灯台光晕 */
-export type DecorFx = 'steam' | 'flame' | 'beacon'
+import { ECHO_STONES, stoneLitFlag } from './forestMap'
+
+/** 装饰动效：温泉蒸汽 / 火焰跳动 / 灯台光晕 / 蘑菇微光 */
+export type DecorFx = 'steam' | 'flame' | 'beacon' | 'glow'
 
 export interface DecorDef {
   key: string
@@ -43,6 +45,11 @@ export const DECOR_KEYS = [
   'decor-lighthouse',
   'decor-lighthouse-dark',
   'decor-reeds',
+  'decor-eldertree',
+  'decor-eldertree-dark',
+  'decor-echostone',
+  'decor-echostone-lit',
+  'decor-glowshroom',
 ] as const
 
 export const DECOR: Record<string, DecorDef[]> = {
@@ -67,8 +74,23 @@ export const DECOR: Record<string, DecorDef[]> = {
     { key: 'decor-lighthouse-dark', x: 11, y: 3, w: 2, h: 2, solid: true, hideIf: 'whale_beaten' },
     { key: 'decor-lighthouse', x: 11, y: 3, w: 2, h: 2, solid: true, showIf: 'whale_beaten', fx: 'beacon', fxAt: { x: 0, y: -86 } },
     { key: 'decor-reeds', x: 5, y: 8, w: 1, h: 1, solid: true },
-    { key: 'decor-reeds', x: 18, y: 9, w: 1, h: 1, solid: true },
+    { key: 'decor-reeds', x: 18, y: 12, w: 1, h: 1, solid: true },
     { key: 'decor-reeds', x: 1, y: 13, w: 1, h: 1, solid: true },
+  ],
+  forest: [
+    { key: 'decor-eldertree-dark', x: 13, y: 1, w: 5, h: 2, solid: true, hideIf: 'deer_beaten' },
+    { key: 'decor-eldertree', x: 13, y: 1, w: 5, h: 2, solid: true, showIf: 'deer_beaten', fx: 'beacon', fxAt: { x: 0, y: -100 } },
+    ...ECHO_STONES.flatMap((s): DecorDef[] => [
+      { key: 'decor-echostone', x: s.x, y: s.y, w: 1, h: 1, solid: true, hideIf: stoneLitFlag(s.id) },
+      { key: 'decor-echostone-lit', x: s.x, y: s.y, w: 1, h: 1, solid: true, showIf: stoneLitFlag(s.id) },
+    ]),
+    ...[
+      [22, 23],
+      [20, 22],
+      [22, 21],
+      [20, 20],
+      [17, 20],
+    ].map(([x, y]): DecorDef => ({ key: 'decor-glowshroom', x, y, w: 1, h: 1, fx: 'glow', fxAt: { x: 0, y: -14 } })),
   ],
 }
 

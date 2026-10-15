@@ -179,7 +179,7 @@ export function restUntil(w: WorldSave, target: 'day' | 'night', rng: Rng = Math
   w.nextWeatherRoll = w.totalSteps + WEATHER_ROLL_STEPS
 }
 
-/** 地图当前天气；室内/城镇返回 null（无效果） */
+/** 地图当前天气；室内/城镇返回 null（无效果）；旧存档里还没掷过的新地图先按晴天算 */
 export function weatherOf(w: WorldSave, mapId: string): Weather | null {
-  return w.weatherByMap[mapId] ?? null
+  return w.weatherByMap[mapId] ?? (WEATHER_TABLES[mapId] ? 'sunny' : null)
 }
