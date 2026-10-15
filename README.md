@@ -5,7 +5,7 @@
 **运行方式：** 仅本机 `F:\work\game`（不再依赖云端开发服）  
 **远端仓库：** https://github.com/SadicZhou/bkmgame  
 **作者：** 周建豪  
-**进度：** v3.2 湖畔打磨完成，自测通过（2026-10-15，报告见 `test_report_20261015_0927.md`；鲸跃与灯台点亮演出、钓鱼记录与钓鱼大赛、雾天稀有鱼雾灯鳐、冰冕鹅野外来源、一键剧情回归，设计见 `docs/v3.2-lake-polish-design.md`）。v3.1 第二章「雾泉湖畔」开发完成，自测通过（2026-10-15，报告见 `test_report_20261015_0912.md`；章节卡与徽记、钓鱼小游戏、斥候连战、浮桥演出、BOSS 沧澜鲸、5 个新伙伴，设计见 `docs/v3.1-chapter2-design.md`）。v3.0 开发完成，自测通过（2026-10-14，报告见 `test_report_20261014_1622.md`；9 属性 / PP / 状态 / 特性 / 资质与性格 / 初始三选一 / 昼夜天气 / 异色 / 随机异象与唯一精灵 / 寄存所 / 记忆婆婆 / 告示板）。v2 见 `docs/v2-design.md`；策划稿见 `docs/planning/00-总览.md`  
+**进度：** v3.3 打磨完成，自测通过（2026-10-15，报告见 `test_report_20261015_0952.md`；战斗指令菜单拆分、一键回归慢速真实出招模式、澈的钓鱼纪录与雨天限定题，设计见 `docs/v3.3-polish-design.md`）；第三章「回音林」设计稿见 `docs/v3.4-chapter3-design.md`（待确认后开发）。v3.2 湖畔打磨完成，自测通过（2026-10-15，报告见 `test_report_20261015_0927.md`；鲸跃与灯台点亮演出、钓鱼记录与钓鱼大赛、雾天稀有鱼雾灯鳐、冰冕鹅野外来源、一键剧情回归，设计见 `docs/v3.2-lake-polish-design.md`）。v3.1 第二章「雾泉湖畔」开发完成，自测通过（2026-10-15，报告见 `test_report_20261015_0912.md`；章节卡与徽记、钓鱼小游戏、斥候连战、浮桥演出、BOSS 沧澜鲸、5 个新伙伴，设计见 `docs/v3.1-chapter2-design.md`）。v3.0 开发完成，自测通过（2026-10-14，报告见 `test_report_20261014_1622.md`；9 属性 / PP / 状态 / 特性 / 资质与性格 / 初始三选一 / 昼夜天气 / 异色 / 随机异象与唯一精灵 / 寄存所 / 记忆婆婆 / 告示板）。v2 见 `docs/v2-design.md`；策划稿见 `docs/planning/00-总览.md`  
 **技术栈：** Vite + TypeScript + Phaser 3
 
 ## 如何运行（Windows 本地 · 唯一推荐）
@@ -99,12 +99,16 @@ Vitest 单元测试位于 `tests/`，覆盖属性克制、资质分布、伤害�
 set SIM=1 && set SIM_MATE=rockmite && set SIM_PASS_MATE=mistnewt && npx vitest run tests/balance.sim.test.ts
 ```
 
-浏览器自测截图保存在 `test-artifacts/v3/`（v3.0）、`test-artifacts/v3.1/`（第二章）与 `test-artifacts/v3.2/`（湖畔打磨）。
+浏览器自测截图保存在 `test-artifacts/v3/`（v3.0）、`test-artifacts/v3.1/`（第二章）、`test-artifacts/v3.2/`（湖畔打磨）与 `test-artifacts/v3.3/`（钓鱼纪录 / 雨天题 / 战斗菜单）。
 
 ### 一键剧情回归
 
 先启动开发服务器（`npm run dev`），再双击 `scripts\run-regress.bat`，或直接打开 `http://127.0.0.1:45321/?regress=1`。
 脚本会自动跑完「第一章头目 → 章节卡 → 湖畔 → 泉守汐 → 钓鱼 → 斥候连战 → 浮桥与鲸跃 → 沧澜鲸 → 结局 → 灯台点亮」，结果显示在页面右上角（同时写入控制台和 `window.__regressResult`）。运行前会备份本地存档、结束后自动还原。改剧情后跑一次即可。
+
+想检查战斗数值时，用**慢速模式**：双击 `scripts\run-regress-slow.bat` 或打开 `http://127.0.0.1:45321/?regress=slow`。队伍换成贴近实际进度的等级（Lv13～15 起步，带少量伤药），每场战斗都通过真实菜单逐回合出招 / 用药，结果面板会列出每场的胜负、回合数、用药数和剩余 HP。输掉的战斗会让该步骤失败，说明这里对正常进度的玩家偏难。
+
+批量胜率模拟：`set SIM=1 && npx vitest run tests/balance.sim.test.ts`（包含沧澜鲸各等级胜率）。
 
 ## 项目结构（摘要）
 
@@ -115,11 +119,12 @@ src/game/
                CreatureArt 负责立绘加载与缩放（战斗中二阶 ×1.1、三阶 ×1.2，脚底对齐站台）；
                SceneArt 加载背景与装饰物，CharArt 加载人物行走图
   scenes/      Boot / Title / Starter / World / Battle / Chapter（章节卡）/ Ending；
-               world/ 下为 NPC 层、NPC 互动、钓鱼控制、剧情节拍（泉守汐 / 钓鱼大赛）与湖畔演出；battle/ 下为战后结算
+               world/ 下为 NPC 层、NPC 互动、钓鱼控制、剧情节拍（泉守汐 / 钓鱼大赛与澈的纪录）与湖畔演出；
+               battle/ 下为指令按钮（OptionMenu）、指令菜单（BattleMenus）与战后结算（BattleSettle）
   systems/     战斗（Core/Calc/Logic/AI/状态/特性）、资质、成长、遭遇、世界时钟、异象、存档、音效
   state/       运行时全局状态（队伍、寄存所、背包、图鉴、旗标、世界）
   ui/          输入、对话框、列表面板、菜单、小镇服务、学招替换、地图铺设、装饰层、天气层（weather/）、事件表现、战斗特效
-src/dev/       仅开发模式加载的工具（一键剧情回归）
+src/dev/       仅开发模式加载的工具（一键剧情回归、慢速模式的真实出招驱动 autoBattle）
 tests/         Vitest 单元测试
 docs/          设计文档与策划稿（docs/planning）
 ```

@@ -83,6 +83,53 @@ it.runIf(!!process.env.SIM)('unique catch', () => {
   console.log(rows.join('\n'))
 })
 
+/**
+ * 沧澜鲸胜率：三条御三家进化线 + 湖畔伙伴，不同等级只出招（不用道具、不换人）
+ * @author zjh
+ * @date 2026-10-15
+ */
+it.runIf(!!process.env.SIM)('tidewhale win rate', () => {
+  const lines = [
+    ['blazehorn', 'grovefox'],
+    ['torrentshell', 'grovefox'],
+    ['grovefox', 'mistnewt'],
+  ]
+  const whaleLv = MAPS.lake.npcs.find((n) => n.team?.some((m) => m.speciesId === 'tidewhale'))!.team![0].level
+  const rows: string[] = [`tidewhale Lv${whaleLv}`]
+  /** 带药出战：在场伙伴 HP < 35% 时先用好伤药（3）再用伤药（6） */
+  const fightWithPotions = (party: CreatureInstance[], enemies: CreatureInstance[]): boolean => {
+    const s = startBattle(party, enemies, 'boss')
+    const bag = { super_potion: 3, potion: 6 } as Record<string, number>
+    let turns = 0
+    while (!s.over && turns++ < 80) {
+      const p = activePlayer(s)
+      const id = p.hp / p.maxHp < 0.35 ? ['super_potion', 'potion'].find((k) => bag[k] > 0) : undefined
+      if (id) {
+        bag[id]--
+        playerUseItem(s, id, s.activeIndex)
+      } else playerFight(s, bestMove(s))
+    }
+    return s.won
+  }
+  for (const potions of [false, true]) {
+    for (const [lead, mate] of lines) {
+      const cols: string[] = []
+      for (const lv of [16, 18, 20, 22]) {
+        let wins = 0
+        const N = 200
+        for (let i = 0; i < N; i++) {
+          const party = [createCreature(lead, lv), createCreature(mate, lv - 2), createCreature('pebblepup', lv - 3)]
+          const enemies = [createCreature('tidewhale', whaleLv)]
+          if (potions ? fightWithPotions(party, enemies) : fight(party, enemies, 'boss').won) wins++
+        }
+        cols.push(`Lv${lv} ${((wins / N) * 100).toFixed(0)}%`)
+      }
+      rows.push(`${potions ? '带药 ' : '无药 '}${lead}+${mate}: ${cols.join(' | ')}`)
+    }
+  }
+  console.log(rows.join('\n'))
+})
+
 it.runIf(!!process.env.SIM)('main line pacing', () => {
   const rows: string[] = []
   for (const starter of STARTERS) {

@@ -30,3 +30,12 @@ export const CONTEST_ITEMS: string[] = ['super_potion', 'honey_berry', 'pp_fruit
 
 /** 钓鱼记录集齐后的一次性大奖 */
 export const MASTER_REWARD = { coins: 500, itemId: 'lure_bell', count: 3, flag: 'fish_master' }
+
+/** 澈的个人纪录 = 基准体长 × 该倍率；玩家打破后找澈领一次奖励（每种鱼一次） */
+export const ANGLER_RECORD_RATE = 1.2
+export const RECORD_BREAK_COINS = 80
+/** 打破纪录已领奖的旗标前缀（fish_rec_<物种>） */
+export const RECORD_FLAG_PREFIX = 'fish_rec_'
+
+/** 雨天限定题：出题时湖畔在下雨；必须在雨中钓到，目标体长 = 基准 × targetRate，奖励更高 */
+export const RAIN_CONTEST = { targetRate: 1.0, coins: 300, itemId: 'lure_bell' }

@@ -1,53 +1,32 @@
 /**
- * 回合制战斗场景：出招（PP）/ 道具 / 换人 / 逃跑；天气与昼夜；异象战结算；战后学招
- * 逻辑层产出 BattleFrame 队列，本场景逐帧播放提示、血条与动画（动画细节见 ui/BattleFx）。
+ * 回合制战斗场景：布局、帧播放、学招与结算衔接
+ * 逻辑层产出 BattleFrame 队列，本场景逐帧播放提示、血条与动画（动画细节见 ui/BattleFx）；
+ * 指令菜单见 battle/BattleMenus + battle/OptionMenu，战后写回见 battle/BattleSettle。
  * @author zjh
- * @date 2026-10-14
+ * @date 2026-10-15
  */
 
 import Phaser from 'phaser'
-import { MOVES, SPECIES, TYPE_LABEL, battleName, outOfPp, spriteKey, typeMultiplier } from '../data/creatures'
+import { SPECIES, TYPE_LABEL } from '../data/creatures'
 import { ownedBadgeTypes } from '../data/badges'
-import { ITEMS, ITEM_ORDER } from '../data/items'
 import { WEATHER_INFO } from '../data/weather'
 import { setBattleCreatureScale } from '../graphics/CreatureArt'
 import { addBackdrop, battleBackdropKey } from '../graphics/SceneArt'
 import { GameState, type PendingBattle } from '../state/GameState'
 import { Sfx } from '../systems/AudioBeeps'
-import {
-  activeEnemy,
-  activePlayer,
-  canRun,
-  checkItem,
-  playerFight,
-  playerRun,
-  playerSwitch,
-  playerUseItem,
-  startBattle,
-  type BattleFrame,
-  type BattleState,
-  type SideSnap,
-} from '../systems/BattleLogic'
+import { startBattle, type BattleFrame, type BattleState, type SideSnap } from '../systems/BattleLogic'
 import { STATUS_LABEL } from '../systems/StatusEffects'
 import { isFullMoon } from '../systems/WorldClock'
 import { BattleFx } from '../ui/BattleFx'
-import { creatureDetail, rowLabel } from '../ui/CreatureInfo'
 import { HpBar } from '../ui/HpBar'
 import { InputKeys } from '../ui/InputKeys'
-import { ListPanel, type ListRow } from '../ui/ListPanel'
-import { moveInfo, openMoveReplace } from '../ui/MoveLearnFlow'
+import { ListPanel } from '../ui/ListPanel'
+import { openMoveReplace } from '../ui/MoveLearnFlow'
 import { fadeIn, fadeToScene } from '../ui/Transition'
 import { WeatherLayer } from '../ui/WeatherLayer'
+import { BattleMenus } from './battle/BattleMenus'
 import { settleBattle } from './battle/BattleSettle'
-
-/** 指令按钮 */
-interface BattleOption {
-  label: string
-  /** 选中时左侧说明 */
-  info?: string
-  disabled?: boolean
-  onSelect: () => void
-}
+import { OptionMenu, type BattleOption } from './battle/OptionMenu'
 
 type Mode = 'play' | 'menu' | 'end' | 'idle'
 
@@ -87,10 +66,8 @@ export class BattleScene extends Phaser.Scene {
   private enemyFainted = 0
 
   private msgText!: Phaser.GameObjects.Text
-  private optLayer!: Phaser.GameObjects.Container
-  private options: BattleOption[] = []
-  private optIndex = 0
-  private optBack?: () => void
+  private menu!: OptionMenu
+  private commands!: BattleMenus
 
   private queue: BattleFrame[] = []
   private queueDone?: () => void
@@ -114,7 +91,6 @@ export class BattleScene extends Phaser.Scene {
     this.pending = pending
     this.mode = 'idle'
     this.queue = []
-    this.options = []
     this.eDots = []
     this.enemyFainted = 0
     this.lastFrame = undefined
@@ -138,13 +114,20 @@ export class BattleScene extends Phaser.Scene {
     this.buildMessageBox()
     this.panel = new ListPanel(this)
     this.keys = new InputKeys(this)
+    this.commands = new BattleMenus({
+      battle: this.battle,
+      panel: this.panel,
+      showOptions: (prompt, options, onBack, index) => this.showOptions(prompt, options, onBack, index),
+      act: (fn) => this.act(fn),
+      finish: () => this.finish(),
+    })
 
     // 双方初始不可见，由入场帧滑入
     this.playerSpr.setAlpha(0)
     this.enemySpr.setAlpha(0)
 
     fadeIn(this, 300)
-    this.time.delayedCall(320, () => this.playFrames(() => this.showRoot()))
+    this.time.delayedCall(320, () => this.playFrames(() => this.commands.root()))
   }
 
   update(_time: number, delta: number): void {
@@ -157,7 +140,7 @@ export class BattleScene extends Phaser.Scene {
     if (this.mode === 'play' && input.confirm) {
       this.skipFrame()
     } else if (this.mode === 'menu') {
-      this.handleMenuInput(input)
+      this.menu.handle(input)
     } else if (this.mode === 'end' && input.confirm) {
       this.endAction?.()
     }
@@ -266,7 +249,7 @@ export class BattleScene extends Phaser.Scene {
         lineSpacing: 6,
       })
       .setDepth(HUD_DEPTH)
-    this.optLayer = this.add.container(0, 0).setDepth(HUD_DEPTH + 1)
+    this.menu = new OptionMenu(this, this.msgText, BOX_Y, HUD_DEPTH + 1)
   }
 
   // ───────────────────────── 帧播放 ─────────────────────────
@@ -279,7 +262,7 @@ export class BattleScene extends Phaser.Scene {
   private playFrames(onDone: () => void): void {
     this.queue.push(...this.battle.frames.splice(0))
     this.queueDone = onDone
-    this.clearOptions()
+    this.menu.clear()
     this.mode = 'play'
     this.nextFrame()
   }
@@ -470,238 +453,20 @@ export class BattleScene extends Phaser.Scene {
 
   // ───────────────────────── 指令菜单 ─────────────────────────
 
-  private clearOptions(): void {
-    this.optLayer.removeAll(true)
-    this.options = []
-    this.optBack = undefined
-  }
-
-  /**
-   * 在消息框右侧显示 2×2 指令
-   * @author zjh
-   * @date 2026-10-14
-   */
+  /** 停止打字计时，显示一组指令（具体菜单见 battle/BattleMenus） */
   private showOptions(prompt: string, options: BattleOption[], onBack?: () => void, index = 0): void {
     this.typeTimer?.remove()
     this.holdTimer?.remove()
-    this.clearOptions()
-    this.options = options
-    this.optBack = onBack
-    this.optIndex = Math.min(index, options.length - 1)
     this.mode = 'menu'
-    this.msgText.setWordWrapWidth(300)
     this.currentText = prompt
-    this.renderOptions()
+    this.menu.show(prompt, options, onBack, index)
   }
 
-  private renderOptions(): void {
-    this.optLayer.removeAll(true)
-    const sel = this.options[this.optIndex]
-    this.msgText.setText(sel?.info ? `${this.currentText}\n${sel.info}` : this.currentText)
-
-    this.options.forEach((o, i) => {
-      const col = i % 2
-      const row = Math.floor(i / 2)
-      const x = 400 + col * 156
-      const y = BOX_Y + 30 + row * 50
-      const selected = i === this.optIndex
-      const bg = this.add
-        .rectangle(x, y, 148, 40, selected ? 0x3a7a58 : 0x1c3a2c)
-        .setStrokeStyle(2, selected ? 0xffd77a : 0x4a7a60)
-        .setInteractive({ useHandCursor: true })
-        .on('pointerdown', () => {
-          if (this.mode !== 'menu') return
-          this.optIndex = i
-          this.chooseOption()
-        })
-      const t = this.add
-        .text(x, y, o.label, { fontSize: '14px', color: o.disabled ? '#6a7f74' : '#e8f5ee' })
-        .setOrigin(0.5)
-      this.optLayer.add([bg, t])
-    })
-
-    if (this.optBack) {
-      const back = this.add
-        .text(26, this.scale.height - 12, '◀ 返回', { fontSize: '13px', color: '#7ec8a3' })
-        .setOrigin(0, 1)
-        .setInteractive({ useHandCursor: true })
-        .on('pointerdown', () => {
-          Sfx.cancel()
-          this.optBack?.()
-        })
-      this.optLayer.add(back)
-    }
-  }
-
-  private handleMenuInput(input: ReturnType<InputKeys['poll']>): void {
-    const n = this.options.length
-    let next = this.optIndex
-    if (input.left) next = this.optIndex - 1
-    if (input.right) next = this.optIndex + 1
-    if (input.up) next = this.optIndex - 2
-    if (input.down) next = this.optIndex + 2
-    if (next !== this.optIndex && next >= 0 && next < n) {
-      this.optIndex = next
-      Sfx.step()
-      this.renderOptions()
-      return
-    }
-    if (input.confirm) this.chooseOption()
-    else if (input.cancel && this.optBack) {
-      Sfx.cancel()
-      this.optBack()
-    }
-  }
-
-  private chooseOption(): void {
-    const o = this.options[this.optIndex]
-    if (!o) return
-    if (o.disabled) {
-      Sfx.cancel()
-      return
-    }
-    Sfx.confirm()
-    o.onSelect()
-  }
-
-  private showRoot(index = 0): void {
-    if (this.battle.over) {
-      this.finish()
-      return
-    }
-    const p = activePlayer(this.battle)
-    const runnable = canRun(this.battle)
-    this.showOptions(
-      `${battleName(p)} 要怎么做？`,
-      [
-        { label: '出招', onSelect: () => this.showFight() },
-        { label: '道具', onSelect: () => this.showBag() },
-        { label: '换人', onSelect: () => this.showSwitch() },
-        {
-          label: '逃跑',
-          info: !runnable ? '这场对战无法逃跑。' : this.battle.kind === 'unique' ? '逃走后它仍会留在原地，可以再来。' : undefined,
-          disabled: !runnable,
-          onSelect: () => this.act(() => playerRun(this.battle)),
-        },
-      ],
-      undefined,
-      index,
-    )
-  }
-
-  /**
-   * 出招菜单：显示 PP；全部耗尽时只剩「挣扎」
-   * @author zjh
-   * @date 2026-10-14
-   */
-  private showFight(): void {
-    const p = activePlayer(this.battle)
-    if (outOfPp(p)) {
-      this.showOptions(
-        '所有技能的 PP 都用完了！',
-        [{ label: '挣扎', info: '[一般] 威力 50 · 自己也会受伤', onSelect: () => this.act(() => playerFight(this.battle, -1)) }],
-        () => this.showRoot(0),
-      )
-      return
-    }
-    const enemyType = SPECIES[activeEnemy(this.battle).speciesId].type
-    const options: BattleOption[] = p.moves.map((slot, i) => {
-      const m = MOVES[slot.id]
-      const mult = m.category === 'attack' ? typeMultiplier(m.type, enemyType) : 1
-      const eff = mult > 1 ? ' ▲效果拔群' : mult < 1 ? ' ▼效果一般' : ''
-      return {
-        label: `${m.name} ${slot.pp}/${m.pp}`,
-        info: `${moveInfo(m, slot.pp)}${eff}`,
-        disabled: slot.pp <= 0,
-        onSelect: () => this.act(() => playerFight(this.battle, i)),
-      }
-    })
-    this.showOptions('选择招式：', options, () => this.showRoot(0))
-  }
-
-  private showSwitch(): void {
-    const rows: ListRow[] = this.battle.playerParty.map((c, i) => ({
-      label: rowLabel(c, i === this.battle.activeIndex ? '▷ ' : ''),
-      right: c.hp > 0 ? `HP ${c.hp}/${c.maxHp}` : '倒下',
-      icon: spriteKey(c),
-      disabled: c.hp <= 0 || i === this.battle.activeIndex,
-      detail: creatureDetail(c),
-      onSelect: () => {
-        this.panel.close()
-        this.act(() => playerSwitch(this.battle, i))
-      },
-    }))
-    this.panel.open({
-      title: '换上哪只伙伴？',
-      rows,
-      onCancel: () => {
-        this.panel.close()
-        this.showRoot(2)
-      },
-    })
-  }
-
-  /**
-   * 背包：安抚果直接对敌方使用；回复 / 解除 / PP 类再选目标
-   * @author zjh
-   * @date 2026-10-14
-   */
-  private showBag(): void {
-    const ids = ITEM_ORDER.filter((id) => GameState.itemCount(id) > 0 && ITEMS[id].kind !== 'key')
-    const rows: ListRow[] = ids.map((id) => {
-      const it = ITEMS[id]
-      const check =
-        it.kind === 'catch' || it.kind === 'lure' || it.kind === 'repel' ? checkItem(this.battle, id, 0) : { ok: true, reason: undefined }
-      return {
-        label: it.name,
-        right: `×${GameState.itemCount(id)}`,
-        detail: check.ok ? it.desc : `${it.desc}\n（${check.reason}）`,
-        disabled: !check.ok,
-        onSelect: () => {
-          if (it.kind === 'catch') this.useItem(id, 0)
-          else this.showItemTarget(id)
-        },
-      }
-    })
-    if (!rows.length) rows.push({ label: '（背包是空的）', disabled: true })
-    this.panel.open({
-      title: '背包',
-      footer: `焰币 ${GameState.coins}`,
-      rows,
-      onCancel: () => {
-        this.panel.close()
-        this.showRoot(1)
-      },
-    })
-  }
-
-  private showItemTarget(itemId: string): void {
-    const it = ITEMS[itemId]
-    const rows: ListRow[] = this.battle.playerParty.map((c, i) => {
-      const check = checkItem(this.battle, itemId, i)
-      return {
-        label: rowLabel(c),
-        right: c.hp > 0 ? `HP ${c.hp}/${c.maxHp}` : '倒下',
-        icon: spriteKey(c),
-        disabled: !check.ok,
-        detail: check.ok ? `对 ${battleName(c)} 使用 ${it.name}` : check.reason,
-        onSelect: () => this.useItem(itemId, i),
-      }
-    })
-    this.panel.open({ title: `对谁使用 ${it.name}？`, rows, onCancel: () => this.showBag() })
-  }
-
-  private useItem(itemId: string, target: number): void {
-    if (!checkItem(this.battle, itemId, target).ok || !GameState.consumeItem(itemId)) return
-    this.panel.close()
-    this.act(() => playerUseItem(this.battle, itemId, target))
-  }
-
-  /** 执行一次行动并播放结果 */
+  /** 执行一次行动并播放结果，播完回到根菜单 */
   private act(fn: () => void): void {
-    this.clearOptions()
+    this.menu.clear()
     fn()
-    this.playFrames(() => this.showRoot())
+    this.playFrames(() => this.commands.root())
   }
 
   // ───────────────────────── 结算 ─────────────────────────

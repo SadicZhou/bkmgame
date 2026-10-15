@@ -1,17 +1,20 @@
 /**
  * 一键剧情回归（仅开发模式）：打开 http://127.0.0.1:45321/?regress=1 自动运行
  * 第一章头目 → 章节卡 → 湖畔 → 泉守汐 → 钓鱼 → 斥候连战 → 浮桥与鲸跃 → 沧澜鲸 → Ending → 灯台点亮
- * 驱动真实场景（对话、移动、开战），战斗胜负直接写入结果后走正常结算。
+ * 驱动真实场景（对话、移动、开战）。两种战斗方式：
+ * - 快速（?regress=1）：胜负直接写入结果后走正常结算，只验证剧情流程；
+ * - 慢速（?regress=slow）：用接近实际进度的队伍逐回合真实出招，记录回合数与剩余 HP，用来检查战斗数值。
  * 运行前备份本地存档，结束后还原，不会弄丢玩家进度。
  * @author zjh
  * @date 2026-10-15
  */
 
 import type Phaser from 'phaser'
-import { createCreature } from '../game/data/creatures'
+import { createCreature, type CreatureInstance } from '../game/data/creatures'
 import type { Facing } from '../game/state/GameState'
 import { GameState } from '../game/state/GameState'
 import { SAVE_KEY } from '../game/systems/SaveSystem'
+import { fightOut, type BattleProbe } from './autoBattle'
 
 /** 回归中需要访问的 WorldScene 内部能力（开发调试专用） */
 interface WorldProbe extends Phaser.Scene {
@@ -23,12 +26,6 @@ interface WorldProbe extends Phaser.Scene {
   setFacing(f: Facing): void
 }
 
-interface BattleProbe extends Phaser.Scene {
-  battle?: { won: boolean; fled: boolean }
-  finish(): void
-  endAction?: () => void
-}
-
 interface StepResult {
   name: string
   ok: boolean
@@ -38,12 +35,29 @@ interface StepResult {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
+/** 两种模式的初始队伍：快速模式等级拉满保证流程，慢速模式贴近第一章通关时的实际进度 */
+const PARTY: Record<'fast' | 'slow', () => CreatureInstance[]> = {
+  fast: () => [createCreature('torrentshell', 30), createCreature('leafkit', 28)],
+  slow: () => [createCreature('torrentshell', 15), createCreature('grovefox', 14), createCreature('pebblepup', 13)],
+}
+
+/** 慢速模式的初始背包：第一章通关时手头大致会有的伤药 */
+const SLOW_BAG: [string, number][] = [
+  ['potion', 6],
+  ['super_potion', 3],
+]
+
 class Runner {
   readonly results: StepResult[] = []
   private readonly game: Phaser.Game
+  /** 慢速模式：真实出招 */
+  readonly real: boolean
+  /** 当前步骤中各场战斗的摘要，写进该步说明 */
+  private battleNotes: string[] = []
 
-  constructor(game: Phaser.Game) {
+  constructor(game: Phaser.Game, real: boolean) {
     this.game = game
+    this.real = real
   }
 
   /** 等待真实时间；浏览器在后台不刷新帧时手动推进，保证计时器与补间照常运行 */
@@ -113,14 +127,29 @@ class Runner {
     return this.until(() => this.active('Battle') && !!this.scene<BattleProbe>('Battle').battle)
   }
 
-  /** 直接判定胜利并走正常结算，返回结算后进入的场景 */
+  /**
+   * 打赢当前战斗并走正常结算，返回结算后进入的场景
+   * 快速模式直接判胜；慢速模式真实出招，输了返回 'lost'
+   */
   async winBattle(): Promise<string> {
     await this.wait(900)
     const bs = this.scene<BattleProbe>('Battle')
     if (!bs.battle) return ''
-    bs.battle.won = true
-    bs.battle.fled = false
-    bs.finish()
+    if (this.real) {
+      const enemy = bs.battle.enemyParty.map((c) => `Lv.${c.level}`).join('/')
+      const rep = await fightOut(bs, () => this.wait(30))
+      const potions = rep.potions ? `，用药 ${rep.potions}` : ''
+      this.battleNotes.push(`${rep.won ? '胜' : '负'} ${rep.turns} 回合${potions}（敌 ${enemy}；剩余 ${rep.hpLeft}）`)
+      if (!rep.won) {
+        bs.endAction?.()
+        await this.until(() => !this.active('Battle'), 5000)
+        return 'lost'
+      }
+    } else {
+      bs.battle.won = true
+      bs.battle.fled = false
+      bs.finish()
+    }
     await this.until(() => !!bs.endAction, 20000)
     bs.endAction?.()
     await this.until(() => !this.active('Battle'), 5000)
@@ -130,6 +159,8 @@ class Runner {
 
   async step(name: string, run: () => Promise<string | true>): Promise<boolean> {
     const t0 = performance.now()
+    this.battleNotes = []
+    if (this.real) GameState.healAll()
     let ok = false
     let note = ''
     try {
@@ -139,6 +170,7 @@ class Runner {
     } catch (e) {
       note = e instanceof Error ? e.message : String(e)
     }
+    note = [note, ...this.battleNotes].filter(Boolean).join('；')
     this.results.push({ name, ok, ms: Math.round(performance.now() - t0), note })
     return ok
   }
@@ -158,7 +190,8 @@ async function runSteps(r: Runner): Promise<void> {
       '第一章头目：熔鬃狮胜利 → 章节卡',
       async () => {
         GameState.newGame('tideback')
-        GameState.party = [createCreature('torrentshell', 30), createCreature('leafkit', 28)]
+        GameState.party = PARTY[r.real ? 'slow' : 'fast']()
+        if (r.real) for (const [id, n] of SLOW_BAG) GameState.addItem(id, n)
         GameState.flags = { ranger_beaten: true, hiker_beaten: true }
         const ws = await r.enterWorld('pass', 7, 2, 'up')
         ws.tryInteract()
@@ -270,15 +303,19 @@ async function runSteps(r: Runner): Promise<void> {
 }
 
 /** 右上角结果面板 */
-function showReport(results: StepResult[]): void {
+function showReport(results: StepResult[], real: boolean): void {
   const pass = results.filter((x) => x.ok).length
   const box = document.createElement('div')
   box.style.cssText =
-    'position:fixed;top:12px;right:12px;z-index:9999;max-width:420px;padding:12px 14px;border-radius:10px;' +
+    'position:fixed;top:12px;right:12px;z-index:9999;max-width:460px;max-height:90vh;overflow:auto;padding:12px 14px;border-radius:10px;' +
     'background:#101c18ee;color:#e8f5ee;font:13px/1.6 system-ui,"Microsoft YaHei",sans-serif;box-shadow:0 6px 20px #0008'
-  const title = `<b>剧情回归 ${pass}/${results.length} ${pass === results.length ? '✅ 全部通过' : '❌ 有失败'}</b>`
+  const mode = real ? '慢速 · 真实出招' : '快速'
+  const title = `<b>剧情回归（${mode}） ${pass}/${results.length} ${pass === results.length ? '✅ 全部通过' : '❌ 有失败'}</b>`
   const rows = results
-    .map((x) => `<div>${x.ok ? '✅' : '❌'} ${x.name} <span style="opacity:.6">${x.ms}ms</span>${x.note ? `<br><span style="color:#ffb0a0">　${x.note}</span>` : ''}</div>`)
+    .map((x) => {
+      const color = x.ok ? '#a8e6c0' : '#ffb0a0'
+      return `<div>${x.ok ? '✅' : '❌'} ${x.name} <span style="opacity:.6">${x.ms}ms</span>${x.note ? `<br><span style="color:${color}">　${x.note}</span>` : ''}</div>`
+    })
     .join('')
   box.innerHTML = `${title}${rows}<div style="opacity:.6;margin-top:6px">本地存档已还原。点击关闭。</div>`
   box.onclick = () => box.remove()
@@ -287,11 +324,12 @@ function showReport(results: StepResult[]): void {
 
 /**
  * 入口：等待标题画面 → 备份存档 → 跑全部节拍 → 还原存档 → 展示结果
+ * @param real 慢速模式：真实出招直到分出胜负
  * @author zjh
  * @date 2026-10-15
  */
-export async function runStoryRegression(game: Phaser.Game): Promise<StepResult[]> {
-  const r = new Runner(game)
+export async function runStoryRegression(game: Phaser.Game, real = false): Promise<StepResult[]> {
+  const r = new Runner(game, real)
   await r.until(() => r.active('Title'), 30000)
   const backup = localStorage.getItem(SAVE_KEY)
   const errors: string[] = []
@@ -309,7 +347,7 @@ export async function runStoryRegression(game: Phaser.Game): Promise<StepResult[
 
   Object.assign(window, { __regressResult: r.results })
   console.table(r.results)
-  showReport(r.results)
+  showReport(r.results, real)
   game.scene.getScenes(true)[0]?.scene.start('Title')
   return r.results
 }

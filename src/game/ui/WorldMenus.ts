@@ -13,7 +13,7 @@ import { PHENOMENA } from '../data/phenomena'
 import { GameState } from '../state/GameState'
 import { Sfx } from '../systems/AudioBeeps'
 import { applyItemToCreature, checkItemOnCreature } from '../systems/BattleLogic'
-import { fishLogCount, todayContest } from '../systems/FishLog'
+import { anglerRecord, beatsRecord, fishLogCount, todayContest } from '../systems/FishLog'
 import { abilityDetail, creatureDetail, rowLabel } from './CreatureInfo'
 import { ListPanel, type ListRow } from './ListPanel'
 
@@ -277,22 +277,25 @@ export class WorldMenus {
     const w = GameState.world
     const contest = todayContest(w, GameState.day())
     const contestText = contest
-      ? `\n今日大赛：${SPECIES[contest.speciesId].name} ≥ ${contest.minSize} cm（${contest.claimed ? '已领奖' : contest.done ? '已达标，去找澈领奖' : '进行中'}）`
+      ? `\n今日大赛${contest.rain ? '【雨天限定】' : ''}：${SPECIES[contest.speciesId].name} ≥ ${contest.minSize} cm（${contest.claimed ? '已领奖' : contest.done ? '已达标，去找澈领奖' : '进行中'}）`
       : ''
     const rows: ListRow[] = FISH_ORDER.map((id) => {
       const sp = SPECIES[id]
       const rec = w.fishLog?.[id]
-      if (!rec) return { label: '？？？', icon: `spr-${id}`, iconDim: true, detail: `还没有钓到过。${contestText}` }
+      const record = `澈的纪录 ${anglerRecord(id)} cm`
+      if (!rec) return { label: '？？？', icon: `spr-${id}`, iconDim: true, detail: `还没有钓到过。\n${record}${contestText}` }
+      const beat = beatsRecord(w, id)
       return {
-        label: sp.name,
+        label: `${beat ? '★ ' : ''}${sp.name}`,
         right: `${rec.count} 次 · 最大 ${rec.best} cm`,
         icon: `spr-${id}`,
-        detail: `[${TYPE_LABEL[sp.type]}] ${sp.desc}${contestText}`,
+        detail: `[${TYPE_LABEL[sp.type]}] ${sp.desc}\n${record}${beat ? '（已打破 ★）' : ''}${contestText}`,
       }
     })
+    const broken = FISH_ORDER.filter((id) => beatsRecord(w, id)).length
     this.panel.open({
       title: '钓鱼记录',
-      footer: `已钓到 ${fishLogCount(w)}/${FISH_ORDER.length}`,
+      footer: `${fishLogCount(w)}/${FISH_ORDER.length} · 破纪录 ${broken}`,
       rows,
       onCancel: () => this.openMain(5),
     })

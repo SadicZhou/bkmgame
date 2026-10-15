@@ -53,8 +53,9 @@ if (import.meta.env.DEV) {
   void import('./game/state/GameState').then(({ GameState }) => {
     Object.assign(window, { __game: game, __GS: GameState })
   })
-  // 一键剧情回归：地址带 ?regress=1 时自动运行
-  if (new URLSearchParams(location.search).has('regress')) {
-    void import('./dev/storyRegression').then(({ runStoryRegression }) => runStoryRegression(game))
+  // 一键剧情回归：?regress=1 快速（直接判胜），?regress=slow 慢速（真实出招）
+  const regress = new URLSearchParams(location.search).get('regress')
+  if (regress !== null) {
+    void import('./dev/storyRegression').then(({ runStoryRegression }) => runStoryRegression(game, regress === 'slow'))
   }
 }

@@ -7,7 +7,8 @@
 import { SPECIES } from '../../data/creatures'
 import { GameState } from '../../state/GameState'
 import { canFishAt, rodKindOf, type RodKind } from '../../systems/Fishing'
-import { judgeContest, recordCatch, rollFishSize } from '../../systems/FishLog'
+import { anglerRecord, judgeContest, recordCatch, recordFlag, rollFishSize } from '../../systems/FishLog'
+import { weatherOf } from '../../systems/WorldClock'
 import { hasFishing, rollFishing } from '../../systems/WorldTick'
 import { FishingOverlay } from '../../ui/FishingOverlay'
 import type { WorldHost } from './WorldHost'
@@ -75,13 +76,17 @@ export class FishingController {
     const w = GameState.world
     const size = rollFishSize(enemy.speciesId, strong)
     const rec = recordCatch(w, enemy.speciesId, size)
-    const contest = judgeContest(w, GameState.day(), enemy.speciesId, size)
+    const weather = weatherOf(w, host.map.id)
+    const contest = judgeContest(w, GameState.day(), enemy.speciesId, size, weather)
     GameState.setFlag('lake_first_fish', true)
 
     const name = SPECIES[enemy.speciesId].name
     const lines = [`钓到了！是${name}！（体长 ${size} cm）`]
     if (rec.first) lines.push(`「${name}」登记进了钓鱼记录！`)
     else if (rec.newBest) lines.push(`刷新了${name}的最大体长记录！`)
+    if (rec.newBest && size > anglerRecord(enemy.speciesId) && !GameState.hasFlag(recordFlag(enemy.speciesId))) {
+      lines.push(`超过了澈的纪录（${anglerRecord(enemy.speciesId)} cm）！去给他看看吧。`)
+    }
     if (contest) lines.push('达到了钓鱼大赛的目标！战斗结束后去告诉钓鱼少年澈吧。')
     host.dialogue.open(lines, () => host.startWildBattle(enemy))
   }
