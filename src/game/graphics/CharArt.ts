@@ -1,6 +1,6 @@
 /**
  * 人物行走图（AI 像素画）：玩家 4 方向 × 3 帧（站立 / 迈左脚 / 迈右脚），NPC 每人 1 帧；
- * 常驻 / 巡逻 NPC 另有四方向行走图（actor-*，见 NPC_ACTOR）。
+ * 常驻 / 巡逻 NPC 另有四方向行走图（actor-*，见 NPC_ACTOR）；骑乘时玩家换成 mount-<物种id>（48×48）。
  * 原图在 art-src/chars/，用 scripts/process-chars.py 输出到 public/assets/chars/。
  * 每帧 32×40，比地图格高，锚点设在脚底（格子中心下方 FOOT_OFFSET px）。
  * 缺图时 hasCharArt 返回 false，由调用方回退到代码绘制的 spr-player-* / spr-npc。
@@ -9,6 +9,7 @@
  */
 
 import Phaser from 'phaser'
+import { MOUNTS, mountSheet } from '../data/mounts'
 import { MUSHROOMS, mushTexture } from '../data/mushrooms'
 import type { Facing } from '../state/GameState'
 
@@ -93,6 +94,18 @@ export function preloadCharArt(scene: Phaser.Scene): void {
   }
   // 菇菇派对的采集点（scripts/process-props.py 生成）
   for (const m of MUSHROOMS) scene.load.image(mushTexture(m.id), `assets/props/mush-${m.id}.png`)
+  // 骑乘行走图（scripts/process-mounts.py 生成）
+  for (const id of Object.keys(MOUNTS)) {
+    scene.load.spritesheet(mountSheet(id), `assets/chars/${mountSheet(id)}.png`, { frameWidth: MOUNT_FRAME, frameHeight: MOUNT_FRAME })
+  }
+}
+
+/** 骑乘行走图单帧边长 */
+export const MOUNT_FRAME = 48
+
+/** 骑乘行走动画（与玩家同节奏，按坐骑速度加快） */
+export function rideAnim(scene: Phaser.Scene, speciesId: string, f: Facing): string {
+  return ensureWalkAnim(scene, `ride-${speciesId}-${f}`, mountSheet(speciesId), DIR_ROW[f] * 3, WALK_FPS * (MOUNTS[speciesId]?.speed ?? 1))
 }
 
 /** 玩家实际使用的图集：有生成的行走帧就用它（站立帧相同，迈步帧更明显） */
@@ -123,8 +136,8 @@ export function idleFrame(f: Facing): number {
 }
 
 /** 脚底锚点：精灵放在格子中心时，脚落在格子下沿附近 */
-export function anchorFeet<T extends Phaser.GameObjects.Components.Origin>(spr: T): T {
-  spr.setOrigin(0.5, 1 - FOOT_OFFSET / FRAME_H)
+export function anchorFeet<T extends Phaser.GameObjects.Components.Origin>(spr: T, frameH = FRAME_H): T {
+  spr.setOrigin(0.5, 1 - FOOT_OFFSET / frameH)
   return spr
 }
 
@@ -164,7 +177,7 @@ export interface NpcLook {
 }
 
 /** 按需注册一段「迈左脚 → 站立 → 迈右脚 → 站立」循环动画 */
-function ensureWalkAnim(scene: Phaser.Scene, key: string, sheet: string, base: number, fps: number): string {
+export function ensureWalkAnim(scene: Phaser.Scene, key: string, sheet: string, base: number, fps: number): string {
   if (!scene.anims.exists(key)) {
     scene.anims.create({
       key,
@@ -209,8 +222,8 @@ export function npcLook(scene: Phaser.Scene, npcId: string): NpcLook | null {
  * @author zjh
  * @date 2026-10-15
  */
-export function stepBob(scene: Phaser.Scene, spr: Phaser.GameObjects.Sprite, ms: number): void {
-  const base = 1 - FOOT_OFFSET / FRAME_H
+export function stepBob(scene: Phaser.Scene, spr: Phaser.GameObjects.Sprite, ms: number, frameH = FRAME_H): void {
+  const base = 1 - FOOT_OFFSET / frameH
   const lift = { px: 0 }
   scene.tweens.add({
     targets: lift,
@@ -218,7 +231,7 @@ export function stepBob(scene: Phaser.Scene, spr: Phaser.GameObjects.Sprite, ms:
     duration: ms / 2,
     yoyo: true,
     ease: 'Sine.easeOut',
-    onUpdate: () => spr.setOrigin(0.5, base + lift.px / FRAME_H),
+    onUpdate: () => spr.setOrigin(0.5, base + lift.px / frameH),
     onComplete: () => spr.setOrigin(0.5, base),
   })
 }

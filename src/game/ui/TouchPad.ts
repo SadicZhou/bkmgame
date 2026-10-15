@@ -32,9 +32,13 @@ export class TouchPad {
 
   private actionPulse = false
   private menuPulse = false
+  private ridePulse = false
   private readonly root: Phaser.GameObjects.Container
 
-  constructor(scene: Phaser.Scene) {
+  /**
+   * @param opts.ride 是否显示「骑乘」键（只在大地图）
+   */
+  constructor(scene: Phaser.Scene, opts: { ride?: boolean } = {}) {
     const { width, height } = scene.scale
     this.root = scene.add.container(0, 0).setScrollFactor(0).setDepth(1000)
 
@@ -61,18 +65,20 @@ export class TouchPad {
     mkDir(baseX, baseY - 50, '↑', 'up')
     mkDir(baseX, baseY + 50, '↓', 'down')
 
-    const mkPulse = (x: number, y: number, label: string, field: 'action' | 'menu') => {
-      const r = scene.add.circle(x, y, 32, 0x3a2a1a, 0.55).setStrokeStyle(2, 0xe8a838)
+    const mkPulse = (x: number, y: number, label: string, field: 'action' | 'menu' | 'ride', radius = 32) => {
+      const r = scene.add.circle(x, y, radius, 0x3a2a1a, 0.55).setStrokeStyle(2, 0xe8a838)
       const t = scene.add.text(x, y, label, { fontSize: '14px', color: '#f0e6c8' }).setOrigin(0.5)
       r.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
         if (field === 'action') this.actionPulse = true
-        else this.menuPulse = true
+        else if (field === 'menu') this.menuPulse = true
+        else this.ridePulse = true
       })
       this.root.add([r, t])
     }
 
     mkPulse(width - 70, height - 120, '对话', 'action')
     mkPulse(width - 70, height - 50, '菜单', 'menu')
+    if (opts.ride) mkPulse(width - 150, height - 50, '骑乘', 'ride', 26)
 
     // 仅窄屏默认显示；宽屏半透明提示可点
     const isTouch = scene.sys.game.device.input.touch
@@ -91,6 +97,14 @@ export class TouchPad {
   consumeMenu(): boolean {
     if (this.menuPulse) {
       this.menuPulse = false
+      return true
+    }
+    return false
+  }
+
+  consumeRide(): boolean {
+    if (this.ridePulse) {
+      this.ridePulse = false
       return true
     }
     return false

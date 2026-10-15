@@ -36,7 +36,7 @@ export interface BattleReport {
   hpLeft: string
 }
 
-const IDLE: InputFrame = { dx: 0, dy: 0, up: false, down: false, left: false, right: false, confirm: false, cancel: false }
+const IDLE: InputFrame = { dx: 0, dy: 0, up: false, down: false, left: false, right: false, confirm: false, cancel: false, ride: false }
 const CONFIRM: InputFrame = { ...IDLE, confirm: true }
 const DOWN: InputFrame = { ...IDLE, down: true }
 const STAB = 1.2

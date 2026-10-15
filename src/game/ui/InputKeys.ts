@@ -1,5 +1,5 @@
 /**
- * 统一输入：键盘（方向键/WASD、空格/回车/Z、Esc/X）+ 触控垫
+ * 统一输入：键盘（方向键/WASD、空格/回车/Z、Esc/X、R 骑乘）+ 触控垫
  * 每帧调用一次 poll()，得到"持续按住"与"本帧刚按下"两类状态。
  * 按下沿通过 keydown 事件缓冲，避免一帧内按下又抬起的快速轻点被丢失。
  * @author zjh
@@ -20,9 +20,11 @@ export interface InputFrame {
   right: boolean
   confirm: boolean
   cancel: boolean
+  /** 本帧刚按下骑乘键（R / 触屏「骑乘」） */
+  ride: boolean
 }
 
-type Action = 'up' | 'down' | 'left' | 'right' | 'confirm' | 'cancel'
+type Action = 'up' | 'down' | 'left' | 'right' | 'confirm' | 'cancel' | 'ride'
 
 /** 键盘 code → 动作 */
 const CODE_ACTION: Record<string, Action> = {
@@ -40,6 +42,7 @@ const CODE_ACTION: Record<string, Action> = {
   KeyZ: 'confirm',
   Escape: 'cancel',
   KeyX: 'cancel',
+  KeyR: 'ride',
 }
 
 type KeyMap = Record<string, Phaser.Input.Keyboard.Key>
@@ -56,7 +59,7 @@ export class InputKeys {
     const kb = scene.input.keyboard
     // addKeys 同时开启按键捕获，防止方向键/空格滚动页面
     this.keys = kb
-      ? (kb.addKeys('UP,DOWN,LEFT,RIGHT,W,A,S,D,SPACE,ENTER,Z,ESC,X') as KeyMap)
+      ? (kb.addKeys('UP,DOWN,LEFT,RIGHT,W,A,S,D,SPACE,ENTER,Z,ESC,X,R') as KeyMap)
       : null
     if (kb) {
       const onKey = (e: KeyboardEvent) => {
@@ -94,6 +97,7 @@ export class InputKeys {
       right: k === 'right' || (tRight && !this.prevTouch.right),
       confirm: k === 'confirm' || !!this.touch?.consumeAction(),
       cancel: k === 'cancel' || !!this.touch?.consumeMenu(),
+      ride: k === 'ride' || !!this.touch?.consumeRide(),
     }
     this.prevTouch = { up: tUp, down: tDown, left: tLeft, right: tRight }
 

@@ -11,7 +11,7 @@ import { anchorFeet, hasCharArt, idleFrame, playerSheet, registerCharAnims, step
 import { SPECIES, battleName, type CreatureInstance } from '../data/creatures'
 import { decorBlocks } from '../data/decor'
 import { ITEMS } from '../data/items'
-import { MAPS, isSolid, isTallGrass, resolveTile, visibleNpcs, type HasFlag, type MapDef, type NpcDef, type TileKind, type WarpDef } from '../data/maps'
+import { MAPS, isTallGrass, resolveTile, visibleNpcs, type HasFlag, type MapDef, type NpcDef, type TileKind, type WarpDef } from '../data/maps'
 import { MINOR_EVENTS, PHENOMENON_RULES } from '../data/phenomena'
 import { WEATHER_INFO } from '../data/weather'
 import { GameState, type Facing, type PendingBattle } from '../state/GameState'
@@ -37,6 +37,7 @@ import { NpcInteract } from './world/NpcInteract'
 import { NpcChatter } from './world/NpcChatter'
 import { NpcRoster } from './world/NpcRoster'
 import { NpcWalkers } from './world/NpcWalkers'
+import { RideController } from './world/RideController'
 import { FOREST_INTRO_LINES, type StoryHost } from './world/StoryEvents'
 import { Toaster, playBridgeCutscene, rustleAt, showMapBanner } from './world/WorldFx'
 import type { ReturnInfo, WorldHost } from './world/WorldHost'
@@ -81,6 +82,9 @@ export class WorldScene extends Phaser.Scene {
   private walkers!: NpcWalkers
   private roster!: NpcRoster
   private chatter!: NpcChatter
+  /** 骑乘与跟随伙伴 */
+  private ride!: RideController
+  private menuWasOpen = false
   /** 排队等出生格空出来的 NPC：每隔一段时间重试 */
   private rosterRetry = 0
   private toaster!: Toaster
@@ -99,6 +103,7 @@ export class WorldScene extends Phaser.Scene {
     this.facing = GameState.facing
     this.moving = false
     this.busy = false
+    this.menuWasOpen = false
     this.lightUpPending = needsLightUp(this.map, hasFlag)
     // 进入地图 / 战斗结束后重新计算安全步数
     GameState.world.stepsSinceEncounter = 0
@@ -138,6 +143,16 @@ export class WorldScene extends Phaser.Scene {
     this.weather.setAmbient(AMBIENT_BY_MAP[this.map.id] ?? null)
     this.fireLights = decorLights(this.map, decorFlag)
     this.toaster = new Toaster(this)
+    this.ride = new RideController({
+      scene: this,
+      map: this.map,
+      player: this.player,
+      charArt: this.charArt,
+      hasFlag,
+      tile: () => ({ x: this.tileX, y: this.tileY }),
+      facing: () => this.facing,
+      toast: (m) => this.flashToast(m),
+    })
     this.refreshAtmosphere()
 
     this.hudText = this.add
@@ -152,7 +167,7 @@ export class WorldScene extends Phaser.Scene {
       .setDepth(501)
     this.refreshHud()
 
-    this.touch = new TouchPad(this)
+    this.touch = new TouchPad(this, { ride: true })
     this.keys = new InputKeys(this, this.touch)
     this.dialogue = new DialogueBox(this)
     this.createPanels()
@@ -274,7 +289,11 @@ export class WorldScene extends Phaser.Scene {
   }
 
   update(time: number, delta: number): void {
-    this.playerShadow.setPosition(this.player.x, this.player.y + 13)
+    this.playerShadow.setPosition(this.player.x, this.player.y + 13).setSize(this.ride.shadowWidth, 7)
+    // 菜单关上后同步跟随 / 坐骑（队伍、寄存都可能改变它们）
+    if (this.menuWasOpen && !this.menus.isOpen) this.ride.sync()
+    this.menuWasOpen = this.menus.isOpen
+    this.ride.update()
     this.updateLights()
     this.weather?.update(delta)
     const input = this.keys.poll()
@@ -301,6 +320,10 @@ export class WorldScene extends Phaser.Scene {
     }
     if (this.moving) return
 
+    if (input.ride) {
+      this.ride.toggle()
+      return
+    }
     if (input.cancel) {
       this.menus.openMain()
       return
@@ -388,34 +411,37 @@ export class WorldScene extends Phaser.Scene {
     const nx = this.tileX + dx
     const ny = this.tileY + dy
     const tile = resolveTile(this.map, nx, ny, hasFlag)
-    if (!tile || isSolid(tile) || decorBlocks(this.map.id, nx, ny) || this.occupiedByNpc(nx, ny) || this.eventView.uniqueAt(nx, ny)) return
+    if (!tile || decorBlocks(this.map.id, nx, ny) || this.occupiedByNpc(nx, ny) || this.eventView.uniqueAt(nx, ny)) return
+    if (!this.ride.canEnter(tile)) return
 
     const fromX = this.tileX
     const fromY = this.tileY
+    const ms = this.ride.moveMs(MOVE_MS)
     this.moving = true
     this.tileX = nx
     this.tileY = ny
     GameState.playerX = nx
     GameState.playerY = ny
     Sfx.step()
+    this.ride.onStep(fromX, fromY, ms)
 
     const ts = this.map.tileSize
     this.tweens.add({
       targets: this.player,
       x: nx * ts + ts / 2,
       y: ny * ts + ts / 2,
-      duration: MOVE_MS,
+      duration: ms,
       onComplete: () => {
         this.moving = false
         this.afterStep(tile, fromX, fromY)
       },
     })
     if (this.charArt) {
-      this.player.play(`walk-${this.facing}`, true)
-      stepBob(this, this.player, MOVE_MS)
+      this.player.play(this.ride.walkAnim(this.facing), true)
+      stepBob(this, this.player, ms, this.ride.frameH)
     }
     // 代码绘制的小人没有行走帧，用轻微弹跳代替
-    else this.tweens.add({ targets: this.player, scaleY: 0.9, yoyo: true, duration: MOVE_MS / 2 })
+    else this.tweens.add({ targets: this.player, scaleY: 0.9, yoyo: true, duration: ms / 2 })
   }
 
   /**
@@ -442,7 +468,7 @@ export class WorldScene extends Phaser.Scene {
       const color = ice ? 0xe8f8ff : this.map.id === 'pass' ? 0xffb050 : 0x8fd99a
       rustleAt(this, this.tileX * ts + ts / 2, this.tileY * ts + ts / 2, color)
     }
-    const source = !this.map.outdoor ? null : grass ? 'grass' : ice ? 'ice' : null
+    const source = this.ride.encounterSource(tile, !this.map.outdoor ? null : grass ? 'grass' : ice ? 'ice' : null)
     this.handleStep(stepWorld(this.map.id, this.tileX, this.tileY, source))
   }
 
@@ -541,6 +567,10 @@ export class WorldScene extends Phaser.Scene {
     const npc = this.occupiedByNpc(x, y)
     if (npc) this.walkers.greet(npc)
     if (this.interact.handle(this.eventView.uniqueAt(x, y), npc)) return
+    if (this.ride.follower.at(x, y)) {
+      this.dialogue.open([this.ride.follower.greet()])
+      return
+    }
     this.fishing.tryFish(x, y)
   }
 
@@ -604,7 +634,7 @@ export class WorldScene extends Phaser.Scene {
     const cam = this.cameras.main
     const toScreen = (x: number, y: number, r: number) => ({ x: x - cam.scrollX, y: y - cam.scrollY, r })
     this.weather.setLights([
-      toScreen(this.player.x, this.player.y - 4, 84),
+      toScreen(this.player.x, this.player.y - 4, this.ride.lightRadius()),
       ...this.fireLights.map((l) => toScreen(l.x, l.y, 70)),
       ...this.roster.glows().map((l) => toScreen(l.x, l.y, 30)),
     ])

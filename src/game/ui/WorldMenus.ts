@@ -16,6 +16,7 @@ import { Sfx } from '../systems/AudioBeeps'
 import { applyItemToCreature, checkItemOnCreature } from '../systems/BattleLogic'
 import { BOND_FLAG, FRIENDSHIP_GAIN, bondBar, bondStage, nextBondStage } from '../systems/Bond'
 import { anglerRecord, beatsRecord, fishLogCount, todayContest } from '../systems/FishLog'
+import { companionMark, companionRows } from './CompanionRows'
 import { abilityDetail, creatureDetail, rowLabel } from './CreatureInfo'
 import { ListPanel, type ListRow } from './ListPanel'
 import { openTalentFruit } from './TalentFruitMenu'
@@ -98,7 +99,7 @@ export class WorldMenus {
     return GameState.party.map((c, i) => {
       const reason = filter?.(c) ?? null
       return {
-        label: rowLabel(c, i === 0 ? '★ ' : ''),
+        label: rowLabel(c, (i === 0 ? '★ ' : '') + companionMark(c)),
         right: c.hp > 0 ? `HP ${c.hp}/${c.maxHp}` : '倒下',
         icon: spriteKey(c),
         detail: reason ?? creatureDetail(c),
@@ -140,6 +141,10 @@ export class WorldMenus {
             this.openParty(0)
           },
         },
+        ...companionRows(c, (msg) => {
+          this.hooks.toast(msg)
+          this.openCreature(i)
+        }),
         { label: '特性说明', detail: abilityDetail(c) },
         { label: '返回', detail, onSelect: () => this.openParty(i) },
       ],
