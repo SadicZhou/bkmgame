@@ -9,11 +9,10 @@ import Phaser from 'phaser'
 import { MOVES, SPECIES, TYPE_LABEL, battleName, outOfPp, spriteKey, typeMultiplier } from '../data/creatures'
 import { ownedBadgeTypes } from '../data/badges'
 import { ITEMS, ITEM_ORDER } from '../data/items'
-import { PHENOMENON_BY_ID, PHENOMENON_RULES } from '../data/phenomena'
 import { WEATHER_INFO } from '../data/weather'
 import { setBattleCreatureScale } from '../graphics/CreatureArt'
 import { addBackdrop, battleBackdropKey } from '../graphics/SceneArt'
-import { GameState, RESPAWN, type PendingBattle } from '../state/GameState'
+import { GameState, type PendingBattle } from '../state/GameState'
 import { Sfx } from '../systems/AudioBeeps'
 import {
   activeEnemy,
@@ -29,8 +28,6 @@ import {
   type BattleState,
   type SideSnap,
 } from '../systems/BattleLogic'
-import { settleStoryBattle } from '../systems/BattleOutcome'
-import { endPhenomenon } from '../systems/Phenomenon'
 import { STATUS_LABEL } from '../systems/StatusEffects'
 import { isFullMoon } from '../systems/WorldClock'
 import { BattleFx } from '../ui/BattleFx'
@@ -41,6 +38,7 @@ import { ListPanel, type ListRow } from '../ui/ListPanel'
 import { moveInfo, openMoveReplace } from '../ui/MoveLearnFlow'
 import { fadeIn, fadeToScene } from '../ui/Transition'
 import { WeatherLayer } from '../ui/WeatherLayer'
+import { settleBattle } from './battle/BattleSettle'
 
 /** 指令按钮 */
 interface BattleOption {
@@ -709,76 +707,16 @@ export class BattleScene extends Phaser.Scene {
   // ───────────────────────── 结算 ─────────────────────────
 
   /**
-   * 战斗结束：写回金币 / 旗标 / 图鉴 / 寄存所，处理异象、全灭、BOSS 胜利，最后逐个处理学招
+   * 战斗结束：数据写回见 battle/BattleSettle；这里逐个处理学招，播完提示后切场景
    * @author zjh
-   * @date 2026-10-14
+   * @date 2026-10-15
    */
   private finish(): void {
-    const b = this.battle
-    const pending = this.pending
-    const notes: string[] = []
-
-    for (const c of b.playerParty) GameState.markCaught(c.speciesId)
-    if (b.caught) {
-      b.caught.caughtInfo = {
-        day: GameState.day(),
-        mapId: pending.returnMapId,
-        weather: pending.weather ? WEATHER_INFO[pending.weather].label : '—',
-      }
-      if (b.caughtToStorage) GameState.storage.push(b.caught)
-      GameState.markCaught(b.caught.speciesId)
-      notes.push(`${battleName(b.caught)} 已登记到图鉴！`)
-    }
-
-    notes.push(...this.settlePhenomenon())
-
-    let next: () => void = () => fadeToScene(this, 'World')
-    if (b.won || b.fled) {
-      if (b.won) {
-        GameState.coins += b.coinsEarned
-        if (pending.flagOnWin) GameState.setFlag(pending.flagOnWin, true)
-      }
-      GameState.mapId = pending.returnMapId
-      GameState.playerX = pending.returnX
-      GameState.playerY = pending.returnY
-      const story = settleStoryBattle(pending, b.won)
-      notes.push(...story.notes)
-      const to = story.next
-      if (to) next = () => fadeToScene(this, to.scene, 900, to.scene === 'Chapter' ? to.data : undefined)
-    } else {
-      notes.push(...settleStoryBattle(pending, false).notes)
-      const lost = Math.floor(GameState.coins / 2)
-      GameState.coins -= lost
-      GameState.healAll()
-      GameState.mapId = RESPAWN.mapId
-      GameState.playerX = RESPAWN.x
-      GameState.playerY = RESPAWN.y
-      notes.push(`你慌忙带着伙伴回到了旅人小屋……（遗失了 ${lost} 焰币）`)
-    }
-
-    GameState.pendingBattle = null
-    GameState.facing = 'down'
-
-    this.processLearns([...b.pendingLearns], notes, () => this.showNotes(notes, next))
-  }
-
-  /** 异象战结果：收服 → 永久结束；击倒 → 冷却；逃走 / 全灭 → 异象仍在 */
-  private settlePhenomenon(): string[] {
-    const b = this.battle
-    const id = this.pending.phenomenonId
-    const world = GameState.world
-    if (!id || world.phenomenon.activeId !== id) return []
-    const def = PHENOMENON_BY_ID[id]
-    const enemy = b.enemyParty[0]
-    if (b.caught) {
-      endPhenomenon(world, 'caught')
-      return [`✧ ${def.name} 平息了。异象录点亮了新的一页！`]
-    }
-    if (b.won) {
-      endPhenomenon(world, 'failed')
-      return [`${battleName(enemy)} 化作光点消散了……${PHENOMENON_RULES.cooldownDays} 天内这里不会再出现「${def.name}」。`]
-    }
-    return [`${battleName(enemy)} 仍在原地注视着你。异象尚未结束。`]
+    const { notes, next: to } = settleBattle(this.battle, this.pending)
+    const next = to
+      ? () => fadeToScene(this, to.scene, 900, to.scene === 'Chapter' ? to.data : undefined)
+      : () => fadeToScene(this, 'World')
+    this.processLearns([...this.battle.pendingLearns], notes, () => this.showNotes(notes, next))
   }
 
   /**

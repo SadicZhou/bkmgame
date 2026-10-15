@@ -64,8 +64,8 @@ export const DECOR: Record<string, DecorDef[]> = {
     { key: 'decor-plant', x: 1, y: 6, w: 1, h: 1, solid: true },
   ],
   lake: [
-    { key: 'decor-lighthouse-dark', x: 11, y: 2, w: 2, h: 2, solid: true, hideIf: 'whale_beaten' },
-    { key: 'decor-lighthouse', x: 11, y: 2, w: 2, h: 2, solid: true, showIf: 'whale_beaten', fx: 'beacon', fxAt: { x: 0, y: -86 } },
+    { key: 'decor-lighthouse-dark', x: 11, y: 3, w: 2, h: 2, solid: true, hideIf: 'whale_beaten' },
+    { key: 'decor-lighthouse', x: 11, y: 3, w: 2, h: 2, solid: true, showIf: 'whale_beaten', fx: 'beacon', fxAt: { x: 0, y: -86 } },
     { key: 'decor-reeds', x: 5, y: 8, w: 1, h: 1, solid: true },
     { key: 'decor-reeds', x: 18, y: 9, w: 1, h: 1, solid: true },
     { key: 'decor-reeds', x: 1, y: 13, w: 1, h: 1, solid: true },

@@ -20,9 +20,9 @@ export function buildLake(): MapDef {
   const { width, height, tiles } = parseAscii([
     '####################',
     '#~~~~~~~~~~~~~~~~~~#',
+    '#~~~~~~~~~~~~~~~~~~#',
     '#~~~~~~~,,,,,~~~~~~#',
     '#~~~~~~~,,.,,~~~~~~#',
-    '#~~~~~~~~~=~~~~~~~~#',
     '#~~~~~~~~~=~~~~~~~~#',
     '#~~~~~~~~~=~~~~~~~~#',
     '#~~~~~~~~---~~~~~~~#',
@@ -64,6 +64,7 @@ export function buildLake(): MapDef {
       {
         id: 'angler',
         name: '钓鱼少年澈',
+        story: 'angler',
         x: 6,
         y: 13,
         color: 0x6aa0e0,
@@ -126,7 +127,7 @@ export function buildLake(): MapDef {
         name: '沧澜鲸',
         role: 'boss',
         x: 10,
-        y: 1,
+        y: 2,
         color: 0x3a80c8,
         showIf: BRIDGE_FLAG,
         lines: [],

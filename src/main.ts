@@ -53,4 +53,8 @@ if (import.meta.env.DEV) {
   void import('./game/state/GameState').then(({ GameState }) => {
     Object.assign(window, { __game: game, __GS: GameState })
   })
+  // 一键剧情回归：地址带 ?regress=1 时自动运行
+  if (new URLSearchParams(location.search).has('regress')) {
+    void import('./dev/storyRegression').then(({ runStoryRegression }) => runStoryRegression(game))
+  }
 }

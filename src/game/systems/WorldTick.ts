@@ -71,17 +71,24 @@ function encounterCtx(mapId: string, source: EncounterSource): EncounterContext 
     rarePity: w.rarePity[mapId] ?? 0,
     migrationSpecies: minor?.id === 'migration' ? minor.speciesId : undefined,
     shimmer: minor?.id === 'shimmer',
+    hasFlag: GameState.hasFlag,
   }
 }
 
+/** 钓鱼上钩的结果（体长计算需要知道是否强壮个体） */
+export interface FishCatch {
+  enemy: CreatureInstance
+  strong: boolean
+}
+
 /** 抽出物种并生成野生伙伴，同时更新稀有保底 */
-function spawnFrom(mapId: string, ctx: EncounterContext): CreatureInstance | undefined {
+function spawnFrom(mapId: string, ctx: EncounterContext): FishCatch | undefined {
   const w = GameState.world
   const pick = pickEncounter(ctx)
   if (!pick) return undefined
   w.stepsSinceEncounter = 0
   if (hasRare(ctx.table)) w.rarePity[mapId] = pick.rare ? 0 : (w.rarePity[mapId] ?? 0) + 1
-  return createCreature(pick.speciesId, pick.level, { strong: pick.strong, shiny: pick.shiny })
+  return { enemy: createCreature(pick.speciesId, pick.level, { strong: pick.strong, shiny: pick.shiny }), strong: pick.strong }
 }
 
 /**
@@ -92,7 +99,7 @@ function spawnFrom(mapId: string, ctx: EncounterContext): CreatureInstance | und
 function rollEncounter(mapId: string, source: 'grass' | 'ice'): CreatureInstance | undefined {
   const ctx = encounterCtx(mapId, source)
   if (!ctx || Math.random() >= encounterRate(ctx)) return undefined
-  return spawnFrom(mapId, ctx)
+  return spawnFrom(mapId, ctx)?.enemy
 }
 
 /**
@@ -100,7 +107,7 @@ function rollEncounter(mapId: string, source: 'grass' | 'ice'): CreatureInstance
  * @author zjh
  * @date 2026-10-15
  */
-export function rollFishing(mapId: string, rod: 'rod' | 'goodRod'): CreatureInstance | undefined {
+export function rollFishing(mapId: string, rod: 'rod' | 'goodRod'): FishCatch | undefined {
   const ctx = encounterCtx(mapId, rod)
   return ctx ? spawnFrom(mapId, ctx) : undefined
 }

@@ -7,13 +7,16 @@
 
 import { BRIDGE_FLAG } from '../../data/lakeMap'
 import { GameState } from '../../state/GameState'
+import { anglerStory } from './AnglerStory'
 
 /** WorldScene 提供给剧情脚本的能力 */
 export interface StoryHost {
   say(lines: string[], after?: () => void): void
   healParty(): void
   toast(msg: string): void
-  /** 播放雾泉螈搭桥演出，结束后重绘地图 */
+  /** 焰币 / 队伍变化后刷新 HUD */
+  refreshHud(): void
+  /** 播放雾泉螈搭桥 + 沧澜鲸跃出水面的演出，结束后重绘地图 */
   playBridge(): void
 }
 
@@ -72,7 +75,7 @@ function lakeShio(host: StoryHost, name: string): void {
   say(['湖面的冰化了，灯台又亮了。', '沧澜鲸说，好钓竿是它送给你的谢礼——湖底深处的伙伴也会被吸引过来哦。'])
 }
 
-const STORIES: Record<string, StoryFn> = { lake_shio: lakeShio }
+const STORIES: Record<string, StoryFn> = { lake_shio: lakeShio, angler: anglerStory }
 
 /**
  * 执行 NPC 的剧情脚本；没有对应脚本返回 false

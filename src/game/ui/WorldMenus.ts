@@ -7,11 +7,13 @@
 
 import { DEX_ORDER, SPECIES, TYPE_LABEL, UNIQUE_ORDER, battleName, spriteKey, type CreatureInstance } from '../data/creatures'
 import { BADGES, ownedBadges } from '../data/badges'
+import { FISH_ORDER } from '../data/fishing'
 import { ITEMS, ITEM_ORDER, SHOP_STOCK } from '../data/items'
 import { PHENOMENA } from '../data/phenomena'
 import { GameState } from '../state/GameState'
 import { Sfx } from '../systems/AudioBeeps'
 import { applyItemToCreature, checkItemOnCreature } from '../systems/BattleLogic'
+import { fishLogCount, todayContest } from '../systems/FishLog'
 import { abilityDetail, creatureDetail, rowLabel } from './CreatureInfo'
 import { ListPanel, type ListRow } from './ListPanel'
 
@@ -62,6 +64,12 @@ export class WorldMenus {
           right: `${badges.length}/${Object.keys(BADGES).length}`,
           detail: badges.length ? badges.map((b) => `◆ ${b.name}：${b.desc}`).join('\n') : '击败各章节的守护兽后可以获得徽记。',
           onSelect: () => Sfx.cancel(),
+        },
+        {
+          label: '钓鱼记录',
+          right: `${fishLogCount(GameState.world)}/${FISH_ORDER.length}`,
+          detail: '雾泉湖畔钓到过的伙伴、次数与最大体长。',
+          onSelect: () => this.openFishLog(),
         },
         {
           label: '保存进度',
@@ -257,6 +265,36 @@ export class WorldMenus {
       footer: `邂逅 ${p.caught.length}/${UNIQUE_ORDER.length}`,
       rows,
       onCancel: () => this.openMain(3),
+    })
+  }
+
+  /**
+   * 钓鱼记录：未钓到的显示 ？？？；附带今天的钓鱼大赛题目
+   * @author zjh
+   * @date 2026-10-15
+   */
+  openFishLog(): void {
+    const w = GameState.world
+    const contest = todayContest(w, GameState.day())
+    const contestText = contest
+      ? `\n今日大赛：${SPECIES[contest.speciesId].name} ≥ ${contest.minSize} cm（${contest.claimed ? '已领奖' : contest.done ? '已达标，去找澈领奖' : '进行中'}）`
+      : ''
+    const rows: ListRow[] = FISH_ORDER.map((id) => {
+      const sp = SPECIES[id]
+      const rec = w.fishLog?.[id]
+      if (!rec) return { label: '？？？', icon: `spr-${id}`, iconDim: true, detail: `还没有钓到过。${contestText}` }
+      return {
+        label: sp.name,
+        right: `${rec.count} 次 · 最大 ${rec.best} cm`,
+        icon: `spr-${id}`,
+        detail: `[${TYPE_LABEL[sp.type]}] ${sp.desc}${contestText}`,
+      }
+    })
+    this.panel.open({
+      title: '钓鱼记录',
+      footer: `已钓到 ${fishLogCount(w)}/${FISH_ORDER.length}`,
+      rows,
+      onCancel: () => this.openMain(5),
     })
   }
 

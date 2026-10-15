@@ -5,7 +5,7 @@
 **运行方式：** 仅本机 `F:\work\game`（不再依赖云端开发服）  
 **远端仓库：** https://github.com/SadicZhou/bkmgame  
 **作者：** 周建豪  
-**进度：** v3.1 第二章「雾泉湖畔」开发完成，自测通过（2026-10-15，报告见 `test_report_20261015_0912.md`；章节卡与徽记、钓鱼小游戏、斥候连战、浮桥演出、BOSS 沧澜鲸、5 个新伙伴，设计见 `docs/v3.1-chapter2-design.md`）。v3.0 开发完成，自测通过（2026-10-14，报告见 `test_report_20261014_1622.md`；9 属性 / PP / 状态 / 特性 / 资质与性格 / 初始三选一 / 昼夜天气 / 异色 / 随机异象与唯一精灵 / 寄存所 / 记忆婆婆 / 告示板）。v2 见 `docs/v2-design.md`；策划稿见 `docs/planning/00-总览.md`  
+**进度：** v3.2 湖畔打磨完成，自测通过（2026-10-15，报告见 `test_report_20261015_0927.md`；鲸跃与灯台点亮演出、钓鱼记录与钓鱼大赛、雾天稀有鱼雾灯鳐、冰冕鹅野外来源、一键剧情回归，设计见 `docs/v3.2-lake-polish-design.md`）。v3.1 第二章「雾泉湖畔」开发完成，自测通过（2026-10-15，报告见 `test_report_20261015_0912.md`；章节卡与徽记、钓鱼小游戏、斥候连战、浮桥演出、BOSS 沧澜鲸、5 个新伙伴，设计见 `docs/v3.1-chapter2-design.md`）。v3.0 开发完成，自测通过（2026-10-14，报告见 `test_report_20261014_1622.md`；9 属性 / PP / 状态 / 特性 / 资质与性格 / 初始三选一 / 昼夜天气 / 异色 / 随机异象与唯一精灵 / 寄存所 / 记忆婆婆 / 告示板）。v2 见 `docs/v2-design.md`；策划稿见 `docs/planning/00-总览.md`  
 **技术栈：** Vite + TypeScript + Phaser 3
 
 ## 如何运行（Windows 本地 · 唯一推荐）
@@ -38,8 +38,9 @@ npm run preview
 - **开局：** 在焰角兔 / 碧波龟 / 翠叶狐中三选一  
 - **第一章：** 晨曦小镇 → 青苔草地（击败巡护员苔解锁山道）→ 余烬山道 → 山顶 BOSS「焰心守护·烬」→「第一章完」，获得焰之徽记（己方焰招式威力 ×1.1），青苔草地南口解锁  
 - **第二章：** 雾泉湖畔 → 泉守汐送旧钓竿 → 第一次钓鱼后熄灯会斥候守住码头（两场连战，中途输了要从头再来）→ 泉守汐请雾泉螈搭起浮桥 → 湖心 BOSS「沧澜鲸」→ 潮之徽记 + 好钓竿 → 结局「雾散灯明」  
-- **钓鱼：** 面朝水面按确认甩竿，浮漂上出现「！」后 0.6 秒内再按确认；太早或太晚鱼会溜走。好钓竿能钓到更强的伙伴  
-- **冰面：** 湖畔西南的冰面每步约 10% 遇到霜粒鹅  
+- **钓鱼：** 面朝水面按确认甩竿，浮漂上出现「！」后 0.6 秒内再按确认；太早或太晚鱼会溜走。好钓竿能钓到更强的伙伴；起雾时有机会钓到稀有的「雾灯鳐」  
+- **钓鱼记录与大赛：** 每次上钩会记录体长，菜单「钓鱼记录」可查看 6 种鱼的次数与最大体长；钓鱼少年澈每天出一道大赛题目（某种鱼达到指定体长），达标后找他领焰币和奖品，集齐 6 种还有一次性大奖  
+- **冰面：** 湖畔西南的冰面每步约 10% 遇到霜粒鹅；击败沧澜鲸后的夜晚偶尔会遇到冰冕鹅  
 - **小镇服务：** 旅人小屋的疗愈师岚（疗愈 / 资质鉴定 / 休息到天亮或夜晚）、杂货商麦、旅人告示板（天气、事件、传闻）、寄存员纳（存取 / 放生）、记忆婆婆（遗忘 / 回忆技能）  
 - **战斗：** 9 种属性克制、本系 ×1.2、会心、PP（耗尽后只能挣扎）、命中与先制、灼烧 / 麻痹 / 冻结 / 混乱 / 寄生、能力升降、特性、天气与夜晚修正  
 - **收服：** 野生战中使用「安抚果 / 蜜安抚果」，HP 越低、处于异常状态越容易成功；队伍满 6 只时送往寄存所  
@@ -61,7 +62,7 @@ v1 **不依赖外部美术包**，保证克隆即可绿构建：
 
 | 资源 | 来源 | 说明 |
 |------|------|------|
-| 全部 34 种伙伴立绘（含守护兽、沧澜鲸与 3 只唯一伙伴，每种含异色，共 68 张） | **AI 生成原创像素图**（原图 `art-src/creatures/`，处理后 `public/assets/creatures/`） | 144×144 透明 PNG；处理脚本 `python scripts/process-sprites.py` |
+| 全部 35 种伙伴立绘（含守护兽、沧澜鲸、雾灯鳐与 3 只唯一伙伴，每种含异色，共 70 张） | **AI 生成原创像素图**（原图 `art-src/creatures/`，处理后 `public/assets/creatures/`） | 144×144 透明 PNG；处理脚本 `python scripts/process-sprites.py` |
 | 战斗背景 ×5（含湖畔）、标题 / 选伙伴 / 结局背景 | **AI 生成原创像素图**（`art-src/backgrounds/` → `public/assets/backgrounds/`） | 处理脚本 `python scripts/process-backgrounds.py` |
 | 地图装饰物 ×12（小屋、水井、杂货摊、温泉、火盆、床、壁炉、盆栽、地毯、灯台熄灭 / 点亮、芦苇） | **AI 生成原创像素图**（`art-src/decor/` → `public/assets/decor/`） | 摆放与碰撞见 `src/game/data/decor.ts`；处理脚本 `python scripts/process-decor.py` |
 | 玩家行走图（4 方向 × 3 帧）、13 位 NPC（含泉守汐、两名斥候、钓鱼少年） | **AI 生成原创像素图**（`art-src/chars/` → `public/assets/chars/`） | 每帧 32×40；处理脚本 `python scripts/process-chars.py` |
@@ -98,7 +99,12 @@ Vitest 单元测试位于 `tests/`，覆盖属性克制、资质分布、伤害�
 set SIM=1 && set SIM_MATE=rockmite && set SIM_PASS_MATE=mistnewt && npx vitest run tests/balance.sim.test.ts
 ```
 
-浏览器自测截图保存在 `test-artifacts/v3/`（v3.0）与 `test-artifacts/v3.1/`（第二章）。
+浏览器自测截图保存在 `test-artifacts/v3/`（v3.0）、`test-artifacts/v3.1/`（第二章）与 `test-artifacts/v3.2/`（湖畔打磨）。
+
+### 一键剧情回归
+
+先启动开发服务器（`npm run dev`），再双击 `scripts\run-regress.bat`，或直接打开 `http://127.0.0.1:45321/?regress=1`。
+脚本会自动跑完「第一章头目 → 章节卡 → 湖畔 → 泉守汐 → 钓鱼 → 斥候连战 → 浮桥与鲸跃 → 沧澜鲸 → 结局 → 灯台点亮」，结果显示在页面右上角（同时写入控制台和 `window.__regressResult`）。运行前会备份本地存档、结束后自动还原。改剧情后跑一次即可。
 
 ## 项目结构（摘要）
 
@@ -108,10 +114,12 @@ src/game/
   graphics/    运行时像素贴图：PixelFactory 入口 + tiles/（地图块）/ 伙伴配色 / 伙伴绘制 / 人物物件 / 特效小纹理；
                CreatureArt 负责立绘加载与缩放（战斗中二阶 ×1.1、三阶 ×1.2，脚底对齐站台）；
                SceneArt 加载背景与装饰物，CharArt 加载人物行走图
-  scenes/      Boot / Title / Starter / World / Battle / Chapter（章节卡）/ Ending；world/ 下为剧情节拍与地图演出
+  scenes/      Boot / Title / Starter / World / Battle / Chapter（章节卡）/ Ending；
+               world/ 下为 NPC 层、NPC 互动、钓鱼控制、剧情节拍（泉守汐 / 钓鱼大赛）与湖畔演出；battle/ 下为战后结算
   systems/     战斗（Core/Calc/Logic/AI/状态/特性）、资质、成长、遭遇、世界时钟、异象、存档、音效
   state/       运行时全局状态（队伍、寄存所、背包、图鉴、旗标、世界）
   ui/          输入、对话框、列表面板、菜单、小镇服务、学招替换、地图铺设、装饰层、天气层（weather/）、事件表现、战斗特效
+src/dev/       仅开发模式加载的工具（一键剧情回归）
 tests/         Vitest 单元测试
 docs/          设计文档与策划稿（docs/planning）
 ```

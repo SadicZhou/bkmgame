@@ -4,6 +4,8 @@
  * @date 2026-10-14
  */
 
+import type { Weather } from './weather'
+
 /** 单条遭遇条目 */
 export interface EncounterEntry {
   speciesId: string
@@ -12,6 +14,10 @@ export interface EncounterEntry {
   maxLv: number
   /** 仅昼 / 仅夜；不填为不限 */
   time?: 'day' | 'night'
+  /** 只在这些天气出现；不填为不限 */
+  weather?: Weather[]
+  /** 需要该剧情旗标才会出现 */
+  requireFlag?: string
 }
 
 /** 地图遭遇配置 */
@@ -73,15 +79,20 @@ export const ENCOUNTERS: Record<string, EncounterTable> = {
       { speciesId: 'mistnewt', weight: 20, minLv: 13, maxLv: 16 },
       { speciesId: 'tideback', weight: 15, minLv: 14, maxLv: 16 },
     ],
-    ice: [{ speciesId: 'frostgoose', weight: 100, minLv: 14, maxLv: 17 }],
+    ice: [
+      { speciesId: 'frostgoose', weight: 100, minLv: 14, maxLv: 17 },
+      { speciesId: 'icecrown', weight: 8, minLv: 22, maxLv: 24, time: 'night', requireFlag: 'whale_beaten' },
+    ],
     rod: [
       { speciesId: 'bubblefin', weight: 80, minLv: 12, maxLv: 15 },
       { speciesId: 'mistnewt', weight: 20, minLv: 13, maxLv: 15 },
+      { speciesId: 'lanternray', weight: 6, minLv: 16, maxLv: 18, weather: ['fog'] },
     ],
     goodRod: [
       { speciesId: 'coralfin', weight: 60, minLv: 16, maxLv: 18 },
       { speciesId: 'wavefin', weight: 30, minLv: 17, maxLv: 19 },
       { speciesId: 'tideback', weight: 10, minLv: 18, maxLv: 20 },
+      { speciesId: 'lanternray', weight: 12, minLv: 18, maxLv: 21, weather: ['fog'] },
     ],
   },
 }

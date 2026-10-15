@@ -32,6 +32,8 @@ export interface EncounterContext {
   /** 小事件：迁徙潮物种 / 闪耀时刻 */
   migrationSpecies?: string
   shimmer?: boolean
+  /** 剧情旗标（条目 requireFlag 用；不传视为都没有） */
+  hasFlag?: (key: string) => boolean
 }
 
 export interface EncounterPick {
@@ -68,6 +70,8 @@ export function encounterRate(ctx: EncounterContext): number {
 export function entryWeight(ctx: EncounterContext, e: EncounterEntry): number {
   if (e.time === 'night' && !ctx.night) return 0
   if (e.time === 'day' && ctx.night) return 0
+  if (e.weather && !(ctx.weather && e.weather.includes(ctx.weather))) return 0
+  if (e.requireFlag && !ctx.hasFlag?.(e.requireFlag)) return 0
   const sp = SPECIES[e.speciesId]
   const rare = sp.rarity === 'rare'
   let w = e.weight

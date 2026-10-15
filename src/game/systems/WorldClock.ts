@@ -7,6 +7,7 @@
 import type { CreatureInstance } from '../data/creatures'
 import type { MinorEventId } from '../data/phenomena'
 import { WEATHER_ROLL_STEPS, WEATHER_TABLES, type Weather } from '../data/weather'
+import type { FishContest, FishRecord } from './FishLog'
 import type { Rng } from './Talent'
 
 /** 昼夜各持续步数 */
@@ -52,6 +53,10 @@ export interface WorldSave {
   repelSteps: number
   phenomenon: PhenomenonState
   minor: MinorEventState
+  /** 钓鱼记录（v3.2 新增，旧存档没有） */
+  fishLog?: Record<string, FishRecord>
+  /** 当天的钓鱼大赛（v3.2 新增） */
+  fishContest?: FishContest | null
 }
 
 /**
