@@ -318,7 +318,8 @@ async function runSteps(r: Runner): Promise<void> {
         GameState.newGame('tideback')
         GameState.party = PARTY[r.real ? 'slow' : 'fast']()
         if (r.real) for (const [id, n] of SLOW_BAG) GameState.addItem(id, n)
-        GameState.flags = { ranger_beaten: true, hiker_beaten: true }
+        // 视线训练家都标记为已击败，免得巡逻时把回归脚本的玩家拦下来
+        GameState.flags = { ranger_beaten: true, hiker_beaten: true, lake_fisher_beaten: true, forest_herbalist_beaten: true }
         const ws = await r.enterWorld('pass', 7, 2, 'up')
         ws.tryInteract()
         if (!(await r.toBattle(ws))) return '没有进入守护兽战'

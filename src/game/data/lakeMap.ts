@@ -77,6 +77,7 @@ export function buildLake(): MapDef {
         color: 0x3aa0a0,
         facing: 'up',
         emote: '♪',
+        hideIf: ['@night', '@rain'],
         lines: ['湖水清凉凉的，洗出来的衣裳有股好闻的雾味儿。', '冰冻那阵子可把我愁坏了，衣裳只能拿回家里搓。'],
         progressLines: [
           { flag: 'forest_unlocked', lines: ['灯台亮了以后，晚上洗衣裳都不用点灯啦。', '东边林子里传来叮叮咚咚的声音，是石头在唱歌吗？'] },
@@ -90,6 +91,7 @@ export function buildLake(): MapDef {
         x: 6,
         y: 13,
         color: 0x6aa0e0,
+        facing: 'up',
         lines: [
           '浮漂往下一沉、头顶冒出「！」的时候，马上按确认！',
           '太早或太晚，鱼都会溜走——不过没关系，再甩一竿就好。',
@@ -101,6 +103,27 @@ export function buildLake(): MapDef {
             lines: ['湖面的冰都化了！沧澜鲸今天在湖心唱歌呢。', '你的好钓竿真棒，湖底深处的伙伴也会被吸引过来哦。'],
           },
         ],
+      },
+      {
+        id: 'lake_fisher',
+        name: '渔家少女汀',
+        role: 'trainer',
+        x: 17,
+        y: 13,
+        color: 0x5ac8d8,
+        facing: 'left',
+        patrol: [{ x: 12, y: 13 }],
+        patrolLook: 'up',
+        sight: 3,
+        hideIf: '@night',
+        lines: [],
+        team: [
+          { speciesId: 'bubblefin', level: 15 },
+          { speciesId: 'mistnewt', level: 16 },
+        ],
+        defeatedKey: 'lake_fisher_beaten',
+        challengeLines: ['站住！湖边的规矩——眼神对上了就要比一场！', '我的伙伴可是喝着雾泉水长大的！'],
+        afterLines: ['输啦输啦……你的伙伴好结实。', '雾天的时候，湖里会游来发光的雾灯鳐哦，记得带上钓竿。'],
       },
       {
         id: 'scout1',

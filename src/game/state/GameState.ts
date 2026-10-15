@@ -187,7 +187,20 @@ class GameStateStore {
     delete this.flags[key]
   }
 
-  hasFlag = (key: string): boolean => !!this.flags[key]
+  /** 进图时记下的时间 / 天气旗标（@night / @rain），同一张图里保持不变，不存档 */
+  sceneFlags: Record<string, boolean> = {}
+
+  hasFlag = (key: string): boolean => (key.startsWith('@') ? !!this.sceneFlags[key] : !!this.flags[key])
+
+  /**
+   * 进入地图时刷新 @night / @rain；城镇没有自己的天气，跟随青苔草地
+   * @author zjh
+   * @date 2026-10-15
+   */
+  snapshotSceneFlags(mapId: string): void {
+    const weather = this.weatherAt(mapId) ?? this.weatherAt('meadow')
+    this.sceneFlags = { '@night': this.night(), '@rain': weather === 'rain' || weather === 'storm' }
+  }
 
   itemCount(id: string): number {
     return this.bag[id] ?? 0

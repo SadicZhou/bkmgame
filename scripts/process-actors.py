@@ -31,13 +31,20 @@ FRAME_W, FRAME_H = walk.FRAME_W, walk.FRAME_H
 # 第 3 行站立帧的朝向
 SIDE = {"kid": "right"}
 # 身高系数（相对撑满 40px 帧高）
-SCALE = {"kid": 0.84, "florist": 0.92, "washer": 0.92, "farmer": 0.94}
+SCALE = {"kid": 0.84, "florist": 0.92, "washer": 0.92, "farmer": 0.94, "angler": 0.92, "fishergirl": 0.9}
+# 个别原图某方向画错了列：方向行号 → 改用的列号
+COL = {"scout2": {1: 1}}
 
 
 def process(name: str) -> None:
     img = chars.key_out(Image.open(SRC / f"{name}.jpg"))
     cw, ch = img.width / 3, img.height / 4
-    cells = [chars.main_rows(img.crop((0, round(r * ch), round(cw), round((r + 1) * ch)))) for r in range(3)]
+
+    def cell(r: int) -> Image.Image:
+        c = COL.get(name, {}).get(r, 0)
+        return chars.main_rows(img.crop((round(c * cw), round(r * ch), round((c + 1) * cw), round((r + 1) * ch))))
+
+    cells = [cell(r) for r in range(3)]
     boxes = [c.getbbox() for c in cells]
     union = (min(b[0] for b in boxes), min(b[1] for b in boxes), max(b[2] for b in boxes), max(b[3] for b in boxes))
     uw, uh = union[2] - union[0], union[3] - union[1]

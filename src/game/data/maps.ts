@@ -72,8 +72,11 @@ export interface NpcDef {
   afterLines?: string[]
   /** 需要该旗标才出现 */
   showIf?: string
-  /** 有该旗标后消失 */
-  hideIf?: string
+  /**
+   * 有该旗标（任一）后消失。以「@」开头的是进图时的时间 / 天气：
+   * @night 夜晚、@rain 当前地图下雨（如路人夜里回家、雨天收摊）
+   */
+  hideIf?: string | string[]
   /** 剧情对话脚本 id（见 scenes/world/StoryEvents） */
   story?: string
   /** 连战：赢下本场后立即挑战的 NPC id */
@@ -212,6 +215,7 @@ function buildTown(): MapDef {
         color: 0xf0a0c0,
         wander: 3,
         emote: '♪',
+        hideIf: '@night',
         lines: [
           '我在草丛里看见一只翠叶狐！',
           '听说伙伴到 9 级左右会进化，样子会变得超帅！',
@@ -225,6 +229,7 @@ function buildTown(): MapDef {
         color: 0x5a7ec8,
         wander: 2,
         emote: '♪',
+        hideIf: '@night',
         lines: ['今年的番茄长得特别好！都是托了火种的福。', '草地上的岩甲虫老爱啃我的篱笆……不过它们挺可爱的。'],
         progressLines: [
           { flag: 'whale_beaten', lines: ['湖边的冰化了，浇地的水也甜了！', '等收成了，送你一筐番茄尝尝。'] },
@@ -239,6 +244,7 @@ function buildTown(): MapDef {
         color: 0xf0a040,
         wander: 2,
         emote: '♥',
+        hideIf: ['@night', '@rain'],
         lines: ['要来一朵晨曦花吗？据说能让伙伴心情变好哦。', '傍晚的时候，花香会飘满整条街～'],
         progressLines: [
           { flag: 'deer_beaten', lines: ['回音林的叶子会唱歌？好想去听一听！', '要是能采到那里的花就好了……'] },
@@ -579,7 +585,8 @@ export function resolveTile(map: MapDef, x: number, y: number, hasFlag: HasFlag)
  * @date 2026-10-15
  */
 export function visibleNpcs(map: MapDef, hasFlag: HasFlag): NpcDef[] {
-  return map.npcs.filter((n) => (!n.showIf || hasFlag(n.showIf)) && !(n.hideIf && hasFlag(n.hideIf)))
+  const hidden = (h: NpcDef['hideIf']) => (Array.isArray(h) ? h.some(hasFlag) : !!h && hasFlag(h))
+  return map.npcs.filter((n) => (!n.showIf || hasFlag(n.showIf)) && !hidden(n.hideIf))
 }
 
 /**

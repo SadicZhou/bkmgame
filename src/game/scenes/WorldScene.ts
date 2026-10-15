@@ -88,6 +88,7 @@ export class WorldScene extends Phaser.Scene {
 
   create(): void {
     this.map = MAPS[GameState.mapId] ?? MAPS.town
+    GameState.snapshotSceneFlags(this.map.id)
     this.tileX = GameState.playerX
     this.tileY = GameState.playerY
     this.facing = GameState.facing
@@ -110,6 +111,7 @@ export class WorldScene extends Phaser.Scene {
       hasFlag,
       playerTile: () => ({ x: this.tileX, y: this.tileY }),
       blockedByOthers: (x, y) => !!this.staticNpcAt(x, y) || !!this.eventView.uniqueAt(x, y),
+      isThreat: (npc) => !!npc.defeatedKey && !GameState.getFlag(npc.defeatedKey),
       canSpot: (npc) => this.canBeSpotted(npc),
       onSpotted: (npc) => this.spottedBy(npc),
     })

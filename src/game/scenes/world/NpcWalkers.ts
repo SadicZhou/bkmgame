@@ -25,6 +25,8 @@ const WAIT_MAX = 4200
 /** 巡逻：到路点后的停留时间范围 */
 const PATROL_PAUSE_MIN = 1200
 const PATROL_PAUSE_MAX = 2200
+/** 视线高亮的层级：贴地装饰之上、站立装饰与人物之下 */
+const SIGHT_DEPTH = 0.65
 /** 同一个 NPC 两次冒表情的最短间隔 */
 const EMOTE_COOLDOWN = 8000
 /** 闲逛只走这些地面（不进草丛、不踩桥 / 门口） */
@@ -55,6 +57,8 @@ export interface WalkerHost {
   playerTile: () => { x: number; y: number }
   /** 该格是否被其他东西占着（静止 NPC、世界事件物件等） */
   blockedByOthers: (x: number, y: number) => boolean
+  /** 这位训练家还没被击败（视线有效，地面上画出视线范围） */
+  isThreat: (npc: NpcDef) => boolean
   /** 这位训练家现在能不能发起视线对战（未击败、玩家有可战伙伴、场景空闲） */
   canSpot: (npc: NpcDef) => boolean
   /** 被训练家看见了 */
@@ -74,10 +78,13 @@ export class NpcWalkers {
   private readonly walkers: Walker[]
   private readonly scene: Phaser.Scene
   private readonly host: WalkerHost
+  /** 训练家视线范围（贴地的淡红色格子） */
+  private readonly sightLayer: Phaser.GameObjects.Graphics
 
   constructor(scene: Phaser.Scene, bodies: WalkerBody[], host: WalkerHost) {
     this.scene = scene
     this.host = host
+    this.sightLayer = scene.add.graphics().setDepth(SIGHT_DEPTH)
     this.walkers = bodies.map((body) => ({
       body,
       x: body.npc.x,
@@ -114,6 +121,7 @@ export class NpcWalkers {
       w.body.mark?.setPosition(w.body.spr.x, w.body.spr.y + PERSON_MARK_DY - bob)
       w.emoteCd -= delta
     }
+    this.drawSight(time)
     if (paused) return
     const p = this.host.playerTile()
     for (const w of this.walkers) {
@@ -207,18 +215,43 @@ export class NpcWalkers {
     return this.walkers.find((v) => v.body.npc === npc)
   }
 
-  private sees(w: Walker, px: number, py: number): boolean {
+  /** 视线经过的格子：正前方 sight 格，遇到墙 / 水 / 装饰 / 其他 NPC 就停 */
+  private sightCells(w: Walker): { x: number; y: number }[] {
     const range = w.body.npc.sight ?? 0
-    if (!range || !this.host.canSpot(w.body.npc)) return false
     const [dx, dy] = DIR_VEC[w.facing]
+    const cells = []
     for (let k = 1; k <= range; k++) {
       const x = w.x + dx * k
       const y = w.y + dy * k
-      if (x === px && y === py) return true
       const tile = resolveTile(this.host.map, x, y, this.host.hasFlag)
-      if (!tile || isSolid(tile) || decorBlocks(this.host.map.id, x, y) || this.npcAt(x, y) || this.host.blockedByOthers(x, y)) return false
+      if (!tile || isSolid(tile) || decorBlocks(this.host.map.id, x, y) || this.npcAt(x, y) || this.host.blockedByOthers(x, y)) break
+      cells.push({ x, y })
     }
-    return false
+    return cells
+  }
+
+  private sees(w: Walker, px: number, py: number): boolean {
+    if (!w.body.npc.sight || !this.host.canSpot(w.body.npc)) return false
+    return this.sightCells(w).some((c) => c.x === px && c.y === py)
+  }
+
+  /**
+   * 画出未击败训练家的视线：越远越淡，轻微呼吸；走动中不画（避免闪跳）
+   * @author zjh
+   * @date 2026-10-15
+   */
+  private drawSight(time: number): void {
+    const g = this.sightLayer
+    g.clear()
+    const ts = this.host.map.tileSize
+    const pulse = 0.75 + Math.sin(time / 300) * 0.25
+    for (const w of this.walkers) {
+      if (w.moving || !w.body.npc.sight || !this.host.isThreat(w.body.npc)) continue
+      this.sightCells(w).forEach((c, i, all) => {
+        g.fillStyle(0xff6a3c, (0.28 - (i / all.length) * 0.12) * pulse)
+        g.fillRect(c.x * ts + 2, c.y * ts + 2, ts - 4, ts - 4)
+      })
+    }
   }
 
   /** 转身；有四方向行走图才换帧 */

@@ -63,6 +63,13 @@ const NPC_ACTOR: Record<string, string> = {
   town_farmer: 'farmer',
   town_florist: 'florist',
   lake_washer: 'washer',
+  angler: 'angler',
+  scout1: 'scout1',
+  scout2: 'scout2',
+  lake_fisher: 'fishergirl',
+  forest_patrol: 'patrol',
+  kindler: 'kindler',
+  forest_herbalist: 'herbalist',
 }
 
 export type CharSheet = 'char-player' | 'char-npcs' | 'char-npcs2' | 'char-npcs3'
