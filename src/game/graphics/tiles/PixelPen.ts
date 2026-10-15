@@ -67,6 +67,29 @@ export class PixelPen {
     }
   }
 
+  /** 环绕取模的单像素：越界的部分从对边画回来，用于无缝平铺的图块 */
+  wpx(x: number, y: number, color: number, alpha = 1): void {
+    const wx = ((Math.round(x) % this.w) + this.w) % this.w
+    const wy = ((Math.round(y) % this.h) + this.h) % this.h
+    this.px(wx, wy, color, alpha)
+  }
+
+  /**
+   * 环绕的柔和色斑：越靠中心点越密、边缘逐渐稀疏，做明暗过渡且不会出现圆形硬边
+   * @author zjh
+   * @date 2026-10-15
+   */
+  ditherDisc(cx: number, cy: number, r: number, color: number, alpha = 1): void {
+    const r2 = r * r
+    for (let y = -r; y <= r; y++) {
+      for (let x = -r; x <= r; x++) {
+        const d2 = x * x + y * y
+        if (d2 > r2 || this.rand() > (1 - d2 / r2) * 0.7) continue
+        this.wpx(cx + x, cy + y, color, alpha)
+      }
+    }
+  }
+
   /** 竖直草叶：底部 (x, baseY) 向上 len 像素，顶端 lean 偏移，尖端用 tip 色 */
   blade(x: number, baseY: number, len: number, color: number, tip: number, lean = 0): void {
     for (let i = 0; i < len; i++) {

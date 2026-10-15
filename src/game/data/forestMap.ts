@@ -184,7 +184,7 @@ export function buildForest(): MapDef {
         id: 'forest_vines',
         name: '藤蔓',
         role: 'prop',
-        texture: 'tile-tree-2',
+        texture: 'obj-vines',
         x: 15,
         y: 9,
         color: 0x3a6a2a,
