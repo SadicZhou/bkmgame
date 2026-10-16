@@ -180,6 +180,14 @@ class Runner {
 
 const check = (cond: boolean, msg: string): string | true => (cond ? true : msg)
 
+/** 等章节卡可以跳过，再回到大地图 */
+async function leaveChapter(r: Runner): Promise<boolean> {
+  const ch = r.scene<Phaser.Scene & { ready: boolean; leave(): void }>('Chapter')
+  if (!(await r.until(() => ch.ready, 8000))) return false
+  ch.leave()
+  return r.until(() => r.active('World') && !r.world().busy, 8000)
+}
+
 /** 慢速模式挑战沧澜鲸的队伍：按泉守汐的提示练到 Lv20 以上 */
 const SLOW_WHALE_PARTY = () => [createCreature('torrentshell', 21), createCreature('grovefox', 19), createCreature('pebblepup', 18)]
 
@@ -288,9 +296,7 @@ function chapter3Steps(r: Runner): [string, () => Promise<string | true>][] {
     [
       '章节卡 → 菜单出现「羁绊」页',
       async () => {
-        await r.wait(2000)
-        r.scene<Phaser.Scene & { leave(): void }>('Chapter').leave()
-        if (!(await r.until(() => r.active('World') && !r.world().busy))) return '没有回到大地图'
+        if (!(await leaveChapter(r))) return '没有回到大地图'
         const ws = r.world() as WorldProbe & { menus: { openMain(): void; panel: { close(): void } } }
         ws.menus.openMain()
         const panel = ws.menus.panel as unknown as { opts: { title: string; rows: { label: string; onSelect?: () => void }[] } }
@@ -330,9 +336,7 @@ async function runSteps(r: Runner): Promise<void> {
     [
       '章节卡 → 回到余烬山道',
       async () => {
-        await r.wait(2000)
-        r.scene<Phaser.Scene & { leave(): void }>('Chapter').leave()
-        const back = await r.until(() => r.active('World'))
+        const back = await leaveChapter(r)
         return check(back && GameState.mapId === 'pass', `当前地图 ${GameState.mapId}`)
       },
     ],
@@ -423,12 +427,94 @@ async function runSteps(r: Runner): Promise<void> {
       },
     ],
     ...chapter3Steps(r),
+    ...chapter4Steps(r),
   ]
   for (const [name, run] of steps) {
     if (!(await r.step(name, run))) break
   }
   const ran = new Set(r.results.map((x) => x.name))
   for (const [name] of steps) if (!ran.has(name)) r.results.push({ name, ok: false, ms: 0, note: '前一步失败，已跳过' })
+}
+
+/**
+ * 第四章：东口进峡谷、怪力手套、推石、矿车、砧、磐角犀
+ * @author zjh
+ * @date 2026-10-16
+ */
+function chapter4Steps(r: Runner): [string, () => Promise<string | true>][] {
+  const has = GameState.hasFlag
+  return [
+    [
+      '回音林东口 → 千岩峡谷',
+      async () => {
+        const ws = await r.enterWorld('forest', 26, 6, 'right')
+        ws.tryMove(1, 0)
+        await r.wait(800)
+        await r.until(() => r.active('World') && !r.world().busy)
+        return check(GameState.mapId === 'canyon' && has('canyon_unlocked'), `停在 ${GameState.mapId}`)
+      },
+    ],
+    [
+      '登山客峰：获得怪力手套',
+      async () => {
+        const ws = await r.enterWorld('hammer', 10, 4, 'right')
+        ws.tryInteract()
+        await r.closeDialogue(ws)
+        return check(GameState.itemCount('strength_gloves') === 1, '没有拿到怪力手套')
+      },
+    ],
+    [
+      '推石：填平第一道裂缝',
+      async () => {
+        GameState.party.push(createCreature('puffmouse', 20))
+        const ws = await r.enterWorld('canyon', 10, 13, 'up')
+        const field = ws as WorldProbe & { field: { tryInteract(x: number, y: number, dx: number, dy: number): boolean } }
+        field.field.tryInteract(10, 12, 0, -1)
+        await r.wait(250)
+        ws.tryMove(0, -1)
+        await r.wait(250)
+        field.field.tryInteract(10, 11, 0, -1)
+        await r.wait(250)
+        return check(GameState.getFlag('boulder_z1') === 'sunk', `石头状态 ${GameState.getFlag('boulder_z1')}`)
+      },
+    ],
+    [
+      '矿车路线 LRL → 矿道深处',
+      async () => {
+        const ws = await r.enterWorld('mine', 4, 6, 'up')
+        ws.tryInteract()
+        await r.closeDialogue(ws)
+        const cart = await r.enterWorld('mine', 3, 8, 'up')
+        cart.tryInteract()
+        await r.closeDialogue(cart)
+        await r.until(() => r.active('World') && !r.world().busy, 8000)
+        return check(has('canyon_deep') && GameState.playerX === 15 && GameState.playerY === 3, `位置 ${GameState.playerX},${GameState.playerY}`)
+      },
+    ],
+    [
+      '掘手·砧胜利',
+      async () => {
+        const ws = await r.enterWorld('mine', 15, 3, 'up')
+        ws.tryInteract()
+        if (!(await r.toBattle(ws))) return '砧没有开战'
+        if ((await r.winBattle()) === 'lost') return '输给了砧'
+        await r.until(() => r.active('World') && !r.world().busy, 8000)
+        await r.closeDialogue(r.world())
+        return check(has('anvil_beaten'), '没有写入 anvil_beaten')
+      },
+    ],
+    [
+      '磐角犀胜利 → 第四章章节卡 + 岩之徽记',
+      async () => {
+        const ws = await r.enterWorld('mine', 15, 3, 'up')
+        ws.tryInteract()
+        if (!(await r.toBattle(ws))) return '没有进入磐角犀战'
+        const next = await r.winBattle()
+        if (next === 'lost') return '输给了磐角犀'
+        return check(next === 'Chapter' && has('chapter4_done') && has('badge_stone'), `去向 ${next}`)
+      },
+    ],
+  ]
 }
 
 /** 右上角结果面板 */

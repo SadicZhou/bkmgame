@@ -73,6 +73,10 @@ const NPC_ACTOR: Record<string, string> = {
   kindler: 'kindler',
   forest_herbalist: 'herbalist',
   mushroom_granny: 'mushgranny',
+  hammer_granny: 'mushgranny',
+  canyon_peak: 'hiker',
+  canyon_anvil: 'scout1',
+  canyon_miner: 'elder',
 }
 
 export type CharSheet = 'char-player' | 'char-npcs' | 'char-npcs2' | 'char-npcs3'

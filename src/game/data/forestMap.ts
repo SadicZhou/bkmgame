@@ -100,7 +100,7 @@ export function buildForest(): MapDef {
     '########,,,,,,,,,,,,,,########',
     '#########,,,,,,,,,,,,#########',
     '###########,,,,,,,,###########',
-    '###############.##############',
+    '###############............W##',
     '###############.##############',
     '###############.##############',
     '###############.##############',
@@ -134,7 +134,19 @@ export function buildForest(): MapDef {
     bgColor: 0x3a7a4a,
     spawn: { x: 2, y: 26 },
     outdoor: true,
-    warps: [{ x: 2, y: 27, targetMap: 'lake', targetX: 18, targetY: 9, label: '雾泉湖畔' }],
+    warps: [
+      { x: 2, y: 27, targetMap: 'lake', targetX: 18, targetY: 9, label: '雾泉湖畔' },
+      {
+        x: 27,
+        y: 6,
+        targetMap: 'canyon',
+        targetX: 6,
+        targetY: 13,
+        label: '千岩峡谷',
+        requireFlag: 'canyon_unlocked',
+        lockedLines: ['东边的山路还被藤蔓和落石封着。', '（回音林的事情了结之后，再往这边走吧。）'],
+      },
+    ],
     npcs: [
       {
         id: 'forest_moss',

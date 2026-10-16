@@ -20,8 +20,12 @@ export const ART_SPECIES = Object.keys(SPECIES)
  * @author zjh
  * @date 2026-10-14
  */
+/** 还没有立绘、用程序绘制的物种（有 PNG 后从这里删掉） */
+const DRAWN = new Set(['drillmole', 'crystalbat', 'amberling', 'shellfossil', 'ridgerhino'])
+
 export function preloadCreatureArt(scene: Phaser.Scene): void {
   for (const id of ART_SPECIES) {
+    if (DRAWN.has(id)) continue
     scene.load.image(`spr-${id}`, `assets/creatures/${id}.png`)
     scene.load.image(`spr-${id}-shiny`, `assets/creatures/${id}-shiny.png`)
   }

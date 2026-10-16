@@ -64,6 +64,7 @@ export const OUTDOOR_MAPS: { mapId: string; requireFlag?: string }[] = [
   { mapId: 'pass', requireFlag: 'ranger_beaten' },
   { mapId: 'lake', requireFlag: 'lake_unlocked' },
   { mapId: 'forest', requireFlag: 'forest_unlocked' },
+  { mapId: 'canyon', requireFlag: 'canyon_unlocked' },
 ]
 
 class GameStateStore {

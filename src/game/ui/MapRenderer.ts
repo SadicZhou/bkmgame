@@ -25,6 +25,9 @@ const TREE_WALLS: Record<string, string[]> = {
 const SOLID_WALLS: Record<string, string[]> = {
   pass: ['tile-cliff-0', 'tile-cliff-1'],
   cabin: ['tile-woodwall-0'],
+  hammer: ['tile-woodwall-0'],
+  canyon: ['tile-cliff-0', 'tile-cliff-1'],
+  mine: ['tile-cliff-0', 'tile-cliff-1'],
 }
 
 /** 树冠深度：在地面装饰（0.6）之上、立式装饰（5）之下；越靠下的树越靠前 */

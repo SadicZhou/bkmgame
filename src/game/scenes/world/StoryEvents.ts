@@ -9,6 +9,7 @@
 import { BRIDGE_FLAG } from '../../data/lakeMap'
 import { GameState } from '../../state/GameState'
 import { anglerStory } from './AnglerStory'
+import { CANYON_STORIES } from './CanyonStory'
 import { FOREST_STORIES } from './ForestStory'
 import { MUSHROOM_STORIES } from './MushroomStory'
 
@@ -97,7 +98,7 @@ function lakeShio(host: StoryHost, name: string): void {
   say(['湖面的冰化了，灯台又亮了。', '沧澜鲸说，好钓竿是它送给你的谢礼——湖底深处的伙伴也会被吸引过来哦。', '回音林就在湖畔东边，苔应该也在那里。'])
 }
 
-const STORIES: Record<string, StoryFn> = { lake_shio: lakeShio, angler: anglerStory, ...FOREST_STORIES, ...MUSHROOM_STORIES }
+const STORIES: Record<string, StoryFn> = { lake_shio: lakeShio, angler: anglerStory, ...FOREST_STORIES, ...MUSHROOM_STORIES, ...CANYON_STORIES }
 
 /**
  * 执行 NPC 的剧情脚本；没有对应脚本返回 false

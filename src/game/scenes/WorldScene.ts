@@ -31,6 +31,7 @@ import { WeatherLayer } from '../ui/WeatherLayer'
 import type { AmbientKind } from '../ui/weather/Ambient'
 import { WorldEventsView } from '../ui/WorldEventsView'
 import { WorldMenus } from '../ui/WorldMenus'
+import { CanyonField } from './world/CanyonField'
 import { FishingController } from './world/FishingController'
 import { LIGHT_UP_FLAG, beforeLightUp, needsLightUp, playLighthouseLightUp, playWhaleLeap } from './world/LakeCutscenes'
 import { NpcInteract } from './world/NpcInteract'
@@ -51,6 +52,7 @@ const AMBIENT_BY_MAP: Record<string, AmbientKind> = {
   pass: 'embers',
   lake: 'fireflies',
   forest: 'fireflies',
+  canyon: 'embers',
 }
 
 const hasFlag = GameState.hasFlag
@@ -85,6 +87,8 @@ export class WorldScene extends Phaser.Scene {
   /** 骑乘与跟随伙伴 */
   private ride!: RideController
   private menuWasOpen = false
+  /** 千岩峡谷的巨石（其他地图为空壳） */
+  private field!: CanyonField
   /** 排队等出生格空出来的 NPC：每隔一段时间重试 */
   private rosterRetry = 0
   private toaster!: Toaster
@@ -153,6 +157,7 @@ export class WorldScene extends Phaser.Scene {
       facing: () => this.facing,
       toast: (m) => this.flashToast(m),
     })
+    this.field = new CanyonField(this, this.map, (m) => this.flashToast(m))
     this.refreshAtmosphere()
 
     this.hudText = this.add
@@ -318,7 +323,7 @@ export class WorldScene extends Phaser.Scene {
       this.menus.panel.handle(input)
       return
     }
-    if (this.moving) return
+    if (this.moving || this.field.busy) return
 
     if (input.ride) {
       this.ride.toggle()
@@ -412,7 +417,8 @@ export class WorldScene extends Phaser.Scene {
     const ny = this.tileY + dy
     const tile = resolveTile(this.map, nx, ny, hasFlag)
     if (!tile || decorBlocks(this.map.id, nx, ny) || this.occupiedByNpc(nx, ny) || this.eventView.uniqueAt(nx, ny)) return
-    if (!this.ride.canEnter(tile)) return
+    if (this.field.blocks(nx, ny)) return
+    if (!this.field.opens(nx, ny) && !this.ride.canEnter(tile)) return
 
     const fromX = this.tileX
     const fromY = this.tileY
@@ -564,6 +570,7 @@ export class WorldScene extends Phaser.Scene {
   /** 面前有唯一精灵 / NPC 则互动，否则尝试钓鱼 */
   private tryInteract(): void {
     const { x, y } = this.facingTile()
+    if (this.field.tryInteract(x, y, x - this.tileX, y - this.tileY)) return
     const npc = this.occupiedByNpc(x, y)
     if (npc) this.walkers.greet(npc)
     if (this.interact.handle(this.eventView.uniqueAt(x, y), npc)) return

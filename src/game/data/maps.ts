@@ -6,6 +6,7 @@
 
 import type { Facing } from '../state/GameState'
 import { decorBlocks } from './decor'
+import { buildCanyon, buildHammerTown, buildMine } from './canyonMap'
 import { buildForest } from './forestMap'
 import { buildLake } from './lakeMap'
 import { TS, borderWalls, fill, parseAscii, setRect } from './mapKit'
@@ -228,6 +229,7 @@ function buildTown(): MapDef {
           '我在草丛里看见一只翠叶狐！',
           '听说伙伴到 9 级左右会进化，样子会变得超帅！',
         ],
+        progressLines: [{ flag: 'chapter4_done', lines: ['锤音镇的人送了我一把小锤子！', '我要用它做一盏灯——等我做好了给你看！'] }],
       },
       {
         id: 'town_farmer',
@@ -540,6 +542,9 @@ export const MAPS: Record<string, MapDef> = {
   cabin: buildCabin(),
   lake: buildLake(),
   forest: buildForest(),
+  hammer: buildHammerTown(),
+  canyon: buildCanyon(),
+  mine: buildMine(),
 }
 
 /**

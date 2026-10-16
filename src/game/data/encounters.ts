@@ -107,4 +107,15 @@ export const ENCOUNTERS: Record<string, EncounterTable> = {
       { speciesId: 'echofrog', weight: 10, minLv: 19, maxLv: 22, weather: ['rain'] },
     ],
   },
+  canyon: {
+    baseRate: 0.12,
+    grass: [
+      { speciesId: 'bouldermite', weight: 30, minLv: 22, maxLv: 25 },
+      { speciesId: 'pebblepup', weight: 25, minLv: 22, maxLv: 25 },
+      { speciesId: 'drillmole', weight: 20, minLv: 23, maxLv: 26 },
+      { speciesId: 'crystalbat', weight: 15, minLv: 24, maxLv: 27, time: 'night' },
+      { speciesId: 'cragdog', weight: 10, minLv: 25, maxLv: 27 },
+      { speciesId: 'amberling', weight: 3, minLv: 25, maxLv: 27, weather: ['sunny'] },
+    ],
+  },
 }

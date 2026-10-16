@@ -37,10 +37,12 @@ export const ITEMS: Record<string, ItemDef> = {
   talent_fruit: { id: 'talent_fruit', name: '资质果', kind: 'talent', value: 2, price: 0, desc: '饱满的林间果实。指定伙伴的一项资质 +2（上限 20，每只最多 5 次）。只能在野外使用。' },
   old_rod: { id: 'old_rod', name: '旧钓竿', kind: 'key', value: 0, price: 0, desc: '泉守汐送的钓竿。面朝水面按确认就能钓鱼。' },
   good_rod: { id: 'good_rod', name: '好钓竿', kind: 'key', value: 0, price: 0, desc: '沧澜鲸的鳞片缠在竿头，能钓到更深处的伙伴。' },
+  strength_gloves: { id: 'strength_gloves', name: '怪力手套', kind: 'key', value: 0, price: 0, desc: '峰送的手套。队伍里有岩系或一般系伙伴时，面朝巨石按确认可以推动一格。' },
+  dust_badge: { id: 'dust_badge', name: '旧徽章', kind: 'key', value: 0, price: 0, desc: '阿禾旅团的旧徽章，背面刻着一个「尘」字。' },
 }
 
 /** 重要物品（背包末尾展示） */
-export const KEY_ITEMS: string[] = ['old_rod', 'good_rod']
+export const KEY_ITEMS: string[] = ['old_rod', 'good_rod', 'strength_gloves', 'dust_badge']
 
 /** 商店货架顺序 */
 export const SHOP_STOCK: string[] = [

@@ -45,7 +45,7 @@ export const CHAPTER_ENDS: ChapterEnd[] = [
   },
   {
     bossFlag: 'deer_beaten',
-    card: { title: '第三章完 · 回音', subtitle: '羁绊系统开放 · 新的旅途：磐谷（敬请期待）' },
+    card: { title: '第三章完 · 回音', subtitle: '羁绊系统开放 · 新的旅途：千岩峡谷' },
     notes: [
       '黑色灯罩从古树顶端滑落，林心古树亮起了温暖的绿光。',
       '林语鹿的鹿角铃铛一齐响起，回声传遍了整片林子——蓬尾鼠、旋叶蝠、伞灵菇此起彼伏地回应着。',
@@ -55,7 +55,20 @@ export const CHAPTER_ENDS: ChapterEnd[] = [
       '苔：那是「羁绊」。以前阿禾旅长教过我——现在，你也能看见了。',
     ],
     badge: 'leaf',
-    unlockFlags: ['chapter3_done'],
+    unlockFlags: ['chapter3_done', 'canyon_unlocked'],
+    ending: false,
+  },
+  {
+    bossFlag: 'rhino_beaten',
+    card: { title: '第四章完 · 磐谷', subtitle: '新的旅途：星砂荒原（敬请期待）' },
+    notes: [
+      '磐角犀用角轻轻推开最后一块钻机零件，岩灯台亮了起来。',
+      '峡谷的摇晃停了。锤音镇那边，传来久违的叮叮当当——全镇的锤子又敲响了。',
+      '砧低下头，对磐角犀说：对不起，也谢谢你。',
+    ],
+    badge: 'stone',
+    unlockFlags: ['chapter4_done'],
+    items: ['dust_badge'],
     ending: false,
   },
 ]

@@ -156,11 +156,21 @@ export function onRoundEnd(s: BattleState): void {
   if (s.turn % FOREST_VOICE_EVERY !== 0) return
   const sides: Side[] = ['player', 'enemy']
   const singer = sides.map((side) => actorOf(s, side)).find((c) => c.hp > 0 && c.abilityId === 'forest_voice')
-  if (!singer) return
-  say(s, `${battleName(singer)} 的「林语」！回声响彻全场，双方的能力变化都消失了。`)
+  if (singer) {
+    say(s, `${battleName(singer)} 的「林语」！回声响彻全场，双方的能力变化都消失了。`)
+    for (const side of sides) {
+      const c = actorOf(s, side)
+      volOf(s, c).stages = { atk: 0, def: 0, spd: 0 }
+    }
+  }
+  const rumbler = sides.map((side) => actorOf(s, side)).find((c) => c.hp > 0 && c.abilityId === 'stone_rumble')
+  if (!rumbler) return
+  say(s, `${battleName(rumbler)} 的「地鸣」！峡谷跟着震了一下。`)
   for (const side of sides) {
     const c = actorOf(s, side)
-    volOf(s, c).stages = { atk: 0, def: 0, spd: 0 }
+    if (c.hp <= 0 || isType(c, 'stone')) continue
+    const d = dealDamage(c, Math.max(1, Math.floor(c.maxHp / 12)))
+    say(s, `落石砸中了 ${battleName(c)}！（-${d}）`, sideAnim(side, 'hurtPlayer', 'hurtEnemy'))
   }
 }
 
