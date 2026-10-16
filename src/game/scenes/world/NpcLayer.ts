@@ -32,7 +32,7 @@ const OBJECT_ROLES = new Set<NonNullable<NpcDef['role']>>(['boss', 'board', 'sig
 export const PERSON_MARK_DY = -32
 
 /** 大地图上守护兽立绘的缩放（默认 0.8；沧澜鲸是巨鲸，要大一些） */
-export const BOSS_MAP_SCALE: Record<string, number> = { tidewhale: 1.5, echodeer: 1.0, ridgerhino: 1.35, stormfalcon: 1.25 }
+export const BOSS_MAP_SCALE: Record<string, number> = { tidewhale: 1.5, echodeer: 1.0, ridgerhino: 1.35, stormfalcon: 1.25, frostcrane: 1.35 }
 
 /** 守护兽在大地图上显示的物种（队伍最后一只） */
 export function bossSpecies(npc: NpcDef): string {

@@ -119,6 +119,8 @@ export interface BattleState {
   badges?: ElementType[]
   /** 羁绊系统已开放（玩家伙伴享受亲密度阶段效果） */
   bond?: boolean
+  /** 双打：双方第二只活着的伙伴每回合也会出手 */
+  doubles?: boolean
   vol: Record<string, Volatile>
   pendingLearns: PendingLearn[]
   turn: number

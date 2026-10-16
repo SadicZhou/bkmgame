@@ -73,15 +73,27 @@ export const CHAPTER_ENDS: ChapterEnd[] = [
   },
   {
     bossFlag: 'falcon_beaten',
-    card: { title: '第五章完 · 星砂', subtitle: '新的旅途：霜铃峰（敬请期待）' },
+    card: { title: '第五章完 · 星砂', subtitle: '新的旅途：霜铃峰' },
     notes: [
       '锁链烧断了。雷鸣隼振翅飞上一圈，雷心坑安静下来。',
       '沙暴散开的地方，露出通往霜铃峰的方向，天上挂着一层极光。',
       '星图上，第五颗星亮了。',
     ],
     badge: 'volt',
-    unlockFlags: ['chapter5_done'],
+    unlockFlags: ['chapter5_done', 'frost_unlocked'],
     items: ['star_charm'],
+    ending: false,
+  },
+  {
+    bossFlag: 'crane_beaten',
+    card: { title: '第六章完 · 霜铃', subtitle: '新的旅途：云阶浮岛（敬请期待）' },
+    notes: [
+      '冰柱碎开。霜铃鹤展翅，峰顶的冰铃一起响了起来。',
+      '心火极光从霜铃峰铺开，晨曦小镇的夜空也亮了。',
+      '望第一次伸手去碰伙伴身上的火，笑出了声。',
+    ],
+    badge: 'frost',
+    unlockFlags: ['chapter6_done', 'heart_aurora'],
     ending: false,
   },
 ]

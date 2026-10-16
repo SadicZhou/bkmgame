@@ -32,6 +32,8 @@ export const WEATHER_TABLES: Record<string, Partial<Record<Weather, number>>> = 
   forest: { sunny: 40, rain: 30, fog: 20, storm: 10 },
   canyon: { sunny: 55, sand: 30, rain: 15 },
   dunes: { sunny: 40, sand: 45, storm: 15 },
+  frostpeak: { snow: 70, sunny: 20, fog: 10 },
+  icelake: { snow: 80, sunny: 20 },
 }
 
 /** 天气每隔多少步（全局步数）重掷 */

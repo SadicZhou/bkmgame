@@ -43,6 +43,8 @@ export interface PendingBattle {
   winLines?: string[]
   /** 胜利后额外写入的旗标 */
   winFlags?: string[]
+  /** 双打：第二只伙伴也会出手 */
+  doubles?: boolean
   /** 训练家再战（胜利后累计再战次数） */
   rematch?: boolean
   /** 战斗场地天气（室内 / 城镇为 null） */
@@ -66,6 +68,7 @@ export const OUTDOOR_MAPS: { mapId: string; requireFlag?: string }[] = [
   { mapId: 'forest', requireFlag: 'forest_unlocked' },
   { mapId: 'canyon', requireFlag: 'canyon_unlocked' },
   { mapId: 'dunes', requireFlag: 'dunes_unlocked' },
+  { mapId: 'frostpeak', requireFlag: 'frost_unlocked' },
 ]
 
 class GameStateStore {

@@ -106,6 +106,7 @@ export class BattleScene extends Phaser.Scene {
       badges: ownedBadgeTypes(GameState.hasFlag),
       bond: !pending.allyParty && GameState.hasFlag(BOND_FLAG),
       allyName: pending.allyName,
+      doubles: pending.doubles,
     })
 
     this.fx = new BattleFx(this)

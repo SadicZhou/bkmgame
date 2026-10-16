@@ -8,6 +8,7 @@ import type { Facing } from '../state/GameState'
 import { decorBlocks } from './decor'
 import { buildCanyon, buildHammerTown, buildMine } from './canyonMap'
 import { buildDunes, buildObservatory } from './dunesMap'
+import { buildBellHall, buildFrostPeak, buildFrostVillage, buildIceLake } from './frostMap'
 import { buildForest } from './forestMap'
 import { buildLake } from './lakeMap'
 import { TS, borderWalls, fill, parseAscii, setRect } from './mapKit'
@@ -93,6 +94,8 @@ export interface NpcDef {
   winLines?: string[]
   /** 胜利后额外写入的旗标 */
   winFlags?: string[]
+  /** 双打：双方各有两只同时在场 */
+  doubles?: boolean
   /** prop 的贴图（不填则不显示，由装饰物负责外观） */
   texture?: string
   /** 闲逛半径（格，曼哈顿距离）：在出生点附近随机走动；不填则原地站立 */
@@ -189,6 +192,10 @@ function buildTown(): MapDef {
         ],
         progressLines: [
           {
+            flag: 'chapter6_done',
+            lines: ['昨晚的光……我在窗边站了很久。', '那孩子，每年冬天都去霜铃峰放灯吗。'],
+          },
+          {
             flag: 'chapter5_done',
             lines: ['星砂荒原的雷停了？穗来信说，第五颗星亮了。', '霜铃峰很冷，上路前让岚帮你们看看伤。'],
           },
@@ -235,6 +242,7 @@ function buildTown(): MapDef {
           '听说伙伴到 9 级左右会进化，样子会变得超帅！',
         ],
         progressLines: [
+          { flag: 'chapter6_done', lines: ['昨天晚上天上有彩色的光！', '妈妈说那是心火极光，一辈子都难得看到一次！'] },
           { flag: 'chapter5_done', lines: ['荒原上的星星好亮！', '我的小灯还没做好……等霜铃峰的雪化了，我再点给你看。'] },
           { flag: 'chapter4_done', lines: ['锤音镇的人送了我一把小锤子！', '我要用它做一盏灯——等我做好了给你看！'] },
         ],
@@ -538,7 +546,10 @@ function buildCabin(): MapDef {
         y: 3,
         color: 0x9b7ed9,
         lines: ['欢迎回来，旅人。要做点什么？'],
-        progressLines: [{ flag: 'chapter5_done', lines: ['荒原的沙暴伤人。来，我先看看你们。', '下一程是霜铃峰，记得带足伤药。'] }],
+        progressLines: [
+          { flag: 'chapter6_done', lines: ['从霜铃峰下来的人，身上都还留着一点冷。来，坐一会儿。', '极光的晚上，连伤药都觉得没那么苦了。'] },
+          { flag: 'chapter5_done', lines: ['荒原的沙暴伤人。来，我先看看你们。', '下一程是霜铃峰，记得带足伤药。'] },
+        ],
       },
     ],
   }
@@ -556,6 +567,10 @@ export const MAPS: Record<string, MapDef> = {
   mine: buildMine(),
   dunes: buildDunes(),
   observatory: buildObservatory(),
+  frostvillage: buildFrostVillage(),
+  frostpeak: buildFrostPeak(),
+  icelake: buildIceLake(),
+  bellhall: buildBellHall(),
 }
 
 /**

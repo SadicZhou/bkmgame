@@ -130,4 +130,15 @@ export const ENCOUNTERS: Record<string, EncounterTable> = {
       { speciesId: 'starcat', weight: 3, minLv: 28, maxLv: 31, time: 'night' },
     ],
   },
+  frostpeak: {
+    baseRate: 0.12,
+    grass: [
+      { speciesId: 'frostgoose', weight: 30, minLv: 30, maxLv: 33 },
+      { speciesId: 'skyfinch', weight: 25, minLv: 30, maxLv: 33 },
+      { speciesId: 'snowbun', weight: 20, minLv: 30, maxLv: 32, weather: ['snow'] },
+      { speciesId: 'cragdog', weight: 15, minLv: 31, maxLv: 34 },
+      { speciesId: 'icecrown', weight: 12, minLv: 32, maxLv: 35 },
+      { speciesId: 'frostfox', weight: 3, minLv: 33, maxLv: 35, time: 'night', weather: ['snow'] },
+    ],
+  },
 }

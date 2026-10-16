@@ -38,6 +38,7 @@ const LIST: AbilityDef[] = [
   { id: 'forest_voice', name: '林语', desc: '每 3 回合结束时，回声响彻全场：双方能力阶级清零。' },
   { id: 'stone_rumble', name: '地鸣', desc: '每 3 回合结束时地面震动：非岩系伙伴损失 1/12 HP。' },
   { id: 'sky_bolt', name: '落雷', desc: '每 2 回合结束时，雷击落在场上的一方，造成 1/10 HP 伤害。' },
+  { id: 'bell_chime', name: '冰铃共鸣', desc: '每 3 回合结束时，冰铃响起，自身回复 1/8 HP。' },
   // 唯一精灵专属
   { id: 'wish', name: '许愿', desc: '打出会心后，自身速度 +1 阶。' },
   { id: 'bloom_scent', name: '花香', desc: '每回合结束回复 1/16 HP，并有 30% 解除自身异常状态。' },

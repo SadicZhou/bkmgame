@@ -55,6 +55,8 @@ export interface BattleOptions {
   bond?: boolean
   /** 临时组队时的同伴名字（开场改为「XX：去吧，…！」） */
   allyName?: string
+  /** 双打 */
+  doubles?: boolean
 }
 
 /**
@@ -89,6 +91,7 @@ export function startBattle(
     token: !!opts.token,
     badges: opts.badges ?? [],
     bond: !!opts.bond,
+    doubles: !!opts.doubles,
     vol: {},
     pendingLearns: [],
     turn: 1,
@@ -96,11 +99,13 @@ export function startBattle(
   const enemy = enemies[0]
   if (kind === 'wild') say(s, `野生的 ${battleName(enemy)} 跳了出来！`, 'swapEnemy')
   else if (kind === 'unique') say(s, `${battleName(enemy)} 出现在你面前！`, 'swapEnemy')
+  else if (opts.doubles && enemies[1]) say(s, `${opts.trainerName ?? '对手'} 派出了 ${battleName(enemy)} 和 ${battleName(enemies[1])}！`, 'swapEnemy')
   else say(s, `${opts.trainerName ?? '对手'} 派出了 ${battleName(enemy)}！`, 'swapEnemy')
   if (enemy.shiny) say(s, '✦ 它的身体闪闪发光！')
   if (kind === 'unique' && s.token) say(s, '异象信物亮了起来，它被光芒吸引住了！')
   if (s.weather) say(s, `${WEATHER_INFO[s.weather].icon} 场地天气：${WEATHER_INFO[s.weather].label}`, 'weather')
-  const go = `去吧，${battleName(activePlayer(s))}！`
+  const partner = opts.doubles ? party.find((c, i) => i !== s.activeIndex && c.hp > 0) : undefined
+  const go = partner ? `去吧，${battleName(activePlayer(s))}、${battleName(partner)}！` : `去吧，${battleName(activePlayer(s))}！`
   say(s, opts.allyName ? `${opts.allyName}：${go}（本场由${opts.allyName}的伙伴出战）` : go, 'swapPlayer')
   onEnter(s, 'player')
   onEnter(s, 'enemy')
@@ -331,6 +336,16 @@ function executeMove(s: BattleState, side: Side, slotIndex: number): void {
   if (move.contact) onContact(s, side, user, target)
   onHit(s, side, user, target, move, crit)
   applyEffect(s, side, user, target, move, dealt)
+  if (s.doubles && move.spread && dealt > 0) {
+    const foes = side === 'player' ? s.enemyParty : s.playerParty
+    const front = side === 'player' ? s.enemyIndex : s.activeIndex
+    const partnerIdx = foes.findIndex((c, i) => i !== front && c.hp > 0)
+    if (partnerIdx >= 0) {
+      const extra = Math.max(1, Math.floor(dealt * 0.75))
+      const d2 = dealDamage(foes[partnerIdx], extra)
+      say(s, `${move.name} 卷到了 ${battleName(foes[partnerIdx])}！（-${d2}）`, sideAnim(side, 'hitEnemy', 'hitPlayer'))
+    }
+  }
   if (move.id === STRUGGLE.id) {
     const hurt = dealDamage(user, Math.max(1, user.maxHp / 4))
     say(s, `${name} 受到了挣扎的反作用力！（-${hurt}）`, sideAnim(side, 'hurtPlayer', 'hurtEnemy'))
@@ -403,7 +418,44 @@ function enemyTurn(s: BattleState): void {
   if (s.over) return
   if (tokenHolds(s)) sayTokenHold(s)
   else if (activeEnemy(s).hp > 0 && activePlayer(s).hp > 0) executeMove(s, 'enemy', chooseEnemyMove(s))
+  doublesFollowUp(s)
   endOfTurn(s)
+}
+
+/**
+ * 双打跟手：双方第二只活着的伙伴各使用第一个还能用的攻击技
+ * @author zjh
+ * @date 2026-10-16
+ */
+function doublesFollowUp(s: BattleState): void {
+  if (!s.doubles || s.over) return
+  strikePartner(s, 'player')
+  if (!s.over) strikePartner(s, 'enemy')
+}
+
+function attackSlot(c: CreatureInstance): number {
+  return c.moves.findIndex((m) => m.pp > 0 && MOVES[m.id]?.category === 'attack')
+}
+
+function strikePartner(s: BattleState, side: Side): void {
+  if (s.over) return
+  const party = side === 'player' ? s.playerParty : s.enemyParty
+  const active = side === 'player' ? s.activeIndex : s.enemyIndex
+  const idx = party.findIndex((c, i) => i !== active && c.hp > 0)
+  if (idx < 0) return
+  const slot = attackSlot(party[idx])
+  if (slot < 0) return
+  if (side === 'player') {
+    const saved = s.activeIndex
+    s.activeIndex = idx
+    executeMove(s, 'player', slot)
+    if ((s.playerParty[saved]?.hp ?? 0) > 0) s.activeIndex = saved
+    return
+  }
+  const saved = s.enemyIndex
+  s.enemyIndex = idx
+  executeMove(s, 'enemy', chooseEnemyMove(s))
+  if ((s.enemyParty[saved]?.hp ?? 0) > 0) s.enemyIndex = saved
 }
 
 /**
@@ -445,6 +497,7 @@ export function playerFight(s: BattleState, slotIndex: number): void {
     executeMove(s, 'enemy', eChoice)
     if (!s.over && activePlayer(s) === player && activeEnemy(s) === enemy) executeMove(s, 'player', slotIndex)
   }
+  doublesFollowUp(s)
   endOfTurn(s)
 }
 

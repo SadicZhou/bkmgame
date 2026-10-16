@@ -11,6 +11,7 @@ import { GameState } from '../../state/GameState'
 import { anglerStory } from './AnglerStory'
 import { CANYON_STORIES } from './CanyonStory'
 import { DUNE_STORIES } from './DuneStory'
+import { FROST_STORIES } from './FrostStory'
 import { FOREST_STORIES } from './ForestStory'
 import { MUSHROOM_STORIES } from './MushroomStory'
 
@@ -106,6 +107,7 @@ const STORIES: Record<string, StoryFn> = {
   ...MUSHROOM_STORIES,
   ...CANYON_STORIES,
   ...DUNE_STORIES,
+  ...FROST_STORIES,
 }
 
 /**

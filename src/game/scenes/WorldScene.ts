@@ -32,6 +32,7 @@ import type { AmbientKind } from '../ui/weather/Ambient'
 import { WorldEventsView } from '../ui/WorldEventsView'
 import { WorldMenus } from '../ui/WorldMenus'
 import { BOLTS, BOLT_SAFE, DUNE_GATE, boltPhase, boltStrikes, healWithKindler, isBoltTile, rodsLit, tickDuneStorm } from '../systems/Dunes'
+import { FROST_FLAGS, ICE_BLOCKS, SLIDE_GOALS, blockFlag, blockPos, chipCold, iceBlockAt, leadIsFlame, slideEnd, slideFlag, tickCold, tryPushIce } from '../systems/Frost'
 import { CanyonField } from './world/CanyonField'
 import { FishingController } from './world/FishingController'
 import { LIGHT_UP_FLAG, beforeLightUp, needsLightUp, playLighthouseLightUp, playWhaleLeap } from './world/LakeCutscenes'
@@ -93,6 +94,8 @@ export class WorldScene extends Phaser.Scene {
   private field!: CanyonField
   /** 荒原落雷的黄圈 */
   private boltMarks: Phaser.GameObjects.Ellipse[] = []
+  /** 冰湖上的冰块 */
+  private iceGfx: Phaser.GameObjects.Ellipse[] = []
   /** 排队等出生格空出来的 NPC：每隔一段时间重试 */
   private rosterRetry = 0
   private toaster!: Toaster
@@ -169,6 +172,7 @@ export class WorldScene extends Phaser.Scene {
         this.boltMarks.push(this.add.ellipse(b.x * ts + ts / 2, b.y * ts + ts / 2, ts * 0.72, ts * 0.72, 0xf5d442, 0.45).setDepth(4))
       }
     }
+    this.placeIceBlocks()
     this.refreshAtmosphere()
 
     this.hudText = this.add
@@ -425,17 +429,32 @@ export class WorldScene extends Phaser.Scene {
   private tryMove(dx: number, dy: number): void {
     this.setFacing(dx < 0 ? 'left' : dx > 0 ? 'right' : dy < 0 ? 'up' : 'down')
 
-    const nx = this.tileX + dx
-    const ny = this.tileY + dy
-    const tile = resolveTile(this.map, nx, ny, hasFlag)
+    let nx = this.tileX + dx
+    let ny = this.tileY + dy
+    let tile = resolveTile(this.map, nx, ny, hasFlag)
     if (!tile || decorBlocks(this.map.id, nx, ny) || this.occupiedByNpc(nx, ny) || this.eventView.uniqueAt(nx, ny)) return
-    if (this.field.blocks(nx, ny)) return
+    if (this.field.blocks(nx, ny) || iceBlockAt(nx, ny, (k) => GameState.getFlag(k))) return
     const throughGate = this.map.id === 'dunes' && nx === DUNE_GATE.x && ny === DUNE_GATE.y && rodsLit((k) => GameState.getFlag(k))
     if (!throughGate && !this.field.opens(nx, ny) && !this.ride.canEnter(tile)) return
+    if (this.map.id === 'icelake' && tile === 'ice') {
+      const end = slideEnd(
+        this.tileX,
+        this.tileY,
+        dx,
+        dy,
+        (x, y) => resolveTile(this.map, x, y, hasFlag),
+        (x, y) => !!iceBlockAt(x, y, (k) => GameState.getFlag(k)) || !!this.occupiedByNpc(x, y) || decorBlocks(this.map.id, x, y),
+      )
+      if (end.x === this.tileX && end.y === this.tileY) return
+      nx = end.x
+      ny = end.y
+      tile = resolveTile(this.map, nx, ny, hasFlag) ?? tile
+    }
 
     const fromX = this.tileX
     const fromY = this.tileY
-    const ms = this.ride.moveMs(MOVE_MS)
+    const tiles = Math.max(1, Math.abs(nx - fromX) + Math.abs(ny - fromY))
+    const ms = this.ride.moveMs(MOVE_MS * tiles)
     this.moving = true
     this.tileX = nx
     this.tileY = ny
@@ -475,6 +494,8 @@ export class WorldScene extends Phaser.Scene {
       return
     }
     if (this.map.id === 'dunes' && this.applyDuneStep()) return
+    if (this.map.id === 'frostpeak') this.applyCold()
+    if (this.map.id === 'icelake') this.markSlide()
     this.walkers.react()
     const spotter = this.walkers.spotter()
     if (spotter) {
@@ -585,6 +606,7 @@ export class WorldScene extends Phaser.Scene {
   private tryInteract(): void {
     const { x, y } = this.facingTile()
     if (this.field.tryInteract(x, y, x - this.tileX, y - this.tileY)) return
+    if (this.pushIce(x, y)) return
     const npc = this.occupiedByNpc(x, y)
     if (npc) this.walkers.greet(npc)
     if (this.interact.handle(this.eventView.uniqueAt(x, y), npc)) return
@@ -606,6 +628,73 @@ export class WorldScene extends Phaser.Scene {
 
   private returnInfo(): ReturnInfo {
     return { weather: this.fieldWeather(), night: GameState.night(), returnMapId: this.map.id, returnX: this.tileX, returnY: this.tileY }
+  }
+
+  /** 画出冰湖上的冰块 */
+  private placeIceBlocks(): void {
+    for (const g of this.iceGfx) g.destroy()
+    this.iceGfx = []
+    if (this.map.id !== 'icelake') return
+    const ts = this.map.tileSize
+    for (const def of ICE_BLOCKS) {
+      const pos = blockPos(def, (k) => GameState.getFlag(k))
+      this.iceGfx.push(this.add.ellipse(pos.x * ts + ts / 2, pos.y * ts + ts / 2, ts * 0.72, ts * 0.72, 0xd8f4ff, 0.9).setDepth(6))
+    }
+  }
+
+  /**
+   * 怪力手套把面前的冰块推一格。不是冰块时返回 false
+   * @author zjh
+   * @date 2026-10-16
+   */
+  private pushIce(x: number, y: number): boolean {
+    const get = (k: string) => GameState.getFlag(k)
+    if (this.map.id !== 'icelake' || !iceBlockAt(x, y, get)) return false
+    if (GameState.itemCount('strength_gloves') <= 0) {
+      this.flashToast('没有怪力手套，推不动这块冰。')
+      return true
+    }
+    const result = tryPushIce(
+      x,
+      y,
+      x - this.tileX,
+      y - this.tileY,
+      get,
+      (tx, ty) => resolveTile(this.map, tx, ty, hasFlag),
+      (tx, ty) => !!this.occupiedByNpc(tx, ty),
+    )
+    if (!result.ok || result.id === undefined || result.nx === undefined || result.ny === undefined) {
+      this.flashToast(result.reason ?? '这边推不过去。')
+      return true
+    }
+    GameState.setFlag(blockFlag(result.id), `${result.nx},${result.ny}`)
+    this.placeIceBlocks()
+    this.flashToast('冰块推开了。')
+    return true
+  }
+
+  /** 霜铃峰积寒冷，满了以后每 10 步掉一点体力 */
+  private applyCold(): void {
+    const next = tickCold(Number(GameState.getFlag('frost_cold') || 0), Number(GameState.getFlag('frost_full_steps') || 0), leadIsFlame(GameState.party))
+    GameState.setFlag('frost_cold', next.cold)
+    GameState.setFlag('frost_full_steps', next.fullSteps)
+    if (next.justFull) this.flashToast('冷得发抖。去篝火边暖一暖。')
+    if (next.chip && chipCold(GameState.party) > 0) {
+      this.flashToast('寒风刺骨，伙伴们掉了一点体力。')
+      this.refreshHud()
+    }
+  }
+
+  /** 滑到发光的停靠点，三处都到了才开铃殿 */
+  private markSlide(): void {
+    const goal = SLIDE_GOALS.find((g) => g.x === this.tileX && g.y === this.tileY)
+    if (!goal || GameState.hasFlag(slideFlag(goal.id))) return
+    GameState.setFlag(slideFlag(goal.id), true)
+    this.flashToast(`停靠点 ${goal.id} 亮了。`)
+    if (SLIDE_GOALS.every((g) => GameState.hasFlag(slideFlag(g.id)))) {
+      GameState.setFlag(FROST_FLAGS.slide, true)
+      this.flashToast('冰湖的路通了。铃殿的北风散开了。')
+    }
   }
 
   /**
@@ -723,7 +812,8 @@ export class WorldScene extends Phaser.Scene {
     const leadText = lead ? ` ｜ ${battleName(lead)} Lv.${lead.level} HP ${lead.hp}/${lead.maxHp}` : ''
     const wt = this.fieldWeather()
     const weatherText = wt ? ` ${WEATHER_INFO[wt].icon}${WEATHER_INFO[wt].label}` : ''
-    let text = `${this.map.name} ｜ 第${GameState.day()}天 ${timeLabel(w.totalSteps)}${weatherText}${leadText} ｜ 焰币 ${GameState.coins}`
+    const cold = this.map.id === 'frostpeak' ? ` ｜ 寒冷 ${Number(GameState.getFlag('frost_cold') || 0)}` : ''
+    let text = `${this.map.name} ｜ 第${GameState.day()}天 ${timeLabel(w.totalSteps)}${weatherText}${cold}${leadText} ｜ 焰币 ${GameState.coins}`
     const def = activePhenomenon(w)
     if (def) {
       const total = PHENOMENON_RULES.goalCount[def.goal]

@@ -144,6 +144,7 @@ export class NpcInteract {
       allyName: npc.ally?.name,
       winLines: rematch ? [`${npc.name}：还是你厉害！过几天我再来找你切磋。`] : npc.winLines,
       winFlags: npc.winFlags,
+      doubles: npc.doubles,
       ...this.host.returnInfo(),
     })
   }

@@ -51,6 +51,8 @@ export interface MoveDef {
   contact: boolean
   effect?: MoveEffect
   special?: MoveSpecial
+  /** 双打时同时打到对手另一只，威力按本次伤害的 75% */
+  spread?: boolean
   desc: string
 }
 
@@ -145,7 +147,8 @@ const LIST: MoveDef[] = [
   sta('cold_mist', '冷雾', 'frost', 95, 15, '降低对手速度 2 阶。', { effect: { chance: 100, target: 'foe', stages: { spd: -2 } } }),
   sta('frost_wall', '霜壁', 'frost', -1, 10, '3 回合内受到伤害减半。', { special: 'frost_wall' }),
   atk('icicle', '冰柱', 'frost', 30, 95, 15, '掷出冰柱。', { contact: true }),
-  atk('blizzard', '暴风雪', 'frost', 40, 75, 5, '10% 令对手冻结；下雪时必中。', { special: 'snow_sure_hit', effect: { chance: 10, target: 'foe', status: 'freeze' } }),
+  atk('blizzard', '暴风雪', 'frost', 40, 75, 5, '10% 令对手冻结；下雪时必中。双打时会卷到另一只对手。', { special: 'snow_sure_hit', spread: true, effect: { chance: 10, target: 'foe', status: 'freeze' } }),
+  atk('bell_freeze', '铃冻', 'frost', 32, 100, 10, '30% 令对手冻结。霜铃鹤专属。', { effect: { chance: 30, target: 'foe', status: 'freeze' } }),
 
   // ── 灵 ──
   atk('glim_shot', '微光弹', 'spirit', 18, 100, 30, '射出一团微光。'),

@@ -21,6 +21,7 @@ import { fightOut, type BattleProbe } from './autoBattle'
 /** 回归中需要访问的 WorldScene 内部能力（开发调试专用） */
 interface WorldProbe extends Phaser.Scene {
   busy: boolean
+  moving: boolean
   dialogue: { isOpen: boolean; advance(): void }
   fishing: { active: boolean; overlay: { confirm(): void; phase: string } }
   tryInteract(): void
@@ -429,6 +430,7 @@ async function runSteps(r: Runner): Promise<void> {
     ...chapter3Steps(r),
     ...chapter4Steps(r),
     ...chapter5Steps(r),
+    ...chapter6Steps(r),
   ]
   for (const [name, run] of steps) {
     if (!(await r.step(name, run))) break
@@ -584,6 +586,89 @@ function chapter5Steps(r: Runner): [string, () => Promise<string | true>][] {
         const next = await r.winBattle()
         if (next === 'lost') return '输给了雷鸣隼'
         const rewards = has('chapter5_done') && has('badge_volt') && GameState.itemCount('star_charm') === 1
+        return check(next === 'Chapter' && rewards && has('frost_unlocked'), `去向 ${next}，奖励${rewards ? '齐全' : '缺失'}`)
+      },
+    ],
+  ]
+}
+
+/**
+ * 第六章：山麓、冰滑、双子双打、霜铃鹤
+ * @author zjh
+ * @date 2026-10-16
+ */
+function chapter6Steps(r: Runner): [string, () => Promise<string | true>][] {
+  const has = GameState.hasFlag
+  const slide = async (mapX: number, mapY: number, dx: number, dy: number) => {
+    const ws = await r.enterWorld('icelake', mapX, mapY, dx > 0 ? 'right' : dy > 0 ? 'down' : 'up')
+    ws.tryMove(dx, dy)
+    await r.wait(900)
+    await r.until(() => r.active('World') && !r.world().busy && !r.world().moving)
+    return ws
+  }
+  return [
+    [
+      '章节卡 → 回到星砂荒原',
+      async () => {
+        await leaveChapter(r)
+        return check(r.active('World'), '没有回到大地图')
+      },
+    ],
+    [
+      '荒原北口 → 霜铃山麓',
+      async () => {
+        const ws = await r.enterWorld('dunes', 15, 1, 'right')
+        ws.tryMove(1, 0)
+        await r.wait(800)
+        await r.until(() => r.active('World') && !r.world().busy)
+        return check(GameState.mapId === 'frostvillage', `停在 ${GameState.mapId}`)
+      },
+    ],
+    [
+      '村长雪伯：暖炉石',
+      async () => {
+        const ws = await r.enterWorld('frostvillage', 5, 3, 'up')
+        ws.tryInteract()
+        await r.closeDialogue(ws)
+        return check(GameState.itemCount('hearth_stone') === 1, '没有拿到暖炉石')
+      },
+    ],
+    [
+      '冰湖：两段滑行、推开冰块、第三段停靠',
+      async () => {
+        await slide(2, 1, 1, 0)
+        await slide(5, 1, 0, 1)
+        if (!has('frost_slide_1')) return `区 1 停在 ${GameState.playerX},${GameState.playerY}`
+        await slide(2, 5, 1, 0)
+        if (!has('frost_slide_2')) return `区 2 停在 ${GameState.playerX},${GameState.playerY}`
+        const push = await r.enterWorld('icelake', 10, 8, 'up')
+        push.tryInteract()
+        await r.wait(200)
+        const glide = await slide(8, 7, 1, 0)
+        return check(has('frost_slide_solved'), `区 3 停在 ${glide ? GameState.playerX : '?'},${GameState.playerY} 冰块 ${GameState.getFlag('frost_ice_b1')}`)
+      },
+    ],
+    [
+      '双子双打',
+      async () => {
+        const ws = await r.enterWorld('bellhall', 5, 4, 'up')
+        ws.tryInteract()
+        if (!(await r.toBattle(ws))) return '没有进入双子战'
+        if ((await r.winBattle()) === 'lost') return '输给了双子'
+        await r.until(() => r.active('World') && !r.world().busy, 8000)
+        await r.closeDialogue(r.world())
+        return check(has('twins_beaten'), '没有写入 twins_beaten')
+      },
+    ],
+    [
+      '霜铃鹤胜利 → 第六章章节卡 + 霜之徽记',
+      async () => {
+        const ws = await r.enterWorld('bellhall', 5, 2, 'up')
+        ws.tryInteract()
+        if (!(await r.toBattle(ws))) return '没有进入霜铃鹤战'
+        const next = await r.winBattle()
+        if (next === 'lost') return '输给了霜铃鹤'
+        const rewards = has('chapter6_done') && has('badge_frost') && has('heart_aurora')
         return check(next === 'Chapter' && rewards, `去向 ${next}，奖励${rewards ? '齐全' : '缺失'}`)
       },
     ],

@@ -38,7 +38,7 @@ function rodNpcs(): NpcDef[] {
 export function buildDunes(): MapDef {
   const { width, height, tiles } = parseAscii([
     '####################',
-    '##................##',
+    '##..............W.##',
     '##................##',
     '####################',
     '##................##',
@@ -61,6 +61,16 @@ export function buildDunes(): MapDef {
     warps: [
       { x: 8, y: 8, targetMap: 'canyon', targetX: 19, targetY: 13, label: '千岩峡谷' },
       { x: 12, y: 8, targetMap: 'observatory', targetX: 5, targetY: 3, label: '观星台' },
+      {
+        x: 16,
+        y: 1,
+        targetMap: 'frostvillage',
+        targetX: 5,
+        targetY: 3,
+        label: '霜铃山麓',
+        requireFlag: 'frost_unlocked',
+        lockedLines: ['北边的山还盖在雷云后面。', '雷鸣隼飞走以后，这条路才会开。'],
+      },
     ],
     npcs: [
       ...rodNpcs(),

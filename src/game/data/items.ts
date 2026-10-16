@@ -44,10 +44,11 @@ export const ITEMS: Record<string, ItemDef> = {
   book_rock_slide: { id: 'book_rock_slide', name: '技能书·岩崩', kind: 'key', value: 0, price: 0, desc: '矿车竞速的金牌奖品。在背包里打开，可以让岩系伙伴学会岩崩（技能未满时）。' },
   charge_bottle: { id: 'charge_bottle', name: '蓄雷瓶', kind: 'key', value: 0, price: 0, desc: '穗灌好的蓄雷液。没有雷系伙伴时，也能给避雷针充电。' },
   star_charm: { id: 'star_charm', name: '星砂护符', kind: 'key', value: 0, price: 0, desc: '装着一把会闪光的细沙。带着它时，异色伙伴出现率 ×1.5。' },
+  hearth_stone: { id: 'hearth_stone', name: '暖炉石', kind: 'key', value: 0, price: 0, desc: '雪伯给的石头。在霜铃峰的篝火边按确认，可以把寒冷烘掉。' },
 }
 
 /** 重要物品（背包末尾展示） */
-export const KEY_ITEMS: string[] = ['old_rod', 'good_rod', 'strength_gloves', 'dust_badge', 'canyon_ore', 'wind_chime', 'book_rock_slide', 'charge_bottle', 'star_charm']
+export const KEY_ITEMS: string[] = ['old_rod', 'good_rod', 'strength_gloves', 'dust_badge', 'canyon_ore', 'wind_chime', 'book_rock_slide', 'charge_bottle', 'star_charm', 'hearth_stone']
 
 /** 商店货架顺序 */
 export const SHOP_STOCK: string[] = [

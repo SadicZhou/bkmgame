@@ -174,6 +174,11 @@ export function onRoundEnd(s: BattleState): void {
       volOf(s, c).stages = { atk: 0, def: 0, spd: 0 }
     }
   }
+  const chimer = sides.map((side) => actorOf(s, side)).find((c) => c.hp > 0 && c.abilityId === 'bell_chime')
+  if (chimer) {
+    const healed = restoreHp(chimer, Math.max(1, Math.floor(chimer.maxHp / 8)))
+    if (healed > 0) say(s, `${battleName(chimer)} 的「冰铃共鸣」！冰铃响了一声。（+${healed}）`, sideAnim(actorOf(s, 'player') === chimer ? 'player' : 'enemy', 'heal', 'healEnemy'))
+  }
   const rumbler = sides.map((side) => actorOf(s, side)).find((c) => c.hp > 0 && c.abilityId === 'stone_rumble')
   if (!rumbler) return
   say(s, `${battleName(rumbler)} 的「地鸣」！峡谷跟着震了一下。`)
