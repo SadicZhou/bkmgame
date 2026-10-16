@@ -6,6 +6,7 @@
  */
 
 import { battleName } from '../../data/creatures'
+import { ITEMS } from '../../data/items'
 import { PHENOMENON_BY_ID, PHENOMENON_RULES } from '../../data/phenomena'
 import { WEATHER_INFO } from '../../data/weather'
 import { GameState, RESPAWN, type PendingBattle } from '../../state/GameState'
@@ -79,6 +80,11 @@ export function settleBattle(b: BattleState, pending: PendingBattle): BattleSett
         }
       }
       for (const f of pending.winFlags ?? []) GameState.setFlag(f, true)
+      for (const id of pending.winItems ?? []) {
+        if (GameState.itemCount(id) > 0) continue
+        GameState.addItem(id, 1)
+        GameState.notices.push(`获得了重要物品「${ITEMS[id]?.name ?? id}」`)
+      }
       if (pending.winLines?.length) GameState.notices.push(...pending.winLines)
     } else if (pending.allyParty) {
       notes.push(`${pending.allyName ?? '同伴'}的伙伴累倒了……休息一下，再来挑战吧。`)

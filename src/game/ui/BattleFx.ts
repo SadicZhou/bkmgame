@@ -104,7 +104,8 @@ export class BattleFx {
 
   throwBerry(from: { x: number; y: number }, to: { x: number; y: number }): void {
     Sfx.confirm()
-    const berry = this.scene.add.image(from.x, from.y - 20, 'spr-berry').setScale(2).setDepth(45)
+    const key = this.scene.textures.exists('item-soothe_berry') ? 'item-soothe_berry' : 'spr-berry'
+    const berry = this.scene.add.image(from.x, from.y - 20, key).setScale(key.startsWith('item-') ? 1.4 : 2).setDepth(45)
     const state = { t: 0 }
     const sx = berry.x
     const sy = berry.y

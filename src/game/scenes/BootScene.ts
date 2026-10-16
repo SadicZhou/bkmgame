@@ -6,6 +6,7 @@
 
 import Phaser from 'phaser'
 import { preloadCreatureArt } from '../graphics/CreatureArt'
+import { paintItemArt } from '../graphics/ItemArt'
 import { registerPlaceholderTextures } from '../graphics/PixelFactory'
 import { preloadCharArt } from '../graphics/CharArt'
 import { preloadSceneArt } from '../graphics/SceneArt'
@@ -25,6 +26,7 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     registerPlaceholderTextures(this)
+    paintItemArt(this)
     this.scene.start('Title')
   }
 }

@@ -1,0 +1,367 @@
+/**
+ * 第七章地图：起风岛、羽毛岛、风车岛、断桥岛、神殿
+ * 风车规则见 systems/Cloud.ts，这里只写旗标字符串
+ * @author zjh
+ * @date 2026-10-16
+ */
+
+import { TS, parseAscii } from './mapKit'
+import type { MapDef } from './maps'
+
+const back = '风把你托回来了。'
+
+export function buildCloudStart(): MapDef {
+  const { width, height, tiles } = parseAscii([
+    '############',
+    '##........##',
+    '##........##',
+    '#####W######',
+    '##........##',
+    '##........##',
+    '############',
+  ])
+  return {
+    id: 'cloudstart',
+    name: '起风岛',
+    width,
+    height,
+    tileSize: TS,
+    tiles,
+    bgColor: 0xb7e3f5,
+    spawn: { x: 5, y: 5 },
+    outdoor: true,
+    warps: [{ x: 5, y: 3, targetMap: 'cloudfeather', targetX: 5, targetY: 4, label: '羽毛岛' }],
+    npcs: [
+      {
+        id: 'cloud_sign_start',
+        name: '木牌',
+        role: 'sign',
+        x: 3,
+        y: 2,
+        color: 0xc4a574,
+        lines: ['风从这里往北，一直是顺的。', '站在风口上，就会滑到下一座岛。'],
+      },
+    ],
+  }
+}
+
+export function buildCloudFeather(): MapDef {
+  const { width, height, tiles } = parseAscii([
+    '############',
+    '#####W######',
+    '##........##',
+    '##........##',
+    '##........##',
+    '#####W######',
+    '############',
+  ])
+  return {
+    id: 'cloudfeather',
+    name: '羽毛岛',
+    width,
+    height,
+    tileSize: TS,
+    tiles,
+    bgColor: 0xc5e8f8,
+    spawn: { x: 5, y: 4 },
+    outdoor: true,
+    warps: [
+      {
+        x: 5,
+        y: 1,
+        targetMap: 'cloudmill',
+        targetX: 6,
+        targetY: 4,
+        label: '风车岛',
+        requireFlag: 'cloud_mill_a',
+        lockedLines: [back, '羽毛岛的风车还对着来路。'],
+      },
+      { x: 5, y: 5, targetMap: 'cloudstart', targetX: 5, targetY: 4, label: '起风岛' },
+    ],
+    npcs: [
+      {
+        id: 'cloud_mill_a',
+        name: '风车甲',
+        role: 'prop',
+        story: 'cloud_mill_a',
+        x: 3,
+        y: 3,
+        color: 0xe8d090,
+        lines: ['风车叶片转得很慢。'],
+      },
+      {
+        id: 'cloud_sign_feather',
+        name: '木牌',
+        role: 'sign',
+        x: 8,
+        y: 3,
+        color: 0xc4a574,
+        lines: ['风车甲现在的风向，决定能不能去风车岛。', '拨一次，风向就反过来。'],
+      },
+    ],
+  }
+}
+
+export function buildCloudMill(): MapDef {
+  const { width, height, tiles } = parseAscii([
+    '################',
+    '########W#######',
+    '##............##',
+    '##............##',
+    '##............##',
+    '######W#########',
+    '################',
+  ])
+  return {
+    id: 'cloudmill',
+    name: '风车岛',
+    width,
+    height,
+    tileSize: TS,
+    tiles,
+    bgColor: 0xd0eef8,
+    spawn: { x: 6, y: 4 },
+    outdoor: true,
+    warps: [
+      {
+        x: 8,
+        y: 1,
+        targetMap: 'cloudbridge',
+        targetX: 5,
+        targetY: 4,
+        label: '断桥岛',
+        requireFlag: 'cloud_mill_b',
+        lockedLines: [back, '风车乙还在把风往回送。'],
+      },
+      { x: 6, y: 5, targetMap: 'cloudfeather', targetX: 5, targetY: 4, label: '羽毛岛' },
+    ],
+    npcs: [
+      {
+        id: 'cloud_mill_b',
+        name: '风车乙',
+        role: 'prop',
+        story: 'cloud_mill_b',
+        x: 11,
+        y: 3,
+        color: 0xe8d090,
+        lines: ['这架风车对着岛心的风道。'],
+      },
+      {
+        id: 'cloud_sign_mill',
+        name: '木牌',
+        role: 'sign',
+        x: 2,
+        y: 2,
+        color: 0xc4a574,
+        lines: ['三架都顺着神殿，路才通。', '岛心那一排，顺风往东，逆风送回西边。'],
+      },
+    ],
+  }
+}
+
+export function buildCloudBridge(): MapDef {
+  const { width, height, tiles } = parseAscii([
+    '############',
+    '#####W######',
+    '##........##',
+    '##........##',
+    '##........##',
+    '#####W######',
+    '############',
+  ])
+  return {
+    id: 'cloudbridge',
+    name: '断桥岛',
+    width,
+    height,
+    tileSize: TS,
+    tiles,
+    bgColor: 0xc8e6f4,
+    spawn: { x: 5, y: 4 },
+    outdoor: true,
+    warps: [
+      {
+        x: 5,
+        y: 1,
+        targetMap: 'cloudshrine',
+        targetX: 5,
+        targetY: 4,
+        label: '神殿岛',
+        requireFlag: 'cloud_mill_c',
+        lockedLines: ['前头的风还在往回吹。', '断桥岛的风车还没拨成顺风。'],
+      },
+      { x: 5, y: 5, targetMap: 'cloudmill', targetX: 8, targetY: 2, label: '风车岛' },
+    ],
+    npcs: [
+      {
+        id: 'cloud_mill_c',
+        name: '风车丙',
+        role: 'prop',
+        story: 'cloud_mill_c',
+        x: 2,
+        y: 2,
+        color: 0xe8d090,
+        lines: ['这架风车对着神殿。'],
+      },
+      {
+        id: 'cloud_scout1',
+        name: '斥候·弦',
+        role: 'trainer',
+        x: 3,
+        y: 3,
+        color: 0x3a4a78,
+        team: [
+          { speciesId: 'skyfinch', level: 36 },
+          { speciesId: 'cloudsheep', level: 36 },
+        ],
+        defeatedKey: 'cloud_scout1_beaten',
+        chainNext: 'cloud_scout2',
+        challengeLines: ['首领说，别让人上神殿。', '我们三个，一个接一个。'],
+        afterLines: ['风比我想象的更大。'],
+        lines: [],
+      },
+      {
+        id: 'cloud_scout2',
+        name: '斥候·翎',
+        role: 'trainer',
+        x: 6,
+        y: 3,
+        color: 0x2a3a68,
+        team: [
+          { speciesId: 'whirlbat', level: 37 },
+          { speciesId: 'chimekite', level: 37 },
+        ],
+        defeatedKey: 'cloud_scout2_beaten',
+        chainFirst: 'cloud_scout1',
+        chainNext: 'cloud_scout3',
+        challengeLines: ['弦输了？那换我。', '中间没有休息。'],
+        afterLines: ['……翅膀好沉。'],
+        lines: [],
+      },
+      {
+        id: 'cloud_scout3',
+        name: '斥候·筝',
+        role: 'trainer',
+        x: 8,
+        y: 3,
+        color: 0x243058,
+        team: [
+          { speciesId: 'nightcrow', level: 38 },
+          { speciesId: 'chimekite', level: 38 },
+        ],
+        defeatedKey: 'cloud_scout3_beaten',
+        chainFirst: 'cloud_scout1',
+        chainReset: ['cloud_scout1_beaten', 'cloud_scout2_beaten'],
+        challengeLines: ['最后一关是我。', '输了的话，从头再来。'],
+        winLines: ['斥候·筝：这张照片是首领掉的。', '斥候·筝：他说谁捡到谁就拿着，可我们谁也不敢看。', '（地上留下半张照片。）'],
+        afterLines: ['照片在那边。我们不敢捡。'],
+        lines: [],
+      },
+      {
+        id: 'cloud_photo',
+        name: '合照残角',
+        role: 'prop',
+        story: 'cloud_photo',
+        showIf: 'cloud_scout3_beaten',
+        hideIf: 'cloud_photo',
+        x: 9,
+        y: 4,
+        color: 0xf0e6c8,
+        lines: ['半张旧照片。'],
+      },
+    ],
+  }
+}
+
+export function buildCloudShrine(): MapDef {
+  const { width, height, tiles } = parseAscii(['###########', '#_________#', '#_________#', '#_________#', '#_________#', '#####W#####', '###########'])
+  return {
+    id: 'cloudshrine',
+    name: '风之神殿',
+    width,
+    height,
+    tileSize: TS,
+    tiles,
+    bgColor: 0xe8f4f8,
+    spawn: { x: 5, y: 4 },
+    outdoor: false,
+    indoor: true,
+    warps: [{ x: 5, y: 5, targetMap: 'cloudbridge', targetX: 5, targetY: 2, label: '断桥岛' }],
+    npcs: [
+      {
+        id: 'cloud_letter',
+        name: '一封信',
+        role: 'prop',
+        story: 'cloud_letter',
+        x: 2,
+        y: 2,
+        color: 0xf0e0a0,
+        lines: ['台阶上压着一封信。'],
+      },
+      {
+        id: 'cloud_kite',
+        name: '司风·鸢',
+        role: 'trainer',
+        showIf: 'cloud_photo',
+        hideIf: 'kite_beaten',
+        x: 5,
+        y: 2,
+        color: 0xf0f4f8,
+        team: [
+          { speciesId: 'skyfinch', level: 38 },
+          { speciesId: 'whirlbat', level: 38 },
+          { speciesId: 'chimekite', level: 39 },
+          { speciesId: 'nightcrow', level: 40 },
+        ],
+        defeatedKey: 'kite_beaten',
+        challengeLines: [
+          '朔跟你说过我吧。戴面具的那个。',
+          '你好呀，阿禾师父的新徒弟。我叫鸢。',
+          '很久以前，我、墨尘，还有你的师父，是同一个旅团的。',
+          '你一定听过墨尘的故事了——伙伴为了救他，在山火里熄灭。',
+          '你的师父没告诉你后半段。',
+          '打赢我，我就说。面具我先摘了。对着面具说话，像在说谎。',
+        ],
+        winLines: [
+          '司风·鸢：山火那晚，火从山顶烧下来。山脚是村子，山腰是墨尘和灯灯。',
+          '司风·鸢：师父只能选一边。他选了先带村民封山断火。',
+          '司风·鸢：等他赶到山腰，墨尘抱着一团已经熄灭的光，坐在灰里。',
+          '司风·鸢：墨尘没有怪师父。他怪的是火。',
+          '司风·鸢：你若带着那枚旧徽章，那是尘的。师父把它留在矿道里，等他想回来再自己拿。',
+          '司风·鸢：我知道这一切，却一直没说。因为我也不知道谁是对的。',
+          '司风·鸢：这根白风羽你拿着。去问你师父吧。',
+          '司风·鸢：我先走。终章如果还需要风，我会把风送来。',
+        ],
+        winFlags: ['cloud_feather_gift'],
+        winItems: ['white_feather'],
+        lines: [],
+      },
+      {
+        id: 'galeroc',
+        name: '岚翼鹏',
+        role: 'boss',
+        showIf: 'kite_beaten',
+        hideIf: 'roc_beaten',
+        x: 5,
+        y: 1,
+        color: 0xf4f8ff,
+        team: [{ speciesId: 'galeroc', level: 42 }],
+        defeatedKey: 'roc_beaten',
+        challengeLines: ['它收着翅膀。周围的风是停的。'],
+        winLines: ['岚翼鹏展翅。五座岛之间的风，全部变成了顺风。', '它低下头。像是在让你坐上来。'],
+        lines: [],
+      },
+      {
+        id: 'cloud_fly',
+        name: '鹏背',
+        role: 'prop',
+        story: 'cloud_fly',
+        showIf: 'roc_beaten',
+        x: 8,
+        y: 3,
+        color: 0xd0e8f8,
+        lines: ['岚翼鹏仍低着头。'],
+      },
+    ],
+  }
+}

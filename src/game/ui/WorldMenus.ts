@@ -8,7 +8,7 @@
 import { DEX_ORDER, SPECIES, TYPE_LABEL, UNIQUE_ORDER, battleName, spriteKey, type CreatureInstance } from '../data/creatures'
 import { BADGES, ownedBadges } from '../data/badges'
 import { FISH_ORDER } from '../data/fishing'
-import { ITEMS, ITEM_ORDER, SHOP_STOCK } from '../data/items'
+import { BAG_PAGES, ITEMS, ITEM_ORDER, SHOP_STOCK, itemIconKey, type ItemKind } from '../data/items'
 import { MUSH_FLAGS } from '../data/mushrooms'
 import { PHENOMENA } from '../data/phenomena'
 import { GameState } from '../state/GameState'
@@ -21,12 +21,19 @@ import { rockSlideReason, teachRockSlide } from '../systems/MoveBooks'
 import { companionMark, companionRows } from './CompanionRows'
 import { abilityDetail, creatureDetail, rowLabel } from './CreatureInfo'
 import { ListPanel, type ListRow } from './ListPanel'
+import { GLIDE_SPOTS } from '../systems/Cloud'
+import { BOARD_FLAG, BOARD_ID, boardBlock } from '../systems/Vehicle'
+import { MAPS } from '../data/maps'
 import { openTalentFruit } from './TalentFruitMenu'
 
 export interface WorldMenuHooks {
   toast: (msg: string) => void
   refreshHud: () => void
   backToTitle: () => void
+  /** 当前地图能不能展开载具 */
+  outdoor: () => boolean
+  /** 滑翔到另一张地图的出生点 */
+  travel: (mapId: string, x: number, y: number) => void
 }
 
 export class WorldMenus {
@@ -62,7 +69,7 @@ export class WorldMenus {
       index,
       rows: [
         { label: '队伍', right: `${GameState.party.length} 只`, detail: '查看伙伴能力、资质与技能，调整首发。', onSelect: () => this.openParty() },
-        { label: '背包', detail: '使用伤药、万灵药、PP 果、引兽铃等道具。', onSelect: () => this.openBag() },
+        { label: '背包', detail: '回复、野外、重要物品和载具。每件东西都有自己的图。', onSelect: () => this.openBag() },
         { label: '图鉴', right: `${caught}/${DEX_ORDER.length}`, detail: '记录遇见与收服过的伙伴。', onSelect: () => this.openDex() },
         { label: '异象录', right: `${uniques}/${UNIQUE_ORDER.length}`, detail: '记录在异象中邂逅的唯一精灵。', onSelect: () => this.openUniqueDex() },
         {
@@ -85,6 +92,9 @@ export class WorldMenus {
         ...(GameState.hasFlag(DUNE_FLAGS.chart)
           ? [{ label: '星图', right: `${BEACONS.filter((b) => GameState.hasFlag(b.flag)).length}/${BEACONS.length}`, detail: '九座灯台，亮过的星才会写上名字。', onSelect: () => this.openStarChart() }]
           : []),
+        ...(GameState.hasFlag('chapter7_done') && GameState.itemCount('star_glider') > 0
+          ? [{ label: '滑翔', detail: '飞到已经去过的灯台。落在镇子或入口，不落在首领面前。', onSelect: () => this.openGlide() }]
+          : []),
         {
           label: '保存进度',
           detail: '存到本机浏览器（localStorage）。',
@@ -98,6 +108,26 @@ export class WorldMenus {
         { label: '关闭', onSelect: () => this.panel.close() },
       ],
     })
+  }
+
+  /**
+   * 滑翔到已经去过的灯台
+   * @author zjh
+   * @date 2026-10-16
+   */
+  private openGlide(): void {
+    const rows: ListRow[] = GLIDE_SPOTS.filter((s) => GameState.hasFlag(s.flag)).map((s) => ({
+      label: s.name,
+      detail: `落到${s.name}。`,
+      onSelect: () => {
+        const spawn = MAPS[s.mapId]?.spawn
+        if (!spawn) return
+        this.panel.close()
+        this.hooks.travel(s.mapId, spawn.x, spawn.y)
+      },
+    }))
+    if (!rows.length) rows.push({ label: '还没有能降落的地方', disabled: true })
+    this.panel.open({ title: '滑翔', rows, onCancel: () => this.openMain() })
   }
 
   private partyRows(onPick: (i: number) => void, filter?: (c: CreatureInstance) => string | null): ListRow[] {
@@ -158,53 +188,120 @@ export class WorldMenus {
   }
 
   /**
-   * 背包：回复 / 解除 / PP 类选择目标；引兽铃、驱兽香直接生效；安抚果只能在战斗中用
+   * 背包首页：回复 / 野外 / 重要 / 载具
    * @author zjh
-   * @date 2026-10-14
+   * @date 2026-10-16
    */
   openBag(index = 0): void {
-    const ids = ITEM_ORDER.filter((id) => GameState.itemCount(id) > 0)
-    const w = GameState.world
-    const rows: ListRow[] = ids.map((id, i) => {
-      const it = ITEMS[id]
-      const active = it.kind === 'lure' && w.lureSteps > 0 ? `（剩余 ${w.lureSteps} 步）` : it.kind === 'repel' && w.repelSteps > 0 ? `（剩余 ${w.repelSteps} 步）` : ''
+    const rows: ListRow[] = BAG_PAGES.map((page) => {
+      const n = this.pageIds(page.kinds).length
+      const sample = this.pageIds(page.kinds)[0]
       return {
-        label: it.name,
-        right: `×${GameState.itemCount(id)}`,
-        detail: `${it.desc}${active}`,
-        onSelect: () => {
-          if (id === 'book_rock_slide') {
-            this.openRockBook(i)
-            return
-          }
-          if (it.kind === 'key') {
-            this.hooks.toast(id.endsWith('_rod') ? '面朝水面按确认就能钓鱼' : '这是重要物品')
-            Sfx.cancel()
-            return
-          }
-          if (it.kind === 'catch') {
-            this.hooks.toast('只能在野生战斗中使用')
-            Sfx.cancel()
-            return
-          }
-          if (it.kind === 'lure' || it.kind === 'repel') {
-            this.useFieldItem(id, i)
-            return
-          }
-          if (it.kind === 'talent') {
-            openTalentFruit(this.panel, id, { ...this.hooks, back: () => this.openBag(0) })
-            return
-          }
-          this.openItemTarget(id, i)
-        },
+        label: page.name,
+        right: n ? `${n} 种` : '空',
+        icon: itemIconKey(sample ?? { heal: 'potion', field: 'soothe_berry', key: 'dust_badge', ride: BOARD_ID }[page.id]),
+        detail: page.hint,
+        onSelect: () => this.openBagPage(page.id),
       }
     })
-    if (!rows.length) rows.push({ label: '（空空如也）', disabled: true, detail: '去晨曦小镇的杂货商那里看看吧。' })
     this.panel.open({ title: '背包', footer: this.coinsFooter(), index, rows, onCancel: () => this.openMain(1) })
   }
 
+  /** 某一页里的道具 */
+  private openBagPage(pageId: (typeof BAG_PAGES)[number]['id'], index = 0): void {
+    const page = BAG_PAGES.find((p) => p.id === pageId) ?? BAG_PAGES[0]
+    const ids = this.pageIds(page.kinds)
+    const w = GameState.world
+    const rows: ListRow[] = ids.map((id, i) => {
+      const it = ITEMS[id]
+      const active = it.kind === 'lure' && w.lureSteps > 0 ? `\n剩余 ${w.lureSteps} 步` : it.kind === 'repel' && w.repelSteps > 0 ? `\n剩余 ${w.repelSteps} 步` : ''
+      const riding = id === BOARD_ID && GameState.hasFlag(BOARD_FLAG) ? '\n滑板已经展开。' : ''
+      return {
+        label: it.name,
+        right: it.kind === 'vehicle' ? (GameState.hasFlag(BOARD_FLAG) ? '展开中' : '收起') : `×${GameState.itemCount(id)}`,
+        icon: itemIconKey(id),
+        detail: `${it.desc}${active}${riding}`,
+        onSelect: () => this.useBagItem(id, it.kind, i, pageId),
+      }
+    })
+    if (!rows.length) {
+      rows.push({
+        label: pageId === 'ride' ? '还没有载具' : '（这一页是空的）',
+        disabled: true,
+        detail: pageId === 'ride' ? '晨曦小镇的杂货铺有一辆折叠滑板。' : '去晨曦小镇的杂货商那里看看吧。',
+      })
+    }
+    this.panel.open({
+      title: `背包 · ${page.name}`,
+      footer: this.coinsFooter(),
+      index,
+      rows,
+      onCancel: () => this.openBag(BAG_PAGES.findIndex((p) => p.id === pageId)),
+    })
+  }
+
+  private pageIds(kinds: ItemKind[]): string[] {
+    return ITEM_ORDER.filter((id) => GameState.itemCount(id) > 0 && kinds.includes(ITEMS[id].kind))
+  }
+
+  /** 按种类使用：载具展开、重要物品提示用法、其余沿用原来的流程 */
+  private useBagItem(id: string, kind: ItemKind, index: number, pageId: (typeof BAG_PAGES)[number]['id']): void {
+    if (kind === 'vehicle') {
+      this.toggleBoard(pageId, index)
+      return
+    }
+    if (id === 'book_rock_slide') {
+      this.openRockBook(index, pageId)
+      return
+    }
+    if (kind === 'key') {
+      this.hooks.toast(id.endsWith('_rod') ? '面朝水面按确认就能钓鱼' : ITEMS[id].desc)
+      Sfx.cancel()
+      return
+    }
+    if (kind === 'catch') {
+      this.hooks.toast('只能在野生战斗中使用')
+      Sfx.cancel()
+      return
+    }
+    if (kind === 'lure' || kind === 'repel') {
+      this.useFieldItem(id, index, pageId)
+      return
+    }
+    if (kind === 'talent') {
+      openTalentFruit(this.panel, id, { ...this.hooks, back: () => this.openBagPage(pageId, 0) })
+      return
+    }
+    this.openItemTarget(id, index, pageId)
+  }
+
+  /** 展开或收起折叠滑板 */
+  private toggleBoard(pageId: (typeof BAG_PAGES)[number]['id'], index: number): void {
+    if (GameState.hasFlag(BOARD_FLAG)) {
+      GameState.clearFlag(BOARD_FLAG)
+      this.hooks.toast('滑板收起来了')
+      this.hooks.refreshHud()
+      this.openBagPage(pageId, index)
+      return
+    }
+    const block = boardBlock({
+      owned: GameState.itemCount(BOARD_ID) > 0,
+      outdoor: this.hooks.outdoor(),
+      petRiding: !!GameState.hasFlag('pet_riding'),
+    })
+    if (block) {
+      this.hooks.toast(block)
+      Sfx.cancel()
+      return
+    }
+    GameState.setFlag(BOARD_FLAG, true)
+    this.hooks.toast('滑板展开了，走起来会更快')
+    this.hooks.refreshHud()
+    this.openBagPage(pageId, index)
+  }
+
   /** 技能书·岩崩：选一只学得会的伙伴 */
-  private openRockBook(bagIndex: number): void {
+  private openRockBook(bagIndex: number, pageId: (typeof BAG_PAGES)[number]['id']): void {
     this.panel.open({
       title: '把岩崩教给谁？',
       rows: this.partyRows(
@@ -212,17 +309,17 @@ export class WorldMenus {
           const c = GameState.party[i]
           if (rockSlideReason(c) || !GameState.consumeItem('book_rock_slide')) return
           this.hooks.toast(teachRockSlide(c))
-          if (GameState.itemCount('book_rock_slide') > 0) this.openRockBook(bagIndex)
-          else this.openBag(0)
+          if (GameState.itemCount('book_rock_slide') > 0) this.openRockBook(bagIndex, pageId)
+          else this.openBagPage(pageId, 0)
         },
         (c) => rockSlideReason(c),
       ),
-      onCancel: () => this.openBag(bagIndex),
+      onCancel: () => this.openBagPage(pageId, bagIndex),
     })
   }
 
-  /** 引兽铃与驱兽香互斥：用一个会抵消另一个 */
-  private useFieldItem(itemId: string, bagIndex: number): void {
+  /** 引兽铃与驱兽喷雾互斥：用一个会抵消另一个 */
+  private useFieldItem(itemId: string, bagIndex: number, pageId: (typeof BAG_PAGES)[number]['id']): void {
     const it = ITEMS[itemId]
     if (!GameState.consumeItem(itemId)) return
     const w = GameState.world
@@ -235,10 +332,11 @@ export class WorldMenus {
       w.lureSteps = 0
       this.hooks.toast(`淡淡的香气散开，${it.value} 步内弱小的野生伙伴不会靠近`)
     }
-    this.openBag(Math.min(bagIndex, Math.max(0, ITEM_ORDER.filter((id) => GameState.itemCount(id) > 0).length - 1)))
+    const left = this.pageIds(BAG_PAGES.find((p) => p.id === pageId)?.kinds ?? []).length
+    this.openBagPage(pageId, Math.min(bagIndex, Math.max(0, left - 1)))
   }
 
-  private openItemTarget(itemId: string, bagIndex: number): void {
+  private openItemTarget(itemId: string, bagIndex: number, pageId: (typeof BAG_PAGES)[number]['id']): void {
     const it = ITEMS[itemId]
     this.panel.open({
       title: `对谁使用 ${it.name}？`,
@@ -248,15 +346,15 @@ export class WorldMenus {
           if (!checkItemOnCreature(itemId, c).ok || !GameState.consumeItem(itemId)) return
           this.hooks.toast(applyItemToCreature(itemId, c))
           this.hooks.refreshHud()
-          if (GameState.itemCount(itemId) > 0) this.openItemTarget(itemId, bagIndex)
-          else this.openBag(0)
+          if (GameState.itemCount(itemId) > 0) this.openItemTarget(itemId, bagIndex, pageId)
+          else this.openBagPage(pageId, 0)
         },
         (c) => {
           const check = checkItemOnCreature(itemId, c)
           return check.ok ? null : `${battleName(c)}：${check.reason}`
         },
       ),
-      onCancel: () => this.openBag(bagIndex),
+      onCancel: () => this.openBagPage(pageId, bagIndex),
     })
   }
 
@@ -395,13 +493,17 @@ export class WorldMenus {
    */
   openShop(onClose: () => void): void {
     const rows = (): ListRow[] =>
-      SHOP_STOCK.map((id) => {
+      [...SHOP_STOCK, BOARD_ID].map((id) => {
         const it = ITEMS[id]
+        const ownedBoard = it.kind === 'vehicle' && GameState.itemCount(id) > 0
         return {
           label: it.name,
-          right: `${it.price} 焰币 · 持有 ${GameState.itemCount(id)}`,
+          right: ownedBoard ? '已经有了' : `${it.price} 焰币 · 持有 ${GameState.itemCount(id)}`,
+          icon: itemIconKey(id),
           detail: it.desc,
+          disabled: ownedBoard,
           onSelect: () => {
+            if (it.kind === 'vehicle' && GameState.itemCount(id) > 0) return
             if (GameState.coins < it.price) {
               Sfx.cancel()
               this.hooks.toast('焰币不够哦')

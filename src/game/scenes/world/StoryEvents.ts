@@ -10,6 +10,7 @@ import { BRIDGE_FLAG } from '../../data/lakeMap'
 import { GameState } from '../../state/GameState'
 import { anglerStory } from './AnglerStory'
 import { CANYON_STORIES } from './CanyonStory'
+import { CLOUD_STORIES } from './CloudStory'
 import { DUNE_STORIES } from './DuneStory'
 import { FROST_STORIES } from './FrostStory'
 import { FOREST_STORIES } from './ForestStory'
@@ -28,6 +29,12 @@ export interface StoryHost {
   redraw(): void
   /** 剧情只增减了 NPC / 采集点：原地淡入淡出，不重进地图 */
   refreshNpcs(): void
+  /** 弹出三行菜单。取消则不选择 */
+  choose(title: string, options: { id: string; label: string }[], onPick: (id: string) => void): void
+  /** 直接去另一张地图 */
+  travel(mapId: string, x: number, y: number): void
+  /** 播放章节卡 */
+  goChapter(card: { title: string; subtitle: string; badge: 'flame' | 'tide' | 'leaf' | 'stone' | 'volt' | 'frost' | 'gale' }): void
 }
 
 /** 第三章开场：灯台点亮后，泉守汐指向回音林 */
@@ -37,7 +44,7 @@ export const FOREST_INTRO_LINES = [
   '泉守汐：拜托了，旅人。去看看吧。（湖畔东侧的林间小路已经可以通行）',
 ]
 
-type StoryFn = (host: StoryHost, name: string) => void
+type StoryFn = (host: StoryHost, name: string) => void | boolean
 
 const has = (k: string) => GameState.hasFlag(k)
 
@@ -108,6 +115,7 @@ const STORIES: Record<string, StoryFn> = {
   ...CANYON_STORIES,
   ...DUNE_STORIES,
   ...FROST_STORIES,
+  ...CLOUD_STORIES,
 }
 
 /**
@@ -118,6 +126,5 @@ const STORIES: Record<string, StoryFn> = {
 export function runStory(id: string, host: StoryHost, npcName: string): boolean {
   const fn = STORIES[id]
   if (!fn) return false
-  fn(host, npcName)
-  return true
+  return fn(host, npcName) !== false
 }

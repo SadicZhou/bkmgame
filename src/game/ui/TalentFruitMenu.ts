@@ -35,7 +35,7 @@ export function openTalentFruit(panel: ListPanel, itemId: string, hooks: FruitMe
       label: rowLabel(c, i === 0 ? '★ ' : ''),
       right: `${c.fruitUsed ?? 0}/${FRUIT_LIMIT}`,
       icon: spriteKey(c),
-      detail: reason ? `${battleName(c)}：${reason}` : `已吃 ${c.fruitUsed ?? 0}/${FRUIT_LIMIT} 颗。选择后再挑一项资质。`,
+      detail: reason ? `${battleName(c)}：${reason}` : `已使用 ${c.fruitUsed ?? 0}/${FRUIT_LIMIT} 张。选择后再挑一项资质。`,
       disabled: !!reason,
       onSelect: () => openStatPick(panel, itemId, i, hooks),
     }

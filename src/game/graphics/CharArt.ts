@@ -83,7 +83,7 @@ const NPC_ACTOR: Record<string, string> = {
   dune_wang: 'scout2',
   frost_elder: 'elder',
   frost_shio: 'herbalist',
-  frost_shuo: 'scout1',
+  cloud_kite: 'scout1',
 }
 
 export type CharSheet = 'char-player' | 'char-npcs' | 'char-npcs2' | 'char-npcs3'

@@ -53,6 +53,9 @@ export class ListPanel {
   private index = 0
   private offset = 0
   private readonly top: number
+  /** 选中行的放大图，画在说明区左侧 */
+  private detailIcon: Phaser.GameObjects.Image | null = null
+  private readonly detailY: number
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene
@@ -71,7 +74,8 @@ export class ListPanel {
       .text(w / 2, this.top + 22, '', { fontSize: '20px', color: '#f0e6c8' })
       .setOrigin(0.5)
     this.rowLayer = scene.add.container(0, 0)
-    const detailY = this.top + 52 + ROW_H * VISIBLE_ROWS + 10
+    this.detailY = this.top + 52 + ROW_H * VISIBLE_ROWS + 10
+    const detailY = this.detailY
     const divider = scene.add.rectangle(w / 2, detailY - 6, PANEL_W - 32, 1, 0x4a7a60)
     this.detailText = scene.add.text(left + 18, detailY, '', {
       fontSize: '12px',
@@ -138,6 +142,8 @@ export class ListPanel {
   }
 
   close(): void {
+    this.detailIcon?.destroy()
+    this.detailIcon = null
     this.root.setVisible(false)
   }
 
@@ -211,7 +217,8 @@ export class ListPanel {
       let textX = left + 26
       const parts: Phaser.GameObjects.GameObject[] = [bg]
       if (row.icon) {
-        const icon = setCreatureScale(this.scene.add.image(left + 34, y, row.icon), 0.55)
+        const iconScale = row.icon.startsWith('item-') ? 0.68 : 0.55
+        const icon = setCreatureScale(this.scene.add.image(left + 34, y, row.icon), iconScale)
         if (row.iconDim) icon.setTint(0x222222)
         parts.push(icon)
         textX = left + 56
@@ -235,6 +242,28 @@ export class ListPanel {
     if (this.offset > 0) more.push('▲')
     if (this.offset + VISIBLE_ROWS < rows.length) more.push('▼')
     this.scrollHint.setText(more.join(' '))
-    this.detailText.setText(rows[this.index]?.detail ?? '')
+    this.showDetail(rows[this.index], left)
+  }
+
+  /**
+   * 说明文字；有图标时在左侧放大，当作这件东西的立绘
+   * @author zjh
+   * @date 2026-10-16
+   */
+  private showDetail(row: ListRow | undefined, left: number): void {
+    this.detailIcon?.destroy()
+    this.detailIcon = null
+    const iconKey = row?.icon
+    const hasIcon = !!iconKey && this.scene.textures.exists(iconKey)
+    this.detailText.setX(left + (hasIcon ? 86 : 18))
+    this.detailText.setWordWrapWidth(PANEL_W - (hasIcon ? 108 : 36))
+    this.detailText.setText(row?.detail ?? '')
+    if (!hasIcon || !iconKey) return
+    const zoom = iconKey.startsWith('item-') ? 64 / 48 : 1.35
+    const icon = setCreatureScale(this.scene.add.image(left + 44, this.detailY + 36, iconKey), zoom)
+    if (row?.iconDim) icon.setTint(0x222222)
+    icon.setScrollFactor(0)
+    this.root.add(icon)
+    this.detailIcon = icon
   }
 }

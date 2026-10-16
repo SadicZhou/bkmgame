@@ -6,7 +6,7 @@
  */
 
 import { MOVES, SPECIES, battleName, outOfPp, spriteKey, typeMultiplier } from '../../data/creatures'
-import { ITEMS, ITEM_ORDER } from '../../data/items'
+import { ITEMS, ITEM_ORDER, itemIconKey } from '../../data/items'
 import { GameState } from '../../state/GameState'
 import {
   activeEnemy,
@@ -142,7 +142,7 @@ export class BattleMenus {
    */
   bag(): void {
     const { host, battle } = this
-    const ids = ITEM_ORDER.filter((id) => GameState.itemCount(id) > 0 && ITEMS[id].kind !== 'key' && ITEMS[id].kind !== 'talent')
+    const ids = ITEM_ORDER.filter((id) => GameState.itemCount(id) > 0 && ITEMS[id].kind !== 'key' && ITEMS[id].kind !== 'talent' && ITEMS[id].kind !== 'vehicle')
     const rows: ListRow[] = ids.map((id) => {
       const it = ITEMS[id]
       const targetless = it.kind === 'catch' || it.kind === 'lure' || it.kind === 'repel'
@@ -150,6 +150,7 @@ export class BattleMenus {
       return {
         label: it.name,
         right: `×${GameState.itemCount(id)}`,
+        icon: itemIconKey(id),
         detail: check.ok ? it.desc : `${it.desc}\n（${check.reason}）`,
         disabled: !check.ok,
         onSelect: () => {

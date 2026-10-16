@@ -154,6 +154,19 @@ export const FOREST_VOICE_EVERY = 3
  */
 export function onRoundEnd(s: BattleState): void {
   const sides: Side[] = ['player', 'enemy']
+  const wind = sides.map((side) => ({ side, c: actorOf(s, side) })).find((e) => e.c.hp > 0 && e.c.abilityId === 'headwind')
+  if (wind) {
+    const foeSide = other(wind.side)
+    const foe = actorOf(s, foeSide)
+    const half = wind.c.hp * 2 < wind.c.maxHp
+    say(s, `${battleName(wind.c)} 的「逆风」！`)
+    if (half) {
+      changeStages(s, wind.side, wind.c, { spd: -1 })
+      if (foe.hp > 0) changeStages(s, foeSide, foe, { spd: -1 })
+    } else if (foe.hp > 0 && wind.c.spd > foe.spd) {
+      changeStages(s, foeSide, foe, { spd: -1 })
+    }
+  }
   if (s.turn % 2 === 0) {
     const striker = sides.map((side) => actorOf(s, side)).find((c) => c.hp > 0 && c.abilityId === 'sky_bolt')
     if (striker) {

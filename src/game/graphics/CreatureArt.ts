@@ -36,6 +36,10 @@ const DRAWN = new Set([
   'frostfox',
   'frostwing',
   'frostcrane',
+  'chimekite',
+  'cloudsheep',
+  'cloudfin',
+  'galeroc',
 ])
 
 export function preloadCreatureArt(scene: Phaser.Scene): void {

@@ -139,11 +139,12 @@ export class NpcInteract {
       flagOnWin: npc.defeatedKey,
       isBoss: npc.role === 'boss',
       chainNpcId: npc.chainNext,
-      chainResetFlags: first?.defeatedKey ? [first.defeatedKey] : undefined,
+      chainResetFlags: npc.chainReset ?? (first?.defeatedKey ? [first.defeatedKey] : undefined),
       allyParty: npc.ally?.team.map((m) => createCreature(m.speciesId, m.level)),
       allyName: npc.ally?.name,
       winLines: rematch ? [`${npc.name}：还是你厉害！过几天我再来找你切磋。`] : npc.winLines,
       winFlags: npc.winFlags,
+      winItems: npc.winItems,
       doubles: npc.doubles,
       ...this.host.returnInfo(),
     })

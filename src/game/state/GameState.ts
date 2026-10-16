@@ -41,6 +41,8 @@ export interface PendingBattle {
   allyName?: string
   /** 胜利后回到大地图时播放一次的台词 */
   winLines?: string[]
+  /** 胜利后发放一次的道具 */
+  winItems?: string[]
   /** 胜利后额外写入的旗标 */
   winFlags?: string[]
   /** 双打：第二只伙伴也会出手 */
@@ -69,6 +71,10 @@ export const OUTDOOR_MAPS: { mapId: string; requireFlag?: string }[] = [
   { mapId: 'canyon', requireFlag: 'canyon_unlocked' },
   { mapId: 'dunes', requireFlag: 'dunes_unlocked' },
   { mapId: 'frostpeak', requireFlag: 'frost_unlocked' },
+  { mapId: 'cloudstart', requireFlag: 'cloud_unlocked' },
+  { mapId: 'cloudfeather', requireFlag: 'cloud_unlocked' },
+  { mapId: 'cloudmill', requireFlag: 'cloud_unlocked' },
+  { mapId: 'cloudbridge', requireFlag: 'cloud_unlocked' },
 ]
 
 class GameStateStore {

@@ -86,7 +86,7 @@ export const CHAPTER_ENDS: ChapterEnd[] = [
   },
   {
     bossFlag: 'crane_beaten',
-    card: { title: '第六章完 · 霜铃', subtitle: '新的旅途：云阶浮岛（敬请期待）' },
+    card: { title: '第六章完 · 霜铃', subtitle: '新的旅途：云阶浮岛' },
     notes: [
       '冰柱碎开。霜铃鹤展翅，峰顶的冰铃一起响了起来。',
       '心火极光从霜铃峰铺开，晨曦小镇的夜空也亮了。',
@@ -94,6 +94,16 @@ export const CHAPTER_ENDS: ChapterEnd[] = [
     ],
     badge: 'frost',
     unlockFlags: ['chapter6_done', 'heart_aurora'],
+    ending: false,
+  },
+  {
+    bossFlag: 'roc_beaten',
+    notes: [
+      '岚翼鹏展翅，五座岛之间的风重新连上了。',
+      '它低下头。六座已亮的灯和云上这一座，连成一只鸟的形状。',
+    ],
+    badge: 'gale',
+    unlockFlags: ['badge_gale'],
     ending: false,
   },
 ]

@@ -39,6 +39,7 @@ const LIST: AbilityDef[] = [
   { id: 'stone_rumble', name: '地鸣', desc: '每 3 回合结束时地面震动：非岩系伙伴损失 1/12 HP。' },
   { id: 'sky_bolt', name: '落雷', desc: '每 2 回合结束时，雷击落在场上的一方，造成 1/10 HP 伤害。' },
   { id: 'bell_chime', name: '冰铃共鸣', desc: '每 3 回合结束时，冰铃响起，自身回复 1/8 HP。' },
+  { id: 'headwind', name: '逆风', desc: '每回合结束时，若自身更快，对手速度 −1 阶。体力低于一半后，双方速度都 −1 阶。' },
   // 唯一精灵专属
   { id: 'wish', name: '许愿', desc: '打出会心后，自身速度 +1 阶。' },
   { id: 'bloom_scent', name: '花香', desc: '每回合结束回复 1/16 HP，并有 30% 解除自身异常状态。' },

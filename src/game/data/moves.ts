@@ -140,6 +140,7 @@ const LIST: MoveDef[] = [
   sta('tailwind', '顺风', 'gale', -1, 10, '提升自身速度 2 阶。', { effect: { chance: 100, target: 'self', stages: { spd: 2 } } }),
   sta('defog', '吹散', 'gale', -1, 15, '清除对手的能力提升与场上天气。', { special: 'defog' }),
   atk('hurricane', '暴风', 'gale', 40, 75, 10, '20% 令对手混乱。', { effect: { chance: 20, target: 'foe', volatile: 'confused' } }),
+  atk('tail_gust', '尾风', 'gale', 30, 95, 15, '风从身后推来。'),
 
   // ── 霜 ──
   atk('ice_shard', '冰粒', 'frost', 14, 100, 30, '必定先手攻击。', { priority: 1 }),

@@ -8,6 +8,7 @@ import type { Facing } from '../state/GameState'
 import { decorBlocks } from './decor'
 import { buildCanyon, buildHammerTown, buildMine } from './canyonMap'
 import { buildDunes, buildObservatory } from './dunesMap'
+import { buildCloudBridge, buildCloudFeather, buildCloudMill, buildCloudShrine, buildCloudStart } from './cloudMap'
 import { buildBellHall, buildFrostPeak, buildFrostVillage, buildIceLake } from './frostMap'
 import { buildForest } from './forestMap'
 import { buildLake } from './lakeMap'
@@ -86,6 +87,8 @@ export interface NpcDef {
   chainNext?: string
   /** 连战：本场是第二战，需先赢下的 NPC id（否则从第一战开始） */
   chainFirst?: string
+  /** 连战失败时额外清掉的旗标；不填则只清第一场 */
+  chainReset?: string[]
   /** 临时组队：本场由这位同伴的队伍代替玩家出战（胜负都不影响玩家队伍） */
   ally?: { name: string; team: TeamMember[] }
   /** 挑战台词之后、开战之前的旁白（不加 NPC 名字前缀） */
@@ -94,6 +97,8 @@ export interface NpcDef {
   winLines?: string[]
   /** 胜利后额外写入的旗标 */
   winFlags?: string[]
+  /** 胜利后发放一次的道具 */
+  winItems?: string[]
   /** 双打：双方各有两只同时在场 */
   doubles?: boolean
   /** prop 的贴图（不填则不显示，由装饰物负责外观） */
@@ -183,14 +188,19 @@ function buildTown(): MapDef {
         color: 0xc49a6c,
         wander: 1,
         emote: '…',
+        story: 'town_elder',
         chat: ['今天风真暖。', '嗯，嗯。', '年轻真好啊。'],
         lines: [
           '欢迎来到晨曦小镇，焰迹旅人。',
           '余烬山巅的火种最近忽明忽暗，守护它的熔鬃狮变得焦躁不安。',
           '先去东边的青苔草地，赢过巡护员苔，他会放你进山道。',
-          '高草里的野生伙伴可以用「安抚果」带回队伍，对方体力越低越容易成功。',
+          '高草里的野生伙伴可以用「安抚信标」带回队伍，对方体力越低越容易成功。',
         ],
         progressLines: [
+          {
+            flag: 'chapter7_done',
+            lines: ['两半照片我收好了。你若去钟楼，我会跟着。'],
+          },
           {
             flag: 'chapter6_done',
             lines: ['昨晚的光……我在窗边站了很久。', '那孩子，每年冬天都去霜铃峰放灯吗。'],
@@ -228,6 +238,16 @@ function buildTown(): MapDef {
         ],
       },
       {
+        id: 'town_photo',
+        name: '相框',
+        role: 'prop',
+        story: 'town_photo',
+        x: 10,
+        y: 4,
+        color: 0xf0e6c8,
+        lines: ['缺了一角的合照。'],
+      },
+      {
         id: 'kid',
         name: '小路',
         x: 11,
@@ -242,6 +262,7 @@ function buildTown(): MapDef {
           '听说伙伴到 9 级左右会进化，样子会变得超帅！',
         ],
         progressLines: [
+          { flag: 'chapter7_done', lines: ['天上那只大鸟好大！', '它飞走的时候，我的小灯跟着亮了一下。'] },
           { flag: 'chapter6_done', lines: ['昨天晚上天上有彩色的光！', '妈妈说那是心火极光，一辈子都难得看到一次！'] },
           { flag: 'chapter5_done', lines: ['荒原上的星星好亮！', '我的小灯还没做好……等霜铃峰的雪化了，我再点给你看。'] },
           { flag: 'chapter4_done', lines: ['锤音镇的人送了我一把小锤子！', '我要用它做一盏灯——等我做好了给你看！'] },
@@ -286,7 +307,7 @@ function buildTown(): MapDef {
         x: 5,
         y: 7,
         color: 0xe8c060,
-        lines: ['欢迎光临！伤药、万灵药、PP 果、安抚果，应有尽有～'],
+        lines: ['欢迎光临！急救喷雾、清创贴、能量棒、安抚信标，还有折叠滑板～'],
       },
       {
         id: 'board',
@@ -547,6 +568,7 @@ function buildCabin(): MapDef {
         color: 0x9b7ed9,
         lines: ['欢迎回来，旅人。要做点什么？'],
         progressLines: [
+          { flag: 'chapter7_done', lines: ['从云上下来的人，耳朵里都有风声。坐下，我看看。'] },
           { flag: 'chapter6_done', lines: ['从霜铃峰下来的人，身上都还留着一点冷。来，坐一会儿。', '极光的晚上，连伤药都觉得没那么苦了。'] },
           { flag: 'chapter5_done', lines: ['荒原的沙暴伤人。来，我先看看你们。', '下一程是霜铃峰，记得带足伤药。'] },
         ],
@@ -571,6 +593,11 @@ export const MAPS: Record<string, MapDef> = {
   frostpeak: buildFrostPeak(),
   icelake: buildIceLake(),
   bellhall: buildBellHall(),
+  cloudstart: buildCloudStart(),
+  cloudfeather: buildCloudFeather(),
+  cloudmill: buildCloudMill(),
+  cloudbridge: buildCloudBridge(),
+  cloudshrine: buildCloudShrine(),
 }
 
 /**

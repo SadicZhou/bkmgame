@@ -580,7 +580,7 @@ export function checkItemOnCreature(itemId: string, target: CreatureInstance): I
   const item = ITEMS[itemId]
   switch (item.kind) {
     case 'heal':
-      if (target.hp <= 0) return { ok: false, reason: '倒下的伙伴需要复苏草' }
+      if (target.hp <= 0) return { ok: false, reason: '倒下的伙伴需要复苏贴' }
       if (target.hp >= target.maxHp) return { ok: false, reason: 'HP 已经是满的' }
       return { ok: true }
     case 'revive':

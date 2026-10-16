@@ -100,6 +100,16 @@ export function buildFrostPeak(): MapDef {
         color: 0xff8040,
         lines: ['火还暖着。'],
       },
+      {
+        id: 'cloud_pillar',
+        name: '风柱',
+        role: 'prop',
+        story: 'cloud_pillar',
+        x: 2,
+        y: 2,
+        color: 0xd8f4ff,
+        lines: ['风往天上吹。'],
+      },
     ],
   }
 }

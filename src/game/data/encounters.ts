@@ -50,6 +50,20 @@ export function tableFor(table: EncounterTable, source: EncounterSource): Encoun
   return entries?.length ? { baseRate: source === 'ice' ? ICE_RATE : 1, grass: entries } : null
 }
 
+/** 云阶各岛共用的风系遭遇 */
+function cloudGrass(): EncounterTable {
+  return {
+    baseRate: 0.12,
+    grass: [
+      { speciesId: 'skyfinch', weight: 30, minLv: 34, maxLv: 37 },
+      { speciesId: 'cloudsheep', weight: 25, minLv: 34, maxLv: 36, weather: ['sunny'] },
+      { speciesId: 'whirlbat', weight: 20, minLv: 34, maxLv: 37, time: 'night' },
+      { speciesId: 'chimekite', weight: 15, minLv: 36, maxLv: 39 },
+      { speciesId: 'voltbadger', weight: 10, minLv: 36, maxLv: 39, weather: ['storm'] },
+    ],
+  }
+}
+
 export const ENCOUNTERS: Record<string, EncounterTable> = {
   meadow: {
     baseRate: 0.12,
@@ -141,4 +155,8 @@ export const ENCOUNTERS: Record<string, EncounterTable> = {
       { speciesId: 'frostfox', weight: 3, minLv: 33, maxLv: 35, time: 'night', weather: ['snow'] },
     ],
   },
+  cloudstart: cloudGrass(),
+  cloudfeather: cloudGrass(),
+  cloudmill: cloudGrass(),
+  cloudbridge: cloudGrass(),
 }

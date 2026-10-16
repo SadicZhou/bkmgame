@@ -32,6 +32,8 @@ import type { AmbientKind } from '../ui/weather/Ambient'
 import { WorldEventsView } from '../ui/WorldEventsView'
 import { WorldMenus } from '../ui/WorldMenus'
 import { BOLTS, BOLT_SAFE, DUNE_GATE, boltPhase, boltStrikes, healWithKindler, isBoltTile, rodsLit, tickDuneStorm } from '../systems/Dunes'
+import { cloudWindEnd } from '../systems/Cloud'
+import { BOARD_FLAG, boardSpeed } from '../systems/Vehicle'
 import { FROST_FLAGS, ICE_BLOCKS, SLIDE_GOALS, blockFlag, blockPos, chipCold, iceBlockAt, leadIsFlame, slideEnd, slideFlag, tickCold, tryPushIce } from '../systems/Frost'
 import { CanyonField } from './world/CanyonField'
 import { FishingController } from './world/FishingController'
@@ -80,6 +82,8 @@ export class WorldScene extends Phaser.Scene {
   /** 是否使用 AI 行走图（缺图时回退到代码绘制） */
   private charArt = false
   private playerShadow!: Phaser.GameObjects.Ellipse
+  /** 展开的折叠滑板，画在脚边 */
+  private board!: Phaser.GameObjects.Image
   /** 火盆 / 壁炉 / 灯台位置（世界坐标），夜里照亮周围 */
   private fireLights: { x: number; y: number }[] = []
   private fishing!: FishingController
@@ -143,7 +147,9 @@ export class WorldScene extends Phaser.Scene {
 
     registerCharAnims(this)
     this.charArt = hasCharArt(this, 'char-player')
+    if (!this.map.outdoor && GameState.hasFlag(BOARD_FLAG)) GameState.clearFlag(BOARD_FLAG)
     this.playerShadow = this.add.ellipse(0, 0, 20, 7, 0x000000, 0.22).setDepth(8)
+    this.board = this.add.image(0, 0, 'item-fold_board').setDepth(9).setScale(0.85).setVisible(false)
     this.player = this.charArt
       ? anchorFeet(this.add.sprite(0, 0, playerSheet(this), idleFrame(this.facing))).setDepth(10)
       : this.add.sprite(0, 0, `spr-player-${this.facing}`).setDepth(10)
@@ -230,6 +236,13 @@ export class WorldScene extends Phaser.Scene {
         this.busy = true
         fadeToScene(this, 'Title')
       },
+      outdoor: () => this.map.outdoor,
+      travel: (mapId, x, y) => {
+        GameState.mapId = mapId
+        GameState.playerX = x
+        GameState.playerY = y
+        this.restartMap()
+      },
     })
     this.services = new TownServices(panel, {
       say: (lines, after) => this.dialogue.open(lines, after),
@@ -310,8 +323,12 @@ export class WorldScene extends Phaser.Scene {
 
   update(time: number, delta: number): void {
     this.playerShadow.setPosition(this.player.x, this.player.y + 13).setSize(this.ride.shadowWidth, 7)
+    this.board.setPosition(this.player.x, this.player.y + 8).setVisible(!!GameState.hasFlag(BOARD_FLAG))
     // 菜单关上后同步跟随 / 坐骑（队伍、寄存都可能改变它们）
-    if (this.menuWasOpen && !this.menus.isOpen) this.ride.sync()
+    if (this.menuWasOpen && !this.menus.isOpen) {
+      this.ride.sync()
+      if (this.ride.riding && GameState.hasFlag(BOARD_FLAG)) GameState.clearFlag(BOARD_FLAG)
+    }
     this.menuWasOpen = this.menus.isOpen
     this.ride.update()
     this.updateBoltMarks()
@@ -343,6 +360,7 @@ export class WorldScene extends Phaser.Scene {
 
     if (input.ride) {
       this.ride.toggle()
+      if (this.ride.riding && GameState.hasFlag(BOARD_FLAG)) GameState.clearFlag(BOARD_FLAG)
       return
     }
     if (input.cancel) {
@@ -436,6 +454,22 @@ export class WorldScene extends Phaser.Scene {
     if (this.field.blocks(nx, ny) || iceBlockAt(nx, ny, (k) => GameState.getFlag(k))) return
     const throughGate = this.map.id === 'dunes' && nx === DUNE_GATE.x && ny === DUNE_GATE.y && rodsLit((k) => GameState.getFlag(k))
     if (!throughGate && !this.field.opens(nx, ny) && !this.ride.canEnter(tile)) return
+    if (GameState.hasFlag(BOARD_FLAG) && tile === 'ice') {
+      this.flashToast('滑板在冰上站不稳。')
+      return
+    }
+    if (this.map.id === 'cloudmill') {
+      const blown = cloudWindEnd(this.tileX, this.tileY, dx, dy, (mill) => GameState.hasFlag(mill === 'a' ? 'cloud_mill_a' : 'cloud_mill_b'))
+      if (blown) {
+        if (blown.x === this.tileX && blown.y === this.tileY) {
+          this.flashToast('风把你托回来了')
+          return
+        }
+        nx = blown.x
+        ny = blown.y
+        tile = resolveTile(this.map, nx, ny, hasFlag) ?? tile
+      }
+    }
     if (this.map.id === 'icelake' && tile === 'ice') {
       const end = slideEnd(
         this.tileX,
@@ -454,7 +488,7 @@ export class WorldScene extends Phaser.Scene {
     const fromX = this.tileX
     const fromY = this.tileY
     const tiles = Math.max(1, Math.abs(nx - fromX) + Math.abs(ny - fromY))
-    const ms = this.ride.moveMs(MOVE_MS * tiles)
+    const ms = boardSpeed(this.ride.moveMs(MOVE_MS * tiles), !!GameState.hasFlag(BOARD_FLAG) && !this.ride.riding)
     this.moving = true
     this.tileX = nx
     this.tileY = ny
@@ -773,6 +807,20 @@ export class WorldScene extends Phaser.Scene {
       },
       redraw: () => this.restartMap(),
       refreshNpcs: () => this.syncNpcs(),
+      choose: (title, options, onPick) => {
+        this.menus.panel.open({
+          title,
+          rows: options.map((o) => ({ label: o.label, onSelect: () => onPick(o.id) })),
+          onCancel: () => this.menus.panel.close(),
+        })
+      },
+      travel: (mapId, x, y) => {
+        GameState.mapId = mapId
+        GameState.playerX = x
+        GameState.playerY = y
+        this.restartMap()
+      },
+      goChapter: (card) => fadeToScene(this, 'Chapter', 400, card),
     }
   }
 
@@ -813,7 +861,8 @@ export class WorldScene extends Phaser.Scene {
     const wt = this.fieldWeather()
     const weatherText = wt ? ` ${WEATHER_INFO[wt].icon}${WEATHER_INFO[wt].label}` : ''
     const cold = this.map.id === 'frostpeak' ? ` ｜ 寒冷 ${Number(GameState.getFlag('frost_cold') || 0)}` : ''
-    let text = `${this.map.name} ｜ 第${GameState.day()}天 ${timeLabel(w.totalSteps)}${weatherText}${cold}${leadText} ｜ 焰币 ${GameState.coins}`
+    const board = GameState.hasFlag(BOARD_FLAG) ? ' ｜ 滑板' : ''
+    let text = `${this.map.name} ｜ 第${GameState.day()}天 ${timeLabel(w.totalSteps)}${weatherText}${cold}${board}${leadText} ｜ 焰币 ${GameState.coins}`
     const def = activePhenomenon(w)
     if (def) {
       const total = PHENOMENON_RULES.goalCount[def.goal]

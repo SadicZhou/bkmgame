@@ -13,6 +13,23 @@ const flag = (k: string) => GameState.getFlag(k)
 
 function sui(host: StoryHost, name: string): void {
   const say = (lines: string[]) => host.say(lines.map((l) => `${name}：${l}`))
+  if (GameState.hasFlag('chapter6_done') && !GameState.hasFlag('cloud_unlocked')) {
+    GameState.addItem('star_glider', 1)
+    GameState.setFlag('cloud_unlocked', true)
+    Sfx.win()
+    say([
+      '我又算了一遍。第七颗星不在地上。',
+      '它在云上。霜铃峰的风柱，刚好对着它。',
+      '所以我做了这个。星砂布，竹骨，一架小翅膀。',
+      '站在风柱边上，面朝风，按确认。掉下来会被云接住。……大概。',
+    ])
+    host.toast('获得了重要物品「星砂滑翔翼」')
+    return
+  }
+  if (GameState.hasFlag('cloud_unlocked')) {
+    say(['第七颗星在云上。', '霜铃峰北侧的风柱，面朝它按确认就能滑过去。'])
+    return
+  }
   if (GameState.hasFlag(DUNE_FLAGS.chart)) {
     say(['沙暴来的时候别往远处看，跟着避雷针的光走。', '落雷是四拍：亮、暗、暗、落。落的那一拍，别站在黄圈里。'])
     return

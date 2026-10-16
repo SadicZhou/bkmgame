@@ -431,6 +431,7 @@ async function runSteps(r: Runner): Promise<void> {
     ...chapter4Steps(r),
     ...chapter5Steps(r),
     ...chapter6Steps(r),
+    ...chapter7Steps(r),
   ]
   for (const [name, run] of steps) {
     if (!(await r.step(name, run))) break
@@ -670,6 +671,54 @@ function chapter6Steps(r: Runner): [string, () => Promise<string | true>][] {
         if (next === 'lost') return '输给了霜铃鹤'
         const rewards = has('chapter6_done') && has('badge_frost') && has('heart_aurora')
         return check(next === 'Chapter' && rewards, `去向 ${next}，奖励${rewards ? '齐全' : '缺失'}`)
+      },
+    ],
+  ]
+}
+
+/**
+ * 第七章「云阶」节拍：滑翔翼、风柱、两架风车和风道
+ * 鸢与岚翼鹏的战斗由单测覆盖奖励，这里只走谜题
+ * @author zjh
+ * @date 2026-10-16
+ */
+function chapter7Steps(r: Runner): [string, () => Promise<string | true>][] {
+  const has = GameState.hasFlag
+  return [
+    [
+      '章节卡 → 穗交出滑翔翼',
+      async () => {
+        await leaveChapter(r)
+        const ws = await r.enterWorld('observatory', 5, 3, 'up')
+        ws.tryInteract()
+        await r.closeDialogue(ws)
+        return check(GameState.itemCount('star_glider') === 1 && has('cloud_unlocked'), '没有拿到滑翔翼')
+      },
+    ],
+    [
+      '霜铃峰风柱 → 起风岛',
+      async () => {
+        const ws = await r.enterWorld('frostpeak', 2, 3, 'up')
+        ws.tryInteract()
+        await r.closeDialogue(ws)
+        await r.until(() => GameState.mapId === 'cloudstart', 4000)
+        return check(GameState.mapId === 'cloudstart', `停在 ${GameState.mapId}`)
+      },
+    ],
+    [
+      '拨顺甲乙，风道滑到出口',
+      async () => {
+        const feather = await r.enterWorld('cloudfeather', 3, 4, 'up')
+        feather.tryInteract()
+        await r.closeDialogue(feather)
+        const mill = await r.enterWorld('cloudmill', 11, 4, 'up')
+        mill.tryInteract()
+        await r.closeDialogue(mill)
+        const ws = await r.enterWorld('cloudmill', 3, 3, 'right')
+        ws.tryMove(1, 0)
+        await r.wait(900)
+        await r.until(() => !r.world().moving)
+        return check(has('cloud_mill_a') && has('cloud_mill_b') && GameState.playerX === 7 && GameState.playerY === 3, `停在 ${GameState.playerX},${GameState.playerY}`)
       },
     ],
   ]
