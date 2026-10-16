@@ -263,6 +263,22 @@ function paintNewKinds(g: Phaser.GameObjects.Graphics, p: CritterPalette): numbe
       drawSparkle(g, 34, 30, p.accent)
       drawSparkle(g, 40, 14, p.accent)
       return 21
+    case 'bear':
+      g.fillStyle(p.ear, 1)
+      g.fillCircle(16, 14, 6)
+      g.fillCircle(34, 14, 6)
+      g.fillStyle(p.body, 1)
+      g.fillCircle(16, 14, 4)
+      g.fillCircle(34, 14, 4)
+      g.fillEllipse(25, 32, 28, 22)
+      g.fillCircle(25, 20, 12)
+      g.fillStyle(p.belly, 1)
+      g.fillEllipse(25, 34, 14, 12)
+      g.fillStyle(p.accent, 1)
+      g.fillCircle(25, 16, 5)
+      g.fillStyle(0xfff6c0, 1)
+      g.fillCircle(25, 16, 2)
+      return 20
     case 'deer':
       g.fillStyle(p.ear, 1)
       g.fillRect(14, 2, 3, 14)

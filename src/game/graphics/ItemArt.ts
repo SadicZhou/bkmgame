@@ -140,6 +140,7 @@ function paintOne(g: Icon, id: string): void {
   else if (id === 'star_glider') glider(g)
   else if (id === 'torn_photo') photoItem(g)
   else if (id === 'white_feather') feather(g)
+  else if (id === 'kid_lamp') kidLamp(g)
 }
 
 /** 喷雾罐：喷嘴、金属颈、标签和罐底 */
@@ -451,4 +452,13 @@ function feather(g: Icon): void {
   g.rect(28, 24, 4, 2, 0xe8eef4)
   g.rect(34, 28, 4, 2, 0xe8eef4)
   g.dot(30, 20, 0xffffff)
+}
+
+/** 小路的灯：纸灯笼和短提手 */
+function kidLamp(g: Icon): void {
+  g.rect(30, 12, 4, 8, 0xc4a060)
+  g.round(22, 20, 20, 24, 0xffe0a0)
+  g.rect(26, 26, 12, 10, 0xfff6c8)
+  g.dot(32, 30, 0xfffaf0)
+  g.rect(24, 42, 16, 3, 0xe0b060)
 }

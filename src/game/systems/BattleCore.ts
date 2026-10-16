@@ -83,6 +83,12 @@ export interface Volatile {
   rebirthUsed: boolean
   /** 羁绊「咬牙撑住」本场已判定过 */
   bondUsed: boolean
+  /** 余光：体力过半以下已经愣过一次 */
+  lastLight: boolean
+  /** 守灯：防御已经抬过一次 */
+  lampGuard: boolean
+  /** 熊抱：大于 0 时不能换人，每回合结束减 1 */
+  noSwitch: number
 }
 
 /** 升级时想学但槽满的技能，战后交给玩家决定 */
@@ -138,6 +144,9 @@ export function freshVolatile(): Volatile {
     guardianUsed: false,
     rebirthUsed: false,
     bondUsed: false,
+    lastLight: false,
+    lampGuard: false,
+    noSwitch: 0,
   }
 }
 

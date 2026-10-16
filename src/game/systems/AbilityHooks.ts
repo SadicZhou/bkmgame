@@ -153,7 +153,16 @@ export const FOREST_VOICE_EVERY = 3
  * @date 2026-10-15
  */
 export function onRoundEnd(s: BattleState): void {
+  for (const v of Object.values(s.vol)) {
+    if (v.noSwitch > 0) v.noSwitch -= 1
+  }
   const sides: Side[] = ['player', 'enemy']
+  const guard = sides.map((side) => ({ side, c: actorOf(s, side) })).find((e) => e.c.hp > 0 && e.c.abilityId === 'lamp_guard')
+  if (guard && guard.c.hp * 3 < guard.c.maxHp && !volOf(s, guard.c).lampGuard) {
+    volOf(s, guard.c).lampGuard = true
+    say(s, `${battleName(guard.c)} 的「守灯」！`)
+    changeStages(s, guard.side, guard.c, { def: 2 })
+  }
   const wind = sides.map((side) => ({ side, c: actorOf(s, side) })).find((e) => e.c.hp > 0 && e.c.abilityId === 'headwind')
   if (wind) {
     const foeSide = other(wind.side)

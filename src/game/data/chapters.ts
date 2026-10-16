@@ -106,6 +106,19 @@ export const CHAPTER_ENDS: ChapterEnd[] = [
     unlockFlags: ['badge_gale'],
     ending: false,
   },
+  {
+    bossFlag: 'bear_beaten',
+    card: { title: '第八章完 · 长夜', subtitle: '新的旅途：灰烬之塔' },
+    notes: [
+      '暖灯熊把小路的灯放进了钟楼的灯芯。',
+      '初灯亮起来，全镇的路灯从钟楼一圈圈亮回去。',
+      '第八座灯台，是由一个孩子点亮的。',
+    ],
+    badge: 'hearth',
+    unlockFlags: ['chapter8_done', 'badge_hearth'],
+    items: ['kid_lamp'],
+    ending: false,
+  },
 ]
 
 /**

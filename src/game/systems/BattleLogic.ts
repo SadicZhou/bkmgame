@@ -265,6 +265,11 @@ function useStatusMove(s: BattleState, side: Side, user: CreatureInstance, targe
       vol.frostWall = 3
       say(s, `${name} 竖起了一道霜壁！`, sideAnim(side, 'buffPlayer', 'buffEnemy'))
       return
+    case 'bear_hug': {
+      volOf(s, target).noSwitch = 2
+      say(s, `${battleName(target)} 被抱住了，暂时不能换人！`, sideAnim(other(side), 'debuffPlayer', 'debuffEnemy'))
+      return
+    }
     case 'sandstorm':
       s.weather = 'sand'
       s.weatherTurns = 5

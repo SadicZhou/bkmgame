@@ -53,6 +53,8 @@ export type NpcRole = 'talk' | 'healer' | 'clinic' | 'shop' | 'trainer' | 'boss'
 export interface TeamMember {
   speciesId: string
   level: number
+  /** 指定特性；不填则按物种随机 */
+  abilityId?: string
 }
 
 export interface NpcDef {
@@ -99,6 +101,10 @@ export interface NpcDef {
   winFlags?: string[]
   /** 胜利后发放一次的道具 */
   winItems?: string[]
+  /** 输了也算见过：留在原地，写入这些旗标 */
+  stayOnLoss?: boolean
+  lossFlags?: string[]
+  lossLines?: string[]
   /** 双打：双方各有两只同时在场 */
   doubles?: boolean
   /** prop 的贴图（不填则不显示，由装饰物负责外观） */
@@ -198,6 +204,10 @@ function buildTown(): MapDef {
         ],
         progressLines: [
           {
+            flag: 'chapter8_done',
+            lines: ['初灯是小路点亮的。比我做的第一盏灯亮多了。', '灰烬之塔在余烬山再往上的地方。等你准备好了，我们就去。'],
+          },
+          {
             flag: 'chapter7_done',
             lines: ['两半照片我收好了。你若去钟楼，我会跟着。'],
           },
@@ -248,6 +258,155 @@ function buildTown(): MapDef {
         lines: ['缺了一角的合照。'],
       },
       {
+        id: 'night_clinic',
+        name: '疗愈师岚',
+        role: 'healer',
+        showIf: 'night_started',
+        hideIf: 'chapter8_done',
+        x: 6,
+        y: 9,
+        color: 0x9b7ed9,
+        lines: ['广场的救护站点着。今晚随便来，灯不会灭。'],
+      },
+      {
+        id: 'night_lamp_square',
+        name: '熄灯精英',
+        role: 'trainer',
+        showIf: 'night_started',
+        hideIf: ['night_lamp_square', 'chapter8_done'],
+        x: 8,
+        y: 7,
+        color: 0x3a3a48,
+        defeatedKey: 'night_lamp_square',
+        team: [
+          { speciesId: 'inkcrow', level: 40 },
+          { speciesId: 'nightcrow', level: 41 },
+        ],
+        lines: ['这盏灯，罩上就好。'],
+        challengeLines: ['广场的灯归我们了。', '别过来。'],
+        winLines: ['广场的灯重新亮了。'],
+        winFlags: ['night_lamp_square'],
+      },
+      {
+        id: 'night_lamp_inn',
+        name: '熄灯精英',
+        role: 'trainer',
+        showIf: 'night_started',
+        hideIf: ['night_lamp_inn', 'chapter8_done'],
+        x: 4,
+        y: 5,
+        color: 0x3a3a48,
+        defeatedKey: 'night_lamp_inn',
+        team: [
+          { speciesId: 'voltbadger', level: 41 },
+          { speciesId: 'dunefin', level: 42 },
+        ],
+        lines: ['旅店门口的灯，也该歇了。'],
+        challengeLines: ['这里没有留给你们的光。'],
+        winLines: ['旅店的灯重新亮了。'],
+        winFlags: ['night_lamp_inn'],
+      },
+      {
+        id: 'night_lamp_shop',
+        name: '熄灯精英',
+        role: 'trainer',
+        showIf: 'night_started',
+        hideIf: ['night_lamp_shop', 'chapter8_done'],
+        x: 5,
+        y: 8,
+        color: 0x3a3a48,
+        defeatedKey: 'night_lamp_shop',
+        team: [
+          { speciesId: 'lanternlizard', level: 40 },
+          { speciesId: 'whirlbat', level: 41 },
+        ],
+        lines: ['商店的灯太亮了。'],
+        challengeLines: ['把这盏也罩上。'],
+        winLines: ['商店的灯重新亮了。'],
+        winFlags: ['night_lamp_shop'],
+      },
+      {
+        id: 'night_lamp_home',
+        name: '熄灯精英',
+        role: 'trainer',
+        showIf: 'night_started',
+        hideIf: ['night_lamp_home', 'chapter8_done'],
+        x: 10,
+        y: 6,
+        color: 0x3a3a48,
+        defeatedKey: 'night_lamp_home',
+        team: [
+          { speciesId: 'skyfinch', level: 40 },
+          { speciesId: 'chimekite', level: 42 },
+        ],
+        lines: ['旅长家的灯，尤其不能留。'],
+        challengeLines: ['阿禾家，从这里开始暗。'],
+        winLines: ['阿禾家门前的灯重新亮了。'],
+        winFlags: ['night_lamp_home'],
+      },
+      {
+        id: 'night_lamp_clock',
+        name: '熄灯精英',
+        role: 'trainer',
+        showIf: 'night_started',
+        hideIf: ['night_lamp_clock', 'chapter8_done'],
+        x: 9,
+        y: 3,
+        color: 0x3a3a48,
+        defeatedKey: 'night_lamp_clock',
+        team: [
+          { speciesId: 'frostfox', level: 42 },
+          { speciesId: 'icecrown', level: 43 },
+        ],
+        lines: ['钟楼下的灯，是最后一盏。'],
+        challengeLines: ['罩住它，全镇都会安静。'],
+        winLines: ['钟楼的灯重新亮了。'],
+        winFlags: ['night_lamp_clock'],
+      },
+      {
+        id: 'mochen',
+        name: '墨尘',
+        role: 'trainer',
+        showIf: 'night_relay_done',
+        hideIf: 'mochen_met',
+        x: 9,
+        y: 2,
+        color: 0x2a2838,
+        defeatedKey: 'mochen_met',
+        stayOnLoss: true,
+        lossFlags: ['mochen_met'],
+        team: [
+          { speciesId: 'inkcrow', level: 44 },
+          { speciesId: 'lanternlizard', level: 44 },
+          { speciesId: 'icecrown', level: 44 },
+          { speciesId: 'nightcrow', level: 45, abilityId: 'last_light' },
+        ],
+        lines: ['你就是师父的新徒弟。'],
+        challengeLines: [
+          '我在这个镇子长大。这些灯，有一半是我小时候帮着修的。',
+          '所以我知道，只要熄掉钟楼的初灯，全镇的灯都会熄。',
+          '别误会。我不想伤害任何人。',
+          '让你的伙伴来回答吧。',
+        ],
+        winLines: ['墨尘看着夜幕鸦身上的光，什么都没说，消失在夜里。', '墨尘：灰烬之塔。最后一盏灯在那里。……来吧。'],
+        lossLines: ['墨尘没有熄灯。他盯着自己的夜幕鸦，转身离开了。', '墨尘：灰烬之塔。最后一盏灯在那里。……来吧。'],
+      },
+      {
+        id: 'hearthbear',
+        name: '暖灯熊',
+        role: 'boss',
+        showIf: 'mochen_met',
+        hideIf: 'bear_beaten',
+        x: 9,
+        y: 2,
+        color: 0xffc878,
+        defeatedKey: 'bear_beaten',
+        team: [{ speciesId: 'hearthbear', level: 46 }],
+        lines: ['钟楼里传来低沉的哼声。'],
+        challengeLines: ['一只抱着大灯笼的熊走出来。它眯着眼，分不清你是谁。'],
+        winLines: ['暖灯熊揉了揉眼睛，把灯笼抱紧了。它认出了你的伙伴。'],
+      },
+      {
         id: 'kid',
         name: '小路',
         x: 11,
@@ -262,6 +421,7 @@ function buildTown(): MapDef {
           '听说伙伴到 9 级左右会进化，样子会变得超帅！',
         ],
         progressLines: [
+          { flag: 'chapter8_done', lines: ['我的灯……亮了！', '暖灯熊把我的灯放进钟楼里了。全镇都亮了！'] },
           { flag: 'chapter7_done', lines: ['天上那只大鸟好大！', '它飞走的时候，我的小灯跟着亮了一下。'] },
           { flag: 'chapter6_done', lines: ['昨天晚上天上有彩色的光！', '妈妈说那是心火极光，一辈子都难得看到一次！'] },
           { flag: 'chapter5_done', lines: ['荒原上的星星好亮！', '我的小灯还没做好……等霜铃峰的雪化了，我再点给你看。'] },
@@ -308,6 +468,10 @@ function buildTown(): MapDef {
         y: 7,
         color: 0xe8c060,
         lines: ['欢迎光临！急救喷雾、清创贴、能量棒、安抚信标，还有折叠滑板～'],
+        progressLines: [
+          { flag: 'chapter8_done', lines: ['灯都亮回来了。欢迎光临，价格恢复平常。'] },
+          { flag: 'night_started', lines: ['今晚的灯都灭了，存货我全摆出来了。半价，别客气。'] },
+        ],
       },
       {
         id: 'board',
@@ -568,6 +732,7 @@ function buildCabin(): MapDef {
         color: 0x9b7ed9,
         lines: ['欢迎回来，旅人。要做点什么？'],
         progressLines: [
+          { flag: 'chapter8_done', lines: ['钟楼上的灯是小路点的。你也坐下，我看看有没有擦伤。'] },
           { flag: 'chapter7_done', lines: ['从云上下来的人，耳朵里都有风声。坐下，我看看。'] },
           { flag: 'chapter6_done', lines: ['从霜铃峰下来的人，身上都还留着一点冷。来，坐一会儿。', '极光的晚上，连伤药都觉得没那么苦了。'] },
           { flag: 'chapter5_done', lines: ['荒原的沙暴伤人。来，我先看看你们。', '下一程是霜铃峰，记得带足伤药。'] },

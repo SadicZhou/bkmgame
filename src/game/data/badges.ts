@@ -6,7 +6,7 @@
 
 import type { ElementType as CreatureType } from './types'
 
-export type BadgeId = 'flame' | 'tide' | 'leaf' | 'stone' | 'volt' | 'frost' | 'gale'
+export type BadgeId = 'flame' | 'tide' | 'leaf' | 'stone' | 'volt' | 'frost' | 'gale' | 'hearth'
 
 export interface BadgeDef {
   id: BadgeId
@@ -29,6 +29,7 @@ export const BADGES: Record<BadgeId, BadgeDef> = {
   volt: { id: 'volt', name: '雷之徽记', type: 'volt', flag: 'badge_volt', color: 0xf5d442, desc: '雷属性招式威力 +10%' },
   frost: { id: 'frost', name: '霜之徽记', type: 'frost', flag: 'badge_frost', color: 0xb8e4ff, desc: '霜属性招式威力 +10%' },
   gale: { id: 'gale', name: '风之徽记', type: 'gale', flag: 'badge_gale', color: 0xc8f0e0, desc: '风属性招式威力 +10%' },
+  hearth: { id: 'hearth', name: '初灯徽记', type: 'normal', flag: 'badge_hearth', color: 0xffe0a0, desc: '一般属性招式威力 +10%' },
 }
 
 /**

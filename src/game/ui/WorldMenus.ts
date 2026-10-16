@@ -12,6 +12,7 @@ import { BAG_PAGES, ITEMS, ITEM_ORDER, SHOP_STOCK, itemIconKey, type ItemKind } 
 import { MUSH_FLAGS } from '../data/mushrooms'
 import { PHENOMENA } from '../data/phenomena'
 import { GameState } from '../state/GameState'
+import { nightTownActive } from '../systems/Night'
 import { Sfx } from '../systems/AudioBeeps'
 import { applyItemToCreature, checkItemOnCreature } from '../systems/BattleLogic'
 import { BEACONS, DUNE_FLAGS } from '../systems/Dunes'
@@ -496,20 +497,22 @@ export class WorldMenus {
       [...SHOP_STOCK, BOARD_ID].map((id) => {
         const it = ITEMS[id]
         const ownedBoard = it.kind === 'vehicle' && GameState.itemCount(id) > 0
+        const half = nightTownActive('town', (k) => GameState.hasFlag(k)) && it.price > 0
+        const price = half ? Math.max(1, Math.ceil(it.price / 2)) : it.price
         return {
           label: it.name,
-          right: ownedBoard ? '已经有了' : `${it.price} 焰币 · 持有 ${GameState.itemCount(id)}`,
+          right: ownedBoard ? '已经有了' : `${half ? '半价 ' : ''}${price} 焰币 · 持有 ${GameState.itemCount(id)}`,
           icon: itemIconKey(id),
           detail: it.desc,
           disabled: ownedBoard,
           onSelect: () => {
             if (it.kind === 'vehicle' && GameState.itemCount(id) > 0) return
-            if (GameState.coins < it.price) {
+            if (GameState.coins < price) {
               Sfx.cancel()
               this.hooks.toast('焰币不够哦')
               return
             }
-            GameState.coins -= it.price
+            GameState.coins -= price
             GameState.addItem(id)
             this.hooks.toast(`买下了 ${it.name}`)
             this.hooks.refreshHud()

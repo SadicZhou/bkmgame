@@ -21,6 +21,7 @@ export type MoveSpecial =
   | 'high_crit'
   | 'snow_sure_hit'
   | 'friendship_power'
+  | 'bear_hug'
 
 /** 技能附加效果 */
 export interface MoveEffect {
@@ -158,6 +159,7 @@ const LIST: MoveDef[] = [
   atk('soul_drain', '灵魂吸取', 'spirit', 26, 100, 15, '回复造成伤害的 50%。', { effect: { chance: 100, target: 'self', drainRatio: 0.5 } }),
   atk('spirit_burst', '灵爆', 'spirit', 38, 90, 10, '10% 令对手混乱。', { effect: { chance: 10, target: 'foe', volatile: 'confused' } }),
   atk('heart_echo', '心火共鸣', 'spirit', 45, 100, 5, '威力随亲密度在 30～55 之间变化。', { special: 'friendship_power' }),
+  sta('bear_hug', '熊抱', 'normal', 100, 10, '抱住对手，让对方接下来无法换人。', { special: 'bear_hug' }),
 
   // ── 唯一精灵专属 ──
   atk('falling_star', '坠星', 'normal', 40, -1, 5, '必定命中。坠星貂专属。'),

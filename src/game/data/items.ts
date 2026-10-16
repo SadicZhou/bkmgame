@@ -49,6 +49,7 @@ export const ITEMS: Record<string, ItemDef> = {
   star_glider: { id: 'star_glider', name: '星砂滑翔翼', kind: 'key', value: 0, price: 0, desc: '穗用星砂布扎的小翅膀。在霜铃峰的风柱边按确认，就能滑到云阶。' },
   torn_photo: { id: 'torn_photo', name: '合照残角', kind: 'key', value: 0, price: 0, desc: '缺角合照的右下角。背面写着「尘 与 灯灯，旅团第三年。」' },
   white_feather: { id: 'white_feather', name: '白风羽', kind: 'key', value: 0, price: 0, desc: '鸢留下的信物。终章如果还需要风，它会把风送来。' },
+  kid_lamp: { id: 'kid_lamp', name: '小路的灯', kind: 'key', value: 0, price: 0, desc: '小路自己做的小灯。它点亮了小镇的初灯。终章还用得上。' },
   fold_board: { id: 'fold_board', name: '折叠滑板', kind: 'vehicle', value: 0, price: 200, desc: '旅团杂货铺的折叠滑板。在野外展开后走得更快；室内会自动收起，不能和骑乘同时使用。' },
 }
 
@@ -66,7 +67,7 @@ export function itemIconKey(id: string): string {
 }
 
 /** 重要物品（背包末尾展示） */
-export const KEY_ITEMS: string[] = ['old_rod', 'good_rod', 'strength_gloves', 'dust_badge', 'canyon_ore', 'wind_chime', 'book_rock_slide', 'charge_bottle', 'star_charm', 'hearth_stone', 'star_glider', 'torn_photo', 'white_feather']
+export const KEY_ITEMS: string[] = ['old_rod', 'good_rod', 'strength_gloves', 'dust_badge', 'canyon_ore', 'wind_chime', 'book_rock_slide', 'charge_bottle', 'star_charm', 'hearth_stone', 'star_glider', 'torn_photo', 'white_feather', 'kid_lamp']
 
 /** 商店货架顺序 */
 export const SHOP_STOCK: string[] = [

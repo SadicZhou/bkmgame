@@ -131,6 +131,11 @@ export function beforeMove(s: BattleState, side: Side, c: CreatureInstance): Bef
     return 'skip'
   }
   const vol = volOf(s, c)
+  if (c.abilityId === 'last_light' && c.hp * 2 < c.maxHp && !vol.lastLight) {
+    vol.lastLight = true
+    say(s, `「……灯灯？」${name} 羽尖亮起一圈暖光，这一回合没有出手。`, sideAnim(side, 'statusPlayer', 'statusEnemy'))
+    return 'skip'
+  }
   if (vol.confused > 0) {
     vol.confused -= 1
     if (vol.confused <= 0) {

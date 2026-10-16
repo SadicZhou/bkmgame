@@ -14,6 +14,7 @@ import type { BattleState } from '../../systems/BattleLogic'
 import { settleStoryBattle, type StoryOutcome } from '../../systems/BattleOutcome'
 import { FRIENDSHIP_GAIN } from '../../systems/Bond'
 import { addFriendship } from '../../systems/Growth'
+import { syncNightRelay } from '../../systems/Night'
 import { endPhenomenon } from '../../systems/Phenomenon'
 import { rematchCountKey, winDayKey } from '../../systems/Rematch'
 import { dayOf } from '../../systems/WorldClock'
@@ -86,6 +87,9 @@ export function settleBattle(b: BattleState, pending: PendingBattle): BattleSett
         GameState.notices.push(`获得了重要物品「${ITEMS[id]?.name ?? id}」`)
       }
       if (pending.winLines?.length) GameState.notices.push(...pending.winLines)
+      if (syncNightRelay((k) => !!GameState.getFlag(k), (k) => GameState.setFlag(k, true))) {
+        GameState.notices.push('五盏路灯都亮了。钟楼下，有个人在等你。')
+      }
     } else if (pending.allyParty) {
       notes.push(`${pending.allyName ?? '同伴'}的伙伴累倒了……休息一下，再来挑战吧。`)
     }
@@ -95,6 +99,14 @@ export function settleBattle(b: BattleState, pending: PendingBattle): BattleSett
     const story = settleStoryBattle(pending, b.won)
     notes.push(...story.notes)
     next = story.next
+  } else if (pending.stayOnLoss) {
+    for (const f of pending.lossFlags ?? []) GameState.setFlag(f, true)
+    if (pending.lossLines?.length) GameState.notices.push(...pending.lossLines)
+    notes.push(...settleStoryBattle(pending, false).notes)
+    GameState.mapId = pending.returnMapId
+    GameState.playerX = pending.returnX
+    GameState.playerY = pending.returnY
+    next = undefined
   } else {
     for (const c of GameState.party) addFriendship(c, FRIENDSHIP_GAIN.wipe)
     notes.push(...settleStoryBattle(pending, false).notes)

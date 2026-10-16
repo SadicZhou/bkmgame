@@ -134,7 +134,11 @@ export class NpcInteract {
     this.host.enterBattle({
       kind: npc.role === 'boss' ? 'boss' : 'trainer',
       rematch,
-      enemies: team.map((m) => createCreature(m.speciesId, m.level)),
+      enemies: team.map((m) => {
+        const foe = createCreature(m.speciesId, m.level)
+        if (m.abilityId) foe.abilityId = m.abilityId
+        return foe
+      }),
       trainerName: npc.name,
       flagOnWin: npc.defeatedKey,
       isBoss: npc.role === 'boss',
@@ -145,6 +149,9 @@ export class NpcInteract {
       winLines: rematch ? [`${npc.name}：还是你厉害！过几天我再来找你切磋。`] : npc.winLines,
       winFlags: npc.winFlags,
       winItems: npc.winItems,
+      stayOnLoss: npc.stayOnLoss,
+      lossFlags: npc.lossFlags,
+      lossLines: npc.lossLines,
       doubles: npc.doubles,
       ...this.host.returnInfo(),
     })

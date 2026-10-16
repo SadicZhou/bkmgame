@@ -432,6 +432,7 @@ async function runSteps(r: Runner): Promise<void> {
     ...chapter5Steps(r),
     ...chapter6Steps(r),
     ...chapter7Steps(r),
+    ...chapter8Steps(r),
   ]
   for (const [name, run] of steps) {
     if (!(await r.step(name, run))) break
@@ -719,6 +720,78 @@ function chapter7Steps(r: Runner): [string, () => Promise<string | true>][] {
         await r.wait(900)
         await r.until(() => !r.world().moving)
         return check(has('cloud_mill_a') && has('cloud_mill_b') && GameState.playerX === 7 && GameState.playerY === 3, `停在 ${GameState.playerX},${GameState.playerY}`)
+      },
+    ],
+  ]
+}
+
+/**
+ * 第八章「长夜」节拍：熄灯、两盏未守住的路灯、墨尘、暖灯熊
+ * 前一章回归停在风车岛，这里直接写上第七章已完成和三位盟友
+ * @author zjh
+ * @date 2026-10-16
+ */
+function chapter8Steps(r: Runner): [string, () => Promise<string | true>][] {
+  const has = GameState.hasFlag
+  const fightHere = async (mapId: string, x: number, y: number, facing: 'up' | 'down' | 'left' | 'right') => {
+    const ws = await r.enterWorld(mapId, x, y, facing)
+    ws.tryInteract()
+    if (!(await r.toBattle(ws))) return '没有进入战斗'
+    const next = await r.winBattle()
+    if (next === 'lost') return '战斗失败'
+    await r.until(() => r.active('World') && !r.world().busy, 8000)
+    await r.closeDialogue(r.world())
+    return next
+  }
+  return [
+    [
+      '回到小镇 → 灯灭了',
+      async () => {
+        GameState.setFlag('chapter7_done', true)
+        GameState.setFlag('kindler_joined', true)
+        GameState.setFlag('anvil_beaten', true)
+        GameState.setFlag('twins_beaten', true)
+        const ws = await r.enterWorld('town', 8, 8, 'up')
+        await r.until(() => ws.dialogue.isOpen || has('night_started'), 5000)
+        await r.closeDialogue(ws)
+        await r.until(() => r.active('World') && !r.world().busy, 5000)
+        return check(has('night_started') && has('night_lamp_shop') && has('night_lamp_inn') && has('night_lamp_home'), '长夜或盟友的灯没有点上')
+      },
+    ],
+    [
+      '广场路灯',
+      async () => {
+        const next = await fightHere('town', 8, 8, 'up')
+        if (next !== 'World') return next || '广场战没有回到小镇'
+        return check(has('night_lamp_square'), '广场的灯没亮')
+      },
+    ],
+    [
+      '钟楼路灯 → 墨尘出现',
+      async () => {
+        const next = await fightHere('town', 9, 4, 'up')
+        if (next !== 'World') return next || '钟楼战没有回到小镇'
+        return check(has('night_lamp_clock') && has('night_relay_done'), '五盏灯没有凑齐')
+      },
+    ],
+    [
+      '墨尘 → 输赢都见面',
+      async () => {
+        const next = await fightHere('town', 9, 3, 'up')
+        if (next !== 'World') return next || '墨尘战没有回到小镇'
+        return check(has('mochen_met'), '没有写入 mochen_met')
+      },
+    ],
+    [
+      '暖灯熊 → 第八章章节卡 + 初灯徽记',
+      async () => {
+        const ws = await r.enterWorld('town', 9, 3, 'up')
+        ws.tryInteract()
+        if (!(await r.toBattle(ws))) return '没有进入暖灯熊战'
+        const next = await r.winBattle()
+        if (next === 'lost') return '输给了暖灯熊'
+        const rewards = has('chapter8_done') && has('badge_hearth') && GameState.itemCount('kid_lamp') === 1
+        return check(next === 'Chapter' && rewards, `去向 ${next}，奖励${rewards ? '齐全' : '缺失'}`)
       },
     ],
   ]

@@ -45,6 +45,10 @@ export interface PendingBattle {
   winItems?: string[]
   /** 胜利后额外写入的旗标 */
   winFlags?: string[]
+  /** 失败也推进剧情：留在原地，不送回小屋 */
+  stayOnLoss?: boolean
+  lossFlags?: string[]
+  lossLines?: string[]
   /** 双打：第二只伙伴也会出手 */
   doubles?: boolean
   /** 训练家再战（胜利后累计再战次数） */

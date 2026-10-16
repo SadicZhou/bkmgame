@@ -8,6 +8,7 @@
 import { MOVES, SPECIES, battleName, outOfPp, spriteKey, typeMultiplier } from '../../data/creatures'
 import { ITEMS, ITEM_ORDER, itemIconKey } from '../../data/items'
 import { GameState } from '../../state/GameState'
+import { volOf } from '../../systems/BattleCore'
 import {
   activeEnemy,
   activePlayer,
@@ -66,7 +67,12 @@ export class BattleMenus {
       [
         { label: '出招', onSelect: () => this.fight() },
         { label: '道具', onSelect: () => this.bag() },
-        { label: '换人', onSelect: () => this.switch() },
+        {
+          label: '换人',
+          info: volOf(battle, activePlayer(battle)).noSwitch > 0 ? '被抱住了，现在不能换人。' : undefined,
+          disabled: volOf(battle, activePlayer(battle)).noSwitch > 0,
+          onSelect: () => this.switch(),
+        },
         {
           label: '逃跑',
           info: !runnable ? '这场对战无法逃跑。' : battle.kind === 'unique' ? '逃走后它仍会留在原地，可以再来。' : undefined,

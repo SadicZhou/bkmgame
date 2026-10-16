@@ -33,6 +33,7 @@ import { WorldEventsView } from '../ui/WorldEventsView'
 import { WorldMenus } from '../ui/WorldMenus'
 import { BOLTS, BOLT_SAFE, DUNE_GATE, boltPhase, boltStrikes, healWithKindler, isBoltTile, rodsLit, tickDuneStorm } from '../systems/Dunes'
 import { cloudWindEnd } from '../systems/Cloud'
+import { lightAllyLamps, nightTownActive } from '../systems/Night'
 import { BOARD_FLAG, boardSpeed } from '../systems/Vehicle'
 import { FROST_FLAGS, ICE_BLOCKS, SLIDE_GOALS, blockFlag, blockPos, chipCold, iceBlockAt, leadIsFlame, slideEnd, slideFlag, tickCold, tryPushIce } from '../systems/Frost'
 import { CanyonField } from './world/CanyonField'
@@ -122,7 +123,7 @@ export class WorldScene extends Phaser.Scene {
     this.lightUpPending = needsLightUp(this.map, hasFlag)
     // 进入地图 / 战斗结束后重新计算安全步数
     GameState.world.stepsSinceEncounter = 0
-    this.cameras.main.setBackgroundColor(this.map.bgColor)
+    this.cameras.main.setBackgroundColor(nightTownActive(this.map.id, (k) => !!GameState.hasFlag(k)) ? 0x1c2438 : this.map.bgColor)
     this.cameras.main.setZoom(1)
 
     const decorFlag = this.decorFlag()
@@ -294,8 +295,37 @@ export class WorldScene extends Phaser.Scene {
     const chain = () => {
       if (next && this.hasAbleCreature()) this.interact.challenge(next)
     }
-    if (notices.length) this.dialogue.open(notices, chain)
-    else chain()
+    const openNight = () => {
+      if (!nightTownActive(this.map.id, (k) => !!GameState.hasFlag(k)) && this.map.id === 'town' && GameState.hasFlag('chapter7_done') && !GameState.hasFlag('night_started')) {
+        this.busy = true
+        const has = (k: string) => !!GameState.getFlag(k)
+        const held = [
+          has('kindler_joined') ? '绯守住了商店前的灯。' : '',
+          has('anvil_beaten') ? '砧守住了旅店的灯。' : '',
+          has('twins_beaten') ? '朔和望守住了阿禾家的灯。' : '',
+        ].filter(Boolean)
+        this.dialogue.open(
+          [
+            '小路：旅人！旅人！外面的灯……都灭了！',
+            '（路灯从远到近，一盏盏暗了下去。）',
+            '阿禾：……他来了。',
+            '岚在广场开了救护站。麦把存货半价摆出来了。',
+            ...held,
+            '剩下的路灯，得你去点亮。',
+          ],
+          () => {
+            GameState.setFlag('night_started', true)
+            lightAllyLamps(has, (k) => GameState.setFlag(k, true))
+            this.busy = false
+            this.restartMap(0x1a2744)
+          },
+        )
+        return
+      }
+      chain()
+    }
+    if (notices.length) this.dialogue.open(notices, openNight)
+    else openNight()
   }
 
   /** 结局后第一次回到湖畔：灯台点亮，写旗标后带着点亮的灯台重进地图 */
