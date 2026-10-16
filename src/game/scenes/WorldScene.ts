@@ -31,6 +31,7 @@ import { WeatherLayer } from '../ui/WeatherLayer'
 import type { AmbientKind } from '../ui/weather/Ambient'
 import { WorldEventsView } from '../ui/WorldEventsView'
 import { WorldMenus } from '../ui/WorldMenus'
+import { BOLTS, BOLT_SAFE, DUNE_GATE, boltPhase, boltStrikes, healWithKindler, isBoltTile, rodsLit, tickDuneStorm } from '../systems/Dunes'
 import { CanyonField } from './world/CanyonField'
 import { FishingController } from './world/FishingController'
 import { LIGHT_UP_FLAG, beforeLightUp, needsLightUp, playLighthouseLightUp, playWhaleLeap } from './world/LakeCutscenes'
@@ -53,6 +54,7 @@ const AMBIENT_BY_MAP: Record<string, AmbientKind> = {
   lake: 'fireflies',
   forest: 'fireflies',
   canyon: 'embers',
+  dunes: 'embers',
 }
 
 const hasFlag = GameState.hasFlag
@@ -89,6 +91,8 @@ export class WorldScene extends Phaser.Scene {
   private menuWasOpen = false
   /** 千岩峡谷的巨石（其他地图为空壳） */
   private field!: CanyonField
+  /** 荒原落雷的黄圈 */
+  private boltMarks: Phaser.GameObjects.Ellipse[] = []
   /** 排队等出生格空出来的 NPC：每隔一段时间重试 */
   private rosterRetry = 0
   private toaster!: Toaster
@@ -158,6 +162,13 @@ export class WorldScene extends Phaser.Scene {
       toast: (m) => this.flashToast(m),
     })
     this.field = new CanyonField(this, this.map, (m) => this.flashToast(m))
+    this.boltMarks = []
+    if (this.map.id === 'dunes') {
+      const ts = this.map.tileSize
+      for (const b of BOLTS) {
+        this.boltMarks.push(this.add.ellipse(b.x * ts + ts / 2, b.y * ts + ts / 2, ts * 0.72, ts * 0.72, 0xf5d442, 0.45).setDepth(4))
+      }
+    }
     this.refreshAtmosphere()
 
     this.hudText = this.add
@@ -299,6 +310,7 @@ export class WorldScene extends Phaser.Scene {
     if (this.menuWasOpen && !this.menus.isOpen) this.ride.sync()
     this.menuWasOpen = this.menus.isOpen
     this.ride.update()
+    this.updateBoltMarks()
     this.updateLights()
     this.weather?.update(delta)
     const input = this.keys.poll()
@@ -418,7 +430,8 @@ export class WorldScene extends Phaser.Scene {
     const tile = resolveTile(this.map, nx, ny, hasFlag)
     if (!tile || decorBlocks(this.map.id, nx, ny) || this.occupiedByNpc(nx, ny) || this.eventView.uniqueAt(nx, ny)) return
     if (this.field.blocks(nx, ny)) return
-    if (!this.field.opens(nx, ny) && !this.ride.canEnter(tile)) return
+    const throughGate = this.map.id === 'dunes' && nx === DUNE_GATE.x && ny === DUNE_GATE.y && rodsLit((k) => GameState.getFlag(k))
+    if (!throughGate && !this.field.opens(nx, ny) && !this.ride.canEnter(tile)) return
 
     const fromX = this.tileX
     const fromY = this.tileY
@@ -461,6 +474,7 @@ export class WorldScene extends Phaser.Scene {
       this.useWarp(warp, fromX, fromY)
       return
     }
+    if (this.map.id === 'dunes' && this.applyDuneStep()) return
     this.walkers.react()
     const spotter = this.walkers.spotter()
     if (spotter) {
@@ -594,7 +608,48 @@ export class WorldScene extends Phaser.Scene {
     return { weather: this.fieldWeather(), night: GameState.night(), returnMapId: this.map.id, returnX: this.tileX, returnY: this.tileY }
   }
 
+  /**
+   * 荒原一步：沙暴计时，落雷拍站在黄圈上会被弹回。返回 true 表示这一步不再遇敌
+   * @author zjh
+   * @date 2026-10-16
+   */
+  private applyDuneStep(): boolean {
+    const num = (k: string) => Number(GameState.getFlag(k) || 0)
+    const next = tickDuneStorm(num('dune_walk'), num('dune_storm'), Math.random)
+    GameState.setFlag('dune_walk', next.walk)
+    GameState.setFlag('dune_storm', next.left)
+    if (next.started) this.flashToast('沙暴卷起来了，看不太远。')
+    if (next.ended) this.flashToast('沙暴散了。')
+    if (next.started || next.ended) this.refreshAtmosphere()
+    const bolt = num('dune_bolt') + 1
+    GameState.setFlag('dune_bolt', bolt)
+    const lit = rodsLit((k) => GameState.getFlag(k))
+    if (!lit && isBoltTile(this.tileX, this.tileY) && boltStrikes(bolt)) {
+      this.tileX = BOLT_SAFE.x
+      this.tileY = BOLT_SAFE.y
+      GameState.playerX = BOLT_SAFE.x
+      GameState.playerY = BOLT_SAFE.y
+      this.placePlayerVisual()
+      this.flashToast('落雷！你被弹回了安全的地方。')
+      this.cameras.main.flash(180, 255, 230, 80)
+      return true
+    }
+    return false
+  }
+
+  /** 黄圈随四拍亮灭；石门打开后落雷停 */
+  private updateBoltMarks(): void {
+    if (!this.boltMarks.length) return
+    const lit = rodsLit((k) => GameState.getFlag(k))
+    const phase = boltPhase(Number(GameState.getFlag('dune_bolt') || 0))
+    const alpha = lit ? 0 : phase === 'flash' ? 0.4 : phase === 'strike' ? 0.9 : 0.08
+    for (const mark of this.boltMarks) mark.setAlpha(alpha)
+  }
+
   private enterBattle(pending: PendingBattle, flash = false): void {
+    if (this.map.id === 'dunes' && GameState.hasFlag('kindler_joined') && !GameState.hasFlag('falcon_beaten')) {
+      if (healWithKindler(GameState.party) > 0) this.flashToast('绯的焰灯蜥放出暖光，伙伴们恢复了一些体力。')
+    }
     GameState.pendingBattle = pending
     this.busy = true
     if (flash) this.cameras.main.flash(400, 255, 255, 255)
@@ -650,7 +705,9 @@ export class WorldScene extends Phaser.Scene {
   /** 昼夜滤镜 + 天气粒子 + 异象染色 */
   private refreshAtmosphere(): void {
     const steps = GameState.world.totalSteps
-    this.weather.set(this.fieldWeather(), !this.map.indoor && GameState.night(), isFullMoon(steps))
+    let weather = this.fieldWeather()
+    if (this.map.id === 'dunes' && Number(GameState.getFlag('dune_storm') || 0) > 0) weather = 'sand'
+    this.weather.set(weather, !this.map.indoor && GameState.night(), isFullMoon(steps))
     const tint = this.eventView.tint()
     this.weather.setExtraTint(tint.color, tint.alpha)
   }

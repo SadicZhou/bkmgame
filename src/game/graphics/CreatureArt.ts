@@ -21,7 +21,18 @@ export const ART_SPECIES = Object.keys(SPECIES)
  * @date 2026-10-14
  */
 /** 还没有立绘、用程序绘制的物种（有 PNG 后从这里删掉） */
-const DRAWN = new Set(['drillmole', 'crystalbat', 'amberling', 'shellfossil', 'ridgerhino'])
+const DRAWN = new Set([
+  'drillmole',
+  'crystalbat',
+  'amberling',
+  'shellfossil',
+  'ridgerhino',
+  'sparkpuff',
+  'voltbadger',
+  'dunefin',
+  'starcat',
+  'stormfalcon',
+])
 
 export function preloadCreatureArt(scene: Phaser.Scene): void {
   for (const id of ART_SPECIES) {

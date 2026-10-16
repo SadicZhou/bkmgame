@@ -60,15 +60,28 @@ export const CHAPTER_ENDS: ChapterEnd[] = [
   },
   {
     bossFlag: 'rhino_beaten',
-    card: { title: '第四章完 · 磐谷', subtitle: '新的旅途：星砂荒原（敬请期待）' },
+    card: { title: '第四章完 · 磐谷', subtitle: '新的旅途：星砂荒原' },
     notes: [
       '磐角犀用角轻轻推开最后一块钻机零件，岩灯台亮了起来。',
       '峡谷的摇晃停了。锤音镇那边，传来久违的叮叮当当——全镇的锤子又敲响了。',
       '砧低下头，对磐角犀说：对不起，也谢谢你。',
     ],
     badge: 'stone',
-    unlockFlags: ['chapter4_done'],
+    unlockFlags: ['chapter4_done', 'dunes_unlocked'],
     items: ['dust_badge'],
+    ending: false,
+  },
+  {
+    bossFlag: 'falcon_beaten',
+    card: { title: '第五章完 · 星砂', subtitle: '新的旅途：霜铃峰（敬请期待）' },
+    notes: [
+      '锁链烧断了。雷鸣隼振翅飞上一圈，雷心坑安静下来。',
+      '沙暴散开的地方，露出通往霜铃峰的方向，天上挂着一层极光。',
+      '星图上，第五颗星亮了。',
+    ],
+    badge: 'volt',
+    unlockFlags: ['chapter5_done'],
+    items: ['star_charm'],
     ending: false,
   },
 ]

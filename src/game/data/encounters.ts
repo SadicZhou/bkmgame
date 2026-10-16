@@ -118,4 +118,16 @@ export const ENCOUNTERS: Record<string, EncounterTable> = {
       { speciesId: 'amberling', weight: 3, minLv: 25, maxLv: 27, weather: ['sunny'] },
     ],
   },
+  dunes: {
+    baseRate: 0.13,
+    grass: [
+      { speciesId: 'sparkpuff', weight: 30, minLv: 26, maxLv: 29 },
+      { speciesId: 'pebblepup', weight: 18, minLv: 26, maxLv: 28 },
+      { speciesId: 'bouldermite', weight: 16, minLv: 26, maxLv: 29 },
+      { speciesId: 'voltbadger', weight: 12, minLv: 28, maxLv: 31 },
+      { speciesId: 'emberwing', weight: 10, minLv: 27, maxLv: 30, time: 'night' },
+      { speciesId: 'dunefin', weight: 10, minLv: 27, maxLv: 30, weather: ['sand'] },
+      { speciesId: 'starcat', weight: 3, minLv: 28, maxLv: 31, time: 'night' },
+    ],
+  },
 }

@@ -74,9 +74,13 @@ const NPC_ACTOR: Record<string, string> = {
   forest_herbalist: 'herbalist',
   mushroom_granny: 'mushgranny',
   hammer_granny: 'mushgranny',
+  hammer_apprentice: 'kid',
   canyon_peak: 'hiker',
   canyon_anvil: 'scout1',
   canyon_miner: 'elder',
+  dune_sui: 'florist',
+  dune_shuo: 'scout1',
+  dune_wang: 'scout2',
 }
 
 export type CharSheet = 'char-player' | 'char-npcs' | 'char-npcs2' | 'char-npcs3'

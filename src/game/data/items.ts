@@ -39,10 +39,15 @@ export const ITEMS: Record<string, ItemDef> = {
   good_rod: { id: 'good_rod', name: '好钓竿', kind: 'key', value: 0, price: 0, desc: '沧澜鲸的鳞片缠在竿头，能钓到更深处的伙伴。' },
   strength_gloves: { id: 'strength_gloves', name: '怪力手套', kind: 'key', value: 0, price: 0, desc: '峰送的手套。队伍里有岩系或一般系伙伴时，面朝巨石按确认可以推动一格。' },
   dust_badge: { id: 'dust_badge', name: '旧徽章', kind: 'key', value: 0, price: 0, desc: '阿禾旅团的旧徽章，背面刻着一个「尘」字。' },
+  canyon_ore: { id: 'canyon_ore', name: '峡谷矿石', kind: 'key', value: 0, price: 0, desc: '千岩峡谷里捡到的矿石。锤音镇的锤铺学徒正在收集，凑满 5 块可以交给他。' },
+  wind_chime: { id: 'wind_chime', name: '风铃坠', kind: 'key', value: 0, price: 0, desc: '学徒用矿石敲出来的小坠子。带着它出战时，速度提高 5%。' },
+  book_rock_slide: { id: 'book_rock_slide', name: '技能书·岩崩', kind: 'key', value: 0, price: 0, desc: '矿车竞速的金牌奖品。在背包里打开，可以让岩系伙伴学会岩崩（技能未满时）。' },
+  charge_bottle: { id: 'charge_bottle', name: '蓄雷瓶', kind: 'key', value: 0, price: 0, desc: '穗灌好的蓄雷液。没有雷系伙伴时，也能给避雷针充电。' },
+  star_charm: { id: 'star_charm', name: '星砂护符', kind: 'key', value: 0, price: 0, desc: '装着一把会闪光的细沙。带着它时，异色伙伴出现率 ×1.5。' },
 }
 
 /** 重要物品（背包末尾展示） */
-export const KEY_ITEMS: string[] = ['old_rod', 'good_rod', 'strength_gloves', 'dust_badge']
+export const KEY_ITEMS: string[] = ['old_rod', 'good_rod', 'strength_gloves', 'dust_badge', 'canyon_ore', 'wind_chime', 'book_rock_slide', 'charge_bottle', 'star_charm']
 
 /** 商店货架顺序 */
 export const SHOP_STOCK: string[] = [

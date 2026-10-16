@@ -9,7 +9,10 @@ import { onRoundEnd } from '../src/game/systems/AbilityHooks'
 import { volOf } from '../src/game/systems/BattleCore'
 import { startBattle } from '../src/game/systems/BattleLogic'
 import { boulderAt, boulderBlocks, commitPush, gateOpen, resetBoulders, tryPush, wallOpened } from '../src/game/systems/Boulders'
-import { cartStop, routeCode, toggleSwitch } from '../src/game/systems/MineCart'
+import { effectiveSpeed } from '../src/game/systems/BattleCalc'
+import { cartStop, raceGrade, routeCode, toggleSwitch } from '../src/game/systems/MineCart'
+import { rockSlideReason, teachRockSlide } from '../src/game/systems/MoveBooks'
+import { GameState } from '../src/game/state/GameState'
 import { BOULDERS, CANYON_FLAGS, GATE, PLATES } from '../src/game/data/canyonMap'
 import { chapterEndFor, grantChapterRewards } from '../src/game/data/chapters'
 import { SPECIES, createCreature } from '../src/game/data/creatures'
@@ -143,5 +146,36 @@ describe('v3.6 磐谷', () => {
     const warp = MAPS.forest.warps.find((w) => w.targetMap === 'canyon')
     expect(warp?.requireFlag).toBe('canyon_unlocked')
     expect(isSolid(tileAt(canyon, warp!.targetX, warp!.targetY)!)).toBe(false)
+  })
+
+  it('C4-10 矿石在路上，学徒站在地板上；岩系能从技能书学会岩崩', () => {
+    for (const [x, y] of [[5, 12], [14, 12], [6, 8], [16, 8], [7, 4]] as const) {
+      expect(tileAt(canyon, x, y)).toBe('path')
+    }
+    expect(tileAt(MAPS.hammer, 2, 3)).toBe('floor')
+    expect(visibleNpcs(canyon, () => false).filter((n) => n.id.startsWith('ore_'))).toHaveLength(5)
+    const pup = createCreature('pebblepup', 10, { rng: seeded(2) })
+    pup.moves = pup.moves.filter((m) => m.id !== 'rock_slide').slice(0, 3)
+    expect(rockSlideReason(pup)).toBeNull()
+    expect(teachRockSlide(pup)).toContain('岩崩')
+    expect(pup.moves.some((m) => m.id === 'rock_slide')).toBe(true)
+    const leaf = createCreature('leafkit', 10, { rng: seeded(3) })
+    expect(rockSlideReason(leaf)).toBe('学不会岩崩')
+  })
+
+  it('C4-11 竞速只有对的路线、步数不超过 24 才是金牌；风铃坠让己方更快', () => {
+    expect(raceGrade(24, 24, 'LLL', 'LLL')).toBe('gold')
+    expect(raceGrade(25, 24, 'LLL', 'LLL')).toBe('slow')
+    expect(raceGrade(1, 24, 'RRR', 'LLL')).toBe('miss')
+    const player = createCreature('pebblepup', 20, { rng: seeded(4) })
+    const foe = createCreature('pebblepup', 20, { rng: seeded(5) })
+    const battle = startBattle([player], [foe], 'wild', { rng: seeded(6) })
+    GameState.consumeItem('wind_chime')
+    const plain = effectiveSpeed(battle, player)
+    const foePlain = effectiveSpeed(battle, foe)
+    GameState.addItem('wind_chime', 1)
+    expect(effectiveSpeed(battle, player)).toBeCloseTo(plain * 1.05)
+    expect(effectiveSpeed(battle, foe)).toBe(foePlain)
+    GameState.consumeItem('wind_chime')
   })
 })

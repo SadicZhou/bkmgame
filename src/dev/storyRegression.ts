@@ -428,6 +428,7 @@ async function runSteps(r: Runner): Promise<void> {
     ],
     ...chapter3Steps(r),
     ...chapter4Steps(r),
+    ...chapter5Steps(r),
   ]
   for (const [name, run] of steps) {
     if (!(await r.step(name, run))) break
@@ -511,7 +512,79 @@ function chapter4Steps(r: Runner): [string, () => Promise<string | true>][] {
         if (!(await r.toBattle(ws))) return '没有进入磐角犀战'
         const next = await r.winBattle()
         if (next === 'lost') return '输给了磐角犀'
-        return check(next === 'Chapter' && has('chapter4_done') && has('badge_stone'), `去向 ${next}`)
+        return check(next === 'Chapter' && has('chapter4_done') && has('badge_stone') && has('dunes_unlocked'), `去向 ${next}`)
+      },
+    ],
+  ]
+}
+
+/**
+ * 第五章：离开章节卡、南口进荒原、穗、避雷针、绯、雷鸣隼
+ * @author zjh
+ * @date 2026-10-16
+ */
+function chapter5Steps(r: Runner): [string, () => Promise<string | true>][] {
+  const has = GameState.hasFlag
+  return [
+    [
+      '章节卡 → 回到千岩峡谷',
+      async () => {
+        await leaveChapter(r)
+        return check(r.active('World'), '没有回到大地图')
+      },
+    ],
+    [
+      '峡谷南口 → 星砂荒原',
+      async () => {
+        const ws = await r.enterWorld('canyon', 18, 14, 'right')
+        ws.tryMove(1, 0)
+        await r.wait(800)
+        await r.until(() => r.active('World') && !r.world().busy)
+        return check(GameState.mapId === 'dunes', `停在 ${GameState.mapId}`)
+      },
+    ],
+    [
+      '星图师穗：蓄雷瓶与星图',
+      async () => {
+        const ws = await r.enterWorld('observatory', 5, 3, 'up')
+        ws.tryInteract()
+        await r.closeDialogue(ws)
+        return check(GameState.itemCount('charge_bottle') === 1 && has('star_chart'), '没有拿到蓄雷瓶或星图')
+      },
+    ],
+    [
+      '点亮四根避雷针',
+      async () => {
+        for (const x of [4, 7, 13, 16]) {
+          const ws = await r.enterWorld('dunes', x, 6, 'up')
+          ws.tryInteract()
+          await r.closeDialogue(ws)
+        }
+        return check(has('dunes_rods_lit'), '石门没有打开')
+      },
+    ],
+    [
+      '执灯·绯再会',
+      async () => {
+        const ws = await r.enterWorld('dunes', 10, 2, 'left')
+        ws.tryInteract()
+        if (!(await r.toBattle(ws))) return '没有进入绯的战斗'
+        if ((await r.winBattle()) === 'lost') return '输给了绯'
+        await r.until(() => r.active('World') && !r.world().busy, 8000)
+        await r.closeDialogue(r.world())
+        return check(has('kindler_joined'), '没有写入 kindler_joined')
+      },
+    ],
+    [
+      '雷鸣隼胜利 → 第五章章节卡 + 雷之徽记',
+      async () => {
+        const ws = await r.enterWorld('dunes', 10, 2, 'up')
+        ws.tryInteract()
+        if (!(await r.toBattle(ws))) return '没有进入雷鸣隼战'
+        const next = await r.winBattle()
+        if (next === 'lost') return '输给了雷鸣隼'
+        const rewards = has('chapter5_done') && has('badge_volt') && GameState.itemCount('star_charm') === 1
+        return check(next === 'Chapter' && rewards, `去向 ${next}，奖励${rewards ? '齐全' : '缺失'}`)
       },
     ],
   ]

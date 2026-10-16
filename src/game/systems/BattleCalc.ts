@@ -5,6 +5,7 @@
  */
 
 import { SPECIES, typeMultiplier, type CreatureInstance, type MoveDef } from '../data/creatures'
+import { GameState } from '../state/GameState'
 import { BADGE_POWER } from '../data/badges'
 import { weatherPowerMod } from '../data/weather'
 import { attackerPowerMod, critRate, defenderDamageMod, evasionMod, speedMod } from './AbilityHooks'
@@ -31,9 +32,13 @@ export function badgePowerMod(s: BattleState, attacker: CreatureInstance, move: 
  * @author zjh
  * @date 2026-10-14
  */
+/** 风铃坠：带着它时，玩家一方的实际速度 ×1.05 */
+export const WIND_CHIME_SPEED = 1.05
+
 export function effectiveSpeed(s: BattleState, c: CreatureInstance): number {
   const para = c.status === 'paralyze' ? 0.5 : 1
-  return c.spd * stageMultiplier(volOf(s, c).stages.spd) * para * speedMod(c)
+  const charm = s.playerParty.includes(c) && GameState.itemCount('wind_chime') > 0 ? WIND_CHIME_SPEED : 1
+  return c.spd * stageMultiplier(volOf(s, c).stages.spd) * para * speedMod(c) * charm
 }
 
 /**

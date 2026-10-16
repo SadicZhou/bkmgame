@@ -63,7 +63,7 @@ export class NpcInteract {
         say(npc.lines)
         return
       case 'clinic':
-        say(npc.lines, () => host.services.openClinic())
+        say(npcLines(npc, (k) => !!GameState.getFlag(k)), () => host.services.openClinic())
         return
       case 'board':
         Sfx.confirm()

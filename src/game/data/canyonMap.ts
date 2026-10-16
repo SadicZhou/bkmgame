@@ -23,6 +23,16 @@ export const CANYON_FLAGS = {
 
 export const fossilFlag = (id: string) => `canyon_fossil_${id}`
 export const switchFlag = (i: number) => `cart_sw${i}`
+export const oreFlag = (id: string) => `canyon_ore_${id}`
+
+/** 峡谷里能捡的矿石，凑满 5 块交给锤铺学徒 */
+export const ORES = [
+  { id: '1', x: 5, y: 12 },
+  { id: '2', x: 14, y: 12 },
+  { id: '3', x: 6, y: 8 },
+  { id: '4', x: 16, y: 8 },
+  { id: '5', x: 7, y: 4 },
+] as const
 
 /** 巨石：推到 hole 上会沉下去，裂缝变为可走 */
 export interface BoulderDef {
@@ -80,6 +90,20 @@ function fossilProps(): NpcDef[] {
   }))
 }
 
+function oreProps(): NpcDef[] {
+  return ORES.map((o) => ({
+    id: `ore_${o.id}`,
+    name: '矿石',
+    role: 'prop' as const,
+    story: `ore_${o.id}`,
+    x: o.x,
+    y: o.y,
+    color: 0x8a7060,
+    hideIf: oreFlag(o.id),
+    lines: [],
+  }))
+}
+
 /**
  * 锤音镇：镇长、向导峰、锤铺与旅店
  * @author zjh
@@ -130,6 +154,15 @@ export function buildHammerTown(): MapDef {
         lines: [],
       },
       {
+        id: 'hammer_apprentice',
+        name: '锤铺学徒',
+        story: 'hammer_apprentice',
+        x: 2,
+        y: 3,
+        color: 0xe0b070,
+        lines: [],
+      },
+      {
         id: 'hammer_shop',
         name: '锤铺老板',
         role: 'shop',
@@ -172,7 +205,7 @@ export function buildCanyon(): MapDef {
     '##..................##',
     '##..................##',
     '##..""""......""""..##',
-    '######W########W######',
+    '######W########W###W##',
     '######################',
   ])
   return {
@@ -188,6 +221,16 @@ export function buildCanyon(): MapDef {
     warps: [
       { x: 6, y: 14, targetMap: 'forest', targetX: 26, targetY: 6, label: '回音林' },
       { x: 15, y: 14, targetMap: 'hammer', targetX: 6, targetY: 5, label: '锤音镇' },
+      {
+        x: 19,
+        y: 14,
+        targetMap: 'dunes',
+        targetX: 8,
+        targetY: 7,
+        label: '星砂荒原',
+        requireFlag: 'dunes_unlocked',
+        lockedLines: ['南边的沙丘还被雷云盖着。', '岩灯台亮了以后，这条路才会开。'],
+      },
       { x: 10, y: 1, targetMap: 'mine', targetX: 8, targetY: 9, label: '旧矿道' },
     ],
     npcs: [
@@ -211,6 +254,7 @@ export function buildCanyon(): MapDef {
         lines: ['（旧矿工刻在石壁上的字。）', '「心火不会伤人，伤人的是不听山的声音。」'],
       },
       ...fossilProps(),
+      ...oreProps(),
     ],
   }
 }

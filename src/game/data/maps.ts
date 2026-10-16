@@ -7,6 +7,7 @@
 import type { Facing } from '../state/GameState'
 import { decorBlocks } from './decor'
 import { buildCanyon, buildHammerTown, buildMine } from './canyonMap'
+import { buildDunes, buildObservatory } from './dunesMap'
 import { buildForest } from './forestMap'
 import { buildLake } from './lakeMap'
 import { TS, borderWalls, fill, parseAscii, setRect } from './mapKit'
@@ -188,6 +189,10 @@ function buildTown(): MapDef {
         ],
         progressLines: [
           {
+            flag: 'chapter5_done',
+            lines: ['星砂荒原的雷停了？穗来信说，第五颗星亮了。', '霜铃峰很冷，上路前让岚帮你们看看伤。'],
+          },
+          {
             flag: 'whale_beaten',
             lines: [
               '山巅的火种、湖心的灯台都亮起来了。你和伙伴们真了不起！',
@@ -229,7 +234,10 @@ function buildTown(): MapDef {
           '我在草丛里看见一只翠叶狐！',
           '听说伙伴到 9 级左右会进化，样子会变得超帅！',
         ],
-        progressLines: [{ flag: 'chapter4_done', lines: ['锤音镇的人送了我一把小锤子！', '我要用它做一盏灯——等我做好了给你看！'] }],
+        progressLines: [
+          { flag: 'chapter5_done', lines: ['荒原上的星星好亮！', '我的小灯还没做好……等霜铃峰的雪化了，我再点给你看。'] },
+          { flag: 'chapter4_done', lines: ['锤音镇的人送了我一把小锤子！', '我要用它做一盏灯——等我做好了给你看！'] },
+        ],
       },
       {
         id: 'town_farmer',
@@ -530,6 +538,7 @@ function buildCabin(): MapDef {
         y: 3,
         color: 0x9b7ed9,
         lines: ['欢迎回来，旅人。要做点什么？'],
+        progressLines: [{ flag: 'chapter5_done', lines: ['荒原的沙暴伤人。来，我先看看你们。', '下一程是霜铃峰，记得带足伤药。'] }],
       },
     ],
   }
@@ -545,6 +554,8 @@ export const MAPS: Record<string, MapDef> = {
   hammer: buildHammerTown(),
   canyon: buildCanyon(),
   mine: buildMine(),
+  dunes: buildDunes(),
+  observatory: buildObservatory(),
 }
 
 /**

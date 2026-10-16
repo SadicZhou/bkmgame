@@ -62,7 +62,7 @@ function encounterCtx(mapId: string, source: EncounterSource): EncounterContext 
   const minor = w.minor.mapId === mapId ? w.minor : null
   return {
     table,
-    weather: GameState.weatherAt(mapId),
+    weather: mapId === 'dunes' && Number(GameState.getFlag('dune_storm') || 0) > 0 ? 'sand' : GameState.weatherAt(mapId),
     night: isNight(w.totalSteps),
     leadLevel: lead.level,
     leadAbility: lead.abilityId,
@@ -74,6 +74,7 @@ function encounterCtx(mapId: string, source: EncounterSource): EncounterContext 
     migrationSpecies: minor?.id === 'migration' ? minor.speciesId : undefined,
     shimmer: minor?.id === 'shimmer',
     hasFlag: GameState.hasFlag,
+    shinyMod: GameState.itemCount('star_charm') > 0 ? 1.5 : 1,
   }
 }
 

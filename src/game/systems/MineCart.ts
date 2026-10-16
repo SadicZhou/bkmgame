@@ -34,3 +34,22 @@ export function cartStop(code: string): CartStop {
   if (code === 'RRR') return 'side'
   return 'bump'
 }
+
+/** 矿车竞速的三条路线。par 是从答应比赛到坐上矿车允许的步数 */
+export const RACE_ROUTES = [
+  { id: 'chest', code: 'LLL', name: '宝箱岔', par: 24 },
+  { id: 'side', code: 'RRR', name: '侧洞岔', par: 24 },
+  { id: 'deep', code: 'LRL', name: '深处', par: 24 },
+] as const
+
+export type RaceGrade = 'gold' | 'slow' | 'miss'
+
+/**
+ * 竞速成绩：路线不对算没跑到，步数不超过 par 算金牌
+ * @author zjh
+ * @date 2026-10-16
+ */
+export function raceGrade(steps: number, par: number, code: string, target: string): RaceGrade {
+  if (code !== target) return 'miss'
+  return steps <= par ? 'gold' : 'slow'
+}

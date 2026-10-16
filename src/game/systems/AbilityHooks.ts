@@ -153,8 +153,19 @@ export const FOREST_VOICE_EVERY = 3
  * @date 2026-10-15
  */
 export function onRoundEnd(s: BattleState): void {
-  if (s.turn % FOREST_VOICE_EVERY !== 0) return
   const sides: Side[] = ['player', 'enemy']
+  if (s.turn % 2 === 0) {
+    const striker = sides.map((side) => actorOf(s, side)).find((c) => c.hp > 0 && c.abilityId === 'sky_bolt')
+    if (striker) {
+      const victimSide: Side = s.turn % 4 === 0 ? 'enemy' : 'player'
+      const victim = actorOf(s, victimSide)
+      if (victim.hp > 0) {
+        const d = dealDamage(victim, Math.max(1, Math.floor(victim.maxHp / 10)))
+        say(s, `${battleName(striker)} 的「落雷」击中了 ${battleName(victim)}！（-${d}）`, sideAnim(victimSide, 'hurtPlayer', 'hurtEnemy'))
+      }
+    }
+  }
+  if (s.turn % FOREST_VOICE_EVERY !== 0) return
   const singer = sides.map((side) => actorOf(s, side)).find((c) => c.hp > 0 && c.abilityId === 'forest_voice')
   if (singer) {
     say(s, `${battleName(singer)} 的「林语」！回声响彻全场，双方的能力变化都消失了。`)

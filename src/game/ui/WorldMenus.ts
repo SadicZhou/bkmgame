@@ -14,8 +14,10 @@ import { PHENOMENA } from '../data/phenomena'
 import { GameState } from '../state/GameState'
 import { Sfx } from '../systems/AudioBeeps'
 import { applyItemToCreature, checkItemOnCreature } from '../systems/BattleLogic'
+import { BEACONS, DUNE_FLAGS } from '../systems/Dunes'
 import { BOND_FLAG, FRIENDSHIP_GAIN, bondBar, bondStage, nextBondStage } from '../systems/Bond'
 import { anglerRecord, beatsRecord, fishLogCount, todayContest } from '../systems/FishLog'
+import { rockSlideReason, teachRockSlide } from '../systems/MoveBooks'
 import { companionMark, companionRows } from './CompanionRows'
 import { abilityDetail, creatureDetail, rowLabel } from './CreatureInfo'
 import { ListPanel, type ListRow } from './ListPanel'
@@ -79,6 +81,9 @@ export class WorldMenus {
         },
         ...(GameState.hasFlag(BOND_FLAG)
           ? [{ label: '羁绊', right: '♥', detail: '伙伴们的亲密度与羁绊阶段。', onSelect: () => this.openBond() }]
+          : []),
+        ...(GameState.hasFlag(DUNE_FLAGS.chart)
+          ? [{ label: '星图', right: `${BEACONS.filter((b) => GameState.hasFlag(b.flag)).length}/${BEACONS.length}`, detail: '九座灯台，亮过的星才会写上名字。', onSelect: () => this.openStarChart() }]
           : []),
         {
           label: '保存进度',
@@ -168,6 +173,10 @@ export class WorldMenus {
         right: `×${GameState.itemCount(id)}`,
         detail: `${it.desc}${active}`,
         onSelect: () => {
+          if (id === 'book_rock_slide') {
+            this.openRockBook(i)
+            return
+          }
           if (it.kind === 'key') {
             this.hooks.toast(id.endsWith('_rod') ? '面朝水面按确认就能钓鱼' : '这是重要物品')
             Sfx.cancel()
@@ -192,6 +201,24 @@ export class WorldMenus {
     })
     if (!rows.length) rows.push({ label: '（空空如也）', disabled: true, detail: '去晨曦小镇的杂货商那里看看吧。' })
     this.panel.open({ title: '背包', footer: this.coinsFooter(), index, rows, onCancel: () => this.openMain(1) })
+  }
+
+  /** 技能书·岩崩：选一只学得会的伙伴 */
+  private openRockBook(bagIndex: number): void {
+    this.panel.open({
+      title: '把岩崩教给谁？',
+      rows: this.partyRows(
+        (i) => {
+          const c = GameState.party[i]
+          if (rockSlideReason(c) || !GameState.consumeItem('book_rock_slide')) return
+          this.hooks.toast(teachRockSlide(c))
+          if (GameState.itemCount('book_rock_slide') > 0) this.openRockBook(bagIndex)
+          else this.openBag(0)
+        },
+        (c) => rockSlideReason(c),
+      ),
+      onCancel: () => this.openBag(bagIndex),
+    })
   }
 
   /** 引兽铃与驱兽香互斥：用一个会抵消另一个 */
@@ -323,6 +350,24 @@ export class WorldMenus {
    * @author zjh
    * @date 2026-10-15
    */
+  /**
+   * 星图：九座灯台，亮过的才写上名字
+   * @author zjh
+   * @date 2026-10-16
+   */
+  openStarChart(): void {
+    const rows: ListRow[] = BEACONS.map((b, i) => {
+      const lit = GameState.hasFlag(b.flag)
+      return {
+        label: lit ? `★ ${b.name}之灯台` : `？ 第 ${i + 1} 颗星`,
+        right: lit ? '已亮' : '未明',
+        detail: lit ? '这颗星已经写进星图。' : '穗说，走到那里才会知道它的名字。',
+      }
+    })
+    const index = 6 + (GameState.hasFlag(BOND_FLAG) ? 1 : 0)
+    this.panel.open({ title: '星图', rows, onCancel: () => this.openMain(index) })
+  }
+
   openBond(): void {
     const rows: ListRow[] = GameState.party.map((c) => {
       const stage = bondStage(c.friendship)

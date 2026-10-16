@@ -6,11 +6,12 @@
  */
 
 import { createCreature } from '../../data/creatures'
-import { CANYON_FLAGS, FOSSILS, fossilFlag, switchFlag } from '../../data/canyonMap'
+import { CANYON_FLAGS, FOSSILS, fossilFlag, oreFlag, switchFlag } from '../../data/canyonMap'
 import { GameState } from '../../state/GameState'
 import { Sfx } from '../../systems/AudioBeeps'
 import { resetBoulders } from '../../systems/Boulders'
-import { cartStop, routeCode, switchDir, toggleSwitch } from '../../systems/MineCart'
+import { cartStop, RACE_ROUTES, raceGrade, routeCode, switchDir, toggleSwitch } from '../../systems/MineCart'
+import { rockSlideReason, teachRockSlide } from '../../systems/MoveBooks'
 import type { StoryHost } from './StoryEvents'
 
 const has = (k: string) => GameState.hasFlag(k)
@@ -92,12 +93,99 @@ function fossilStory(id: string) {
   }
 }
 
+function oreStory(id: string) {
+  return (host: StoryHost): void => {
+    if (has(oreFlag(id))) {
+      host.say(['这块矿石已经捡走了。'])
+      return
+    }
+    GameState.setFlag(oreFlag(id), true)
+    GameState.addItem('canyon_ore', 1)
+    Sfx.confirm()
+    host.say([`捡到一块峡谷矿石。（${GameState.itemCount('canyon_ore')}/5）`, '锤音镇的锤铺学徒正在收集这种矿石。'], () => host.refreshNpcs())
+  }
+}
+
+function apprentice(host: StoryHost, name: string): void {
+  if (GameState.itemCount('wind_chime') > 0) {
+    host.say([`${name}：风铃坠带着就行。出战时，伙伴会快上一点点。`])
+    return
+  }
+  const n = GameState.itemCount('canyon_ore')
+  if (n < 5) {
+    host.say([
+      `${name}：师父不让我敲大锤，说山会抖。`,
+      `${name}：小坠子总可以做吧？峡谷里散着 5 块矿石，捡齐了我给你敲一个风铃坠。`,
+      `${name}：你现在有 ${n} 块。`,
+    ])
+    return
+  }
+  for (let i = 0; i < 5; i++) GameState.consumeItem('canyon_ore')
+  GameState.addItem('wind_chime', 1)
+  Sfx.win()
+  host.say([`${name}：叮——好了！`, `${name}：风铃坠给你。带着它战斗，速度会快上一点点。`], () => host.refreshHud())
+}
+
 function miner(host: StoryHost, name: string): void {
-  host.say([
-    `${name}：这车我修了二十年。`,
-    `${name}：轨道上有三个道岔，扳错了就会冲进死路——不过死路尽头会撞上缓冲木，不疼！`,
-    `${name}：面朝道岔按确认可以扳动。坐上矿车，它会自己往前冲。`,
-  ])
+  if (!has(CANYON_FLAGS.cartFixed)) {
+    host.say([
+      `${name}：这车我修了二十年。`,
+      `${name}：轨道上有三个道岔，扳错了就会冲进死路——不过死路尽头会撞上缓冲木，不疼！`,
+      `${name}：面朝道岔按确认可以扳动。坐上矿车，它会自己往前冲。`,
+    ])
+    return
+  }
+  const active = GameState.getFlag('race_code')
+  if (typeof active === 'string' && active) {
+    const route = RACE_ROUTES.find((r) => r.code === active)
+    host.say([`${name}：比赛还在进行。把道岔扳成 ${active}（${route?.name ?? ''}），${route?.par ?? 24} 步之内坐上矿车。`])
+    return
+  }
+  const pending = RACE_ROUTES.find((r) => !has(`race_gold_${r.id}`))
+  if (!pending) {
+    host.say([`${name}：三条路都是金牌。岩崩的技能书你收好，别再来撞缓冲木了。`])
+    return
+  }
+  host.say(
+    [
+      `${name}：矿车修好了，要不要比一比？`,
+      `${name}：这一趟去「${pending.name}」，路线 ${pending.code}。`,
+      `${name}：从现在起 ${pending.par} 步之内坐上车，就算金牌。三条都拿到，我把岩崩的技能书给你。`,
+    ],
+    () => {
+      GameState.setFlag('race_code', pending.code)
+      GameState.setFlag('race_start', GameState.world.totalSteps)
+    },
+  )
+}
+
+/**
+ * 若正在竞速，按到达的路线结算；返回要追加的台词
+ * @author zjh
+ * @date 2026-10-16
+ */
+function finishRace(code: string): string[] {
+  const target = GameState.getFlag('race_code')
+  if (typeof target !== 'string' || !target) return []
+  const route = RACE_ROUTES.find((r) => r.code === target)
+  if (!route) return []
+  const start = Number(GameState.getFlag('race_start') ?? 0)
+  const steps = Math.max(0, GameState.world.totalSteps - start)
+  GameState.setFlag('race_code', '')
+  const grade = raceGrade(steps, route.par, code, target)
+  if (grade === 'miss') return [`（比赛要的是 ${target}，这趟是 ${code}。再去找阿岩重来吧。）`]
+  if (grade === 'slow') return [`（用了 ${steps} 步，金牌要在 ${route.par} 步以内。）`]
+  GameState.setFlag(`race_gold_${route.id}`, true)
+  if (!RACE_ROUTES.every((r) => has(`race_gold_${r.id}`))) {
+    const left = RACE_ROUTES.filter((r) => !has(`race_gold_${r.id}`)).length
+    return [`（金牌！这条路用了 ${steps} 步。还剩 ${left} 条。）`]
+  }
+  if (has('race_book')) return [`（金牌！三条路都跑完了。）`]
+  GameState.setFlag('race_book', true)
+  const pupil = GameState.party.find((c) => !rockSlideReason(c))
+  if (pupil) return [`（金牌！三条路都跑完了。）`, teachRockSlide(pupil)]
+  GameState.addItem('book_rock_slide', 1)
+  return [`（金牌！三条路都跑完了。）`, '技能书放进背包了。岩系伙伴技能没满时，打开就能学岩崩。']
 }
 
 function switchStory(i: number) {
@@ -112,13 +200,14 @@ function switchStory(i: number) {
 function mineCart(host: StoryHost): void {
   const code = routeCode((k) => GameState.getFlag(k))
   const stop = cartStop(code)
+  const extra = finishRace(code)
   const line = `（矿车哐当一声，顺着路线 ${code} 冲了出去……）`
   if (stop === 'bump') {
-    host.say([line, '（尽头是一排缓冲木。车停了，人没事。）', '阿岩说只有一条路能到矿道深处。'])
+    host.say([line, '（尽头是一排缓冲木。车停了，人没事。）', '阿岩说只有一条路能到矿道深处。', ...extra])
     return
   }
   if (stop === 'chest') {
-    host.say([line, '（支路尽头有一只旧箱子。）', has(CANYON_FLAGS.chest) ? '箱子已经空了。' : '找到了好伤药！'], () => {
+    host.say([line, '（支路尽头有一只旧箱子。）', has(CANYON_FLAGS.chest) ? '箱子已经空了。' : '找到了好伤药！', ...extra], () => {
       if (!has(CANYON_FLAGS.chest)) {
         GameState.addItem('super_potion', 2)
         GameState.setFlag(CANYON_FLAGS.chest, true)
@@ -131,7 +220,7 @@ function mineCart(host: StoryHost): void {
     return
   }
   if (stop === 'side') {
-    host.say([line, '（另一条支路，地上散着铃铛。）', has(CANYON_FLAGS.side) ? '没有别的东西了。' : '捡到了引兽铃！'], () => {
+    host.say([line, '（另一条支路，地上散着铃铛。）', has(CANYON_FLAGS.side) ? '没有别的东西了。' : '捡到了引兽铃！', ...extra], () => {
       if (!has(CANYON_FLAGS.side)) {
         GameState.addItem('lure_bell', 1)
         GameState.setFlag(CANYON_FLAGS.side, true)
@@ -143,7 +232,7 @@ function mineCart(host: StoryHost): void {
     })
     return
   }
-  host.say([line, '（矿车冲进了矿道深处，灯台的方向亮着一点光。）'], () => {
+  host.say([line, '（矿车冲进了矿道深处，灯台的方向亮着一点光。）', ...extra], () => {
     GameState.setFlag(CANYON_FLAGS.deep, true)
     GameState.setFlag(CANYON_FLAGS.cartFixed, true)
     GameState.playerX = 15
@@ -170,12 +259,14 @@ function mineBadge(host: StoryHost): void {
 /** 第四章剧情脚本 */
 export const CANYON_STORIES: Record<string, (host: StoryHost, name: string) => void> = {
   hammer_granny: hammerGranny,
+  hammer_apprentice: apprentice,
   canyon_peak: canyonPeak,
   boulder_reset: boulderReset,
   canyon_miner: miner,
   mine_cart: mineCart,
   mine_badge: mineBadge,
   ...Object.fromEntries(FOSSILS.map((f) => [`fossil_${f.id}`, fossilStory(f.id)])),
+  ...Object.fromEntries(['1', '2', '3', '4', '5'].map((id) => [`ore_${id}`, oreStory(id)])),
   ...Object.fromEntries([1, 2, 3].map((i) => [`cart_sw${i}`, switchStory(i)])),
 }
 

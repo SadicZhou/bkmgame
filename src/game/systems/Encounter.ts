@@ -34,6 +34,8 @@ export interface EncounterContext {
   shimmer?: boolean
   /** 剧情旗标（条目 requireFlag 用；不传视为都没有） */
   hasFlag?: (key: string) => boolean
+  /** 星砂护符等对异色率的倍率，默认 1 */
+  shinyMod?: number
 }
 
 export interface EncounterPick {
@@ -105,7 +107,7 @@ export function pickEncounter(ctx: EncounterContext, rng: Rng = Math.random): En
   const strong = rng() < STRONG_RATE
   const level = entry.minLv + Math.floor(rng() * (entry.maxLv - entry.minLv + 1)) + (strong ? 2 : 0)
   if (ctx.repelActive && level < ctx.leadLevel) return null
-  const shiny = rng() < SHINY_RATE * (ctx.shimmer ? 3 : 1)
+  const shiny = rng() < SHINY_RATE * (ctx.shimmer ? 3 : 1) * (ctx.shinyMod ?? 1)
   return { speciesId: entry.speciesId, level, strong, shiny, rare: SPECIES[entry.speciesId].rarity === 'rare' }
 }
 
