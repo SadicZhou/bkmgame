@@ -104,6 +104,21 @@ function rematch(name: string, speciesId: string, x: number, y: number, color: n
   }
 }
 
+function fishSign(id: string, story: string, flag: string, x: number, y: number): NpcDef {
+  return {
+    id,
+    name: '钓点木牌',
+    role: 'sign',
+    story,
+    showIf: 'fish_nation',
+    hideIf: flag,
+    x,
+    y,
+    color: 0xc4a574,
+    lines: ['木牌上写着一道钓鱼题。'],
+  }
+}
+
 /**
  * 各地通关后才看得到的人和记号
  * @author zjh
@@ -168,6 +183,7 @@ export function postgameNpcs(mapId: string): NpcDef[] {
         lines: ['湖边的水纹里，有一点很小的光。'],
       },
       rematch('沧澜鲸', 'tidewhale', 10, 3, 0x3a80c8),
+      fishSign('fish_q_lake', 'fish_q_lake', 'fish_spot_lake', 4, 12),
     ]
   }
   if (mapId === 'forest') {
@@ -202,7 +218,11 @@ export function postgameNpcs(mapId: string): NpcDef[] {
       rematch('曦焰凤', 'dawnphoenix', 5, 2, 0xfff0c0),
     ]
   }
-  if (mapId === 'mine') return [rematch('磐角犀', 'ridgerhino', 15, 2, 0xc4a484)]
+  if (mapId === 'mine') {
+    return [rematch('磐角犀', 'ridgerhino', 15, 2, 0xc4a484), fishSign('fish_q_mine', 'fish_q_mine', 'fish_spot_mine', 3, 4)]
+  }
+  if (mapId === 'cloudstart') return [fishSign('fish_q_cloud', 'fish_q_cloud', 'fish_spot_cloud', 8, 5)]
+  if (mapId === 'icelake') return [fishSign('fish_q_ice', 'fish_q_ice', 'fish_spot_ice', 3, 2)]
   if (mapId === 'dunes') return [rematch('雷鸣隼', 'stormfalcon', 10, 1, 0xf5d442)]
   if (mapId === 'bellhall') return [rematch('霜铃鹤', 'frostcrane', 5, 1, 0xd8f4ff)]
   if (mapId === 'cloudshrine') return [rematch('岚翼鹏', 'galeroc', 5, 1, 0xf4f8ff)]

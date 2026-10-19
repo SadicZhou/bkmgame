@@ -8,7 +8,7 @@
 
 import { BRIDGE_FLAG } from '../../data/lakeMap'
 import { GameState } from '../../state/GameState'
-import { anglerStory } from './AnglerStory'
+import { anglerStory, fishSpotStory } from './AnglerStory'
 import { CANYON_STORIES } from './CanyonStory'
 import { CLOUD_STORIES } from './CloudStory'
 import { TOWER_STORIES } from './TowerStory'
@@ -112,6 +112,10 @@ function lakeShio(host: StoryHost, name: string): void {
 const STORIES: Record<string, StoryFn> = {
   lake_shio: lakeShio,
   angler: anglerStory,
+  fish_q_lake: (host) => fishSpotStory(host, 'fish_q_lake'),
+  fish_q_cloud: (host) => fishSpotStory(host, 'fish_q_cloud'),
+  fish_q_ice: (host) => fishSpotStory(host, 'fish_q_ice'),
+  fish_q_mine: (host) => fishSpotStory(host, 'fish_q_mine'),
   ...FOREST_STORIES,
   ...MUSHROOM_STORIES,
   ...CANYON_STORIES,

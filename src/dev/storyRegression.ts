@@ -440,6 +440,7 @@ async function runSteps(r: Runner): Promise<void> {
     ...chapter10Steps(r),
     ...guardianSteps(r),
     ...riftSteps(r),
+    ...fishNationSteps(r),
   ]
   for (const [name, run] of steps) {
     if (!(await r.step(name, run))) break
@@ -1141,6 +1142,55 @@ async function walkTrail(r: Runner, trail: { x: number; y: number }[]): Promise<
     if (!arrived) return `走到 ${trail[i].x},${trail[i].y} 失败`
   }
   return true
+}
+
+/** 全国钓鱼大赛：四处木牌各答一题，回湖边领金钓竿 */
+function fishNationSteps(r: Runner): [string, () => Promise<string | true>][] {
+  const spots: [string, number, number, 'up' | 'down' | 'left' | 'right', string][] = [
+    ['lake', 4, 11, 'down', '雾灯鳐'],
+    ['cloudstart', 8, 4, 'down', '云鳍鱼'],
+    ['icelake', 3, 1, 'down', '冰晶狐'],
+    ['mine', 3, 5, 'up', '琥珀精'],
+  ]
+  return [
+    [
+      '全国钓鱼大赛四处答题 → 金钓竿',
+      async () => {
+        const ws = await r.enterWorld('lake', 6, 12, 'down')
+        ws.tryInteract()
+        if (!(await r.until(() => r.world().dialogue.isOpen, 4000))) return '澈没有开口'
+        await r.closeDialogue(r.world())
+        if (!GameState.hasFlag('fish_nation')) return '全国大赛没有开始'
+        for (const [mapId, x, y, facing, answer] of spots) {
+          const here = await r.enterWorld(mapId, x, y, facing)
+          here.tryInteract()
+          if (!(await r.until(() => r.world().dialogue.isOpen, 4000))) return `${mapId} 木牌没有出题`
+          await r.closeDialogue(r.world())
+          if (!(await pickChoice(r, answer))) return `${mapId} 没有选中 ${answer}`
+          await r.until(() => r.world().dialogue.isOpen, 4000)
+          await r.closeDialogue(r.world())
+        }
+        const back = await r.enterWorld('lake', 6, 12, 'down')
+        back.tryInteract()
+        if (!(await r.until(() => r.world().dialogue.isOpen, 4000))) return '澈没有发奖'
+        await r.closeDialogue(r.world())
+        return check(GameState.hasFlag('fish_nation_done') && GameState.itemCount('gold_rod') === 1, '没有拿到金钓竿')
+      },
+    ],
+  ]
+}
+
+/** 点开当前选项面板里的一项 */
+async function pickChoice(r: Runner, label: string): Promise<boolean> {
+  const ready = await r.until(() => {
+    const panel = (r.world() as WorldProbe & { menus?: { panel?: { opts?: { rows?: { label: string }[] } } } }).menus?.panel
+    return !!panel?.opts?.rows?.length
+  }, 4000)
+  if (!ready) return false
+  const panel = (r.world() as WorldProbe & { menus: { panel: { opts: { rows: { label: string; onSelect?: () => void }[] } } } }).menus.panel
+  const row = panel.opts.rows.find((x) => x.label === label)
+  row?.onSelect?.()
+  return !!row
 }
 
 /** 右上角结果面板 */

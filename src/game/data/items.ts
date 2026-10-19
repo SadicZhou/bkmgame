@@ -37,6 +37,7 @@ export const ITEMS: Record<string, ItemDef> = {
   repel: { id: 'repel', name: '驱兽喷雾', kind: 'repel', value: 200, price: 80, desc: '200 步内，比首发等级低的野生伙伴不会靠近。' },
   talent_fruit: { id: 'talent_fruit', name: '资质卡', kind: 'talent', value: 2, price: 0, desc: '一张训练记录卡。指定伙伴的一项资质 +2（上限 20，每只最多 5 次）。只能在野外使用。' },
   old_rod: { id: 'old_rod', name: '旧钓竿', kind: 'key', value: 0, price: 0, desc: '泉守汐送的钓竿。面朝水面按确认就能钓鱼。' },
+  gold_rod: { id: 'gold_rod', name: '金钓竿', kind: 'key', value: 0, price: 0, desc: '全国钓鱼大赛的奖品。带着它时，稀有伙伴更容易出现。' },
   good_rod: { id: 'good_rod', name: '好钓竿', kind: 'key', value: 0, price: 0, desc: '沧澜鲸的鳞片缠在竿头，能钓到更深处的伙伴。' },
   strength_gloves: { id: 'strength_gloves', name: '怪力手套', kind: 'key', value: 0, price: 0, desc: '峰送的手套。队伍里有岩系或一般系伙伴时，面朝巨石按确认可以推动一格。' },
   dust_badge: { id: 'dust_badge', name: '旧徽章', kind: 'key', value: 0, price: 0, desc: '阿禾旅团的旧徽章，背面刻着一个「尘」字。' },
@@ -68,7 +69,7 @@ export function itemIconKey(id: string): string {
 }
 
 /** 重要物品（背包末尾展示） */
-export const KEY_ITEMS: string[] = ['old_rod', 'good_rod', 'strength_gloves', 'dust_badge', 'canyon_ore', 'wind_chime', 'book_rock_slide', 'charge_bottle', 'star_charm', 'hearth_stone', 'star_glider', 'torn_photo', 'white_feather', 'kid_lamp', 'gold_crown']
+export const KEY_ITEMS: string[] = ['old_rod', 'good_rod', 'gold_rod', 'strength_gloves', 'dust_badge', 'canyon_ore', 'wind_chime', 'book_rock_slide', 'charge_bottle', 'star_charm', 'hearth_stone', 'star_glider', 'torn_photo', 'white_feather', 'kid_lamp', 'gold_crown']
 
 /** 商店货架顺序 */
 export const SHOP_STOCK: string[] = [

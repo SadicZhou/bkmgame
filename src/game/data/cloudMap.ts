@@ -42,6 +42,7 @@ export function buildCloudStart(): MapDef {
         color: 0xc4a574,
         lines: ['风从这里往北，一直是顺的。', '站在风口上，就会滑到下一座岛。'],
       },
+      ...postgameNpcs('cloudstart'),
     ],
   }
 }

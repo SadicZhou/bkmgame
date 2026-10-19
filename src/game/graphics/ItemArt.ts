@@ -127,8 +127,9 @@ function paintOne(g: Icon, id: string): void {
   else if (id === 'lure_bell') bell(g, 0xfff0a8, 0xf0c84a, 0xc89820, false)
   else if (id === 'wind_chime') bell(g, 0xffffff, 0xd8e8f0, 0x98b0c0, true)
   else if (id === 'talent_fruit') card(g)
-  else if (id === 'old_rod') rod(g, false)
-  else if (id === 'good_rod') rod(g, true)
+  else if (id === 'old_rod') rod(g, 'old')
+  else if (id === 'good_rod') rod(g, 'good')
+  else if (id === 'gold_rod') rod(g, 'gold')
   else if (id === 'strength_gloves') gloves(g)
   else if (id === 'dust_badge') badge(g)
   else if (id === 'star_charm') charm(g)
@@ -285,9 +286,9 @@ function card(g: Icon): void {
 }
 
 /** 钓竿：把手、渔轮和导线环 */
-function rod(g: Icon, good: boolean): void {
-  const blank = good ? 0x7ec8e8 : 0xc49a6c
-  const blankHi = good ? 0xd8f4ff : 0xe8d0b0
+function rod(g: Icon, kind: 'old' | 'good' | 'gold'): void {
+  const blank = kind === 'gold' ? 0xf0c040 : kind === 'good' ? 0x7ec8e8 : 0xc49a6c
+  const blankHi = kind === 'gold' ? 0xfff0a8 : kind === 'good' ? 0xd8f4ff : 0xe8d0b0
   g.round(8, 46, 16, 10, 0x6a4030)
   g.rect(10, 48, 12, 2, 0xc4a080)
   g.rect(10, 52, 12, 2, 0xc4a080)
@@ -299,10 +300,10 @@ function rod(g: Icon, good: boolean): void {
     g.dot(20 + i, 39 - i, blankHi)
   }
   g.rect(46, 12, 8, 2, 0xf8f8f8)
-  if (good) {
-    g.ellipse(50, 18, 4, 3, 0xb8e8ff)
+  if (kind !== 'old') {
+    g.ellipse(50, 18, 4, 3, kind === 'gold' ? 0xffe080 : 0xb8e8ff)
     g.rect(47, 17, 5, 2, 0xffffff)
-    g.dot(52, 16, 0x4080c0)
+    g.dot(52, 16, kind === 'gold' ? 0xc08020 : 0x4080c0)
   }
 }
 

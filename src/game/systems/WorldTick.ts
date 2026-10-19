@@ -75,6 +75,7 @@ function encounterCtx(mapId: string, source: EncounterSource): EncounterContext 
     shimmer: minor?.id === 'shimmer',
     hasFlag: GameState.hasFlag,
     shinyMod: GameState.itemCount('star_charm') > 0 ? 1.5 : 1,
+    goldRod: GameState.itemCount('gold_rod') > 0,
   }
 }
 

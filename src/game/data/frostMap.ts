@@ -155,6 +155,7 @@ export function buildIceLake(): MapDef {
         story: 'frost_shio',
         lines: ['发光的地方能停住。滑错了，走回起点就行。'],
       },
+      ...postgameNpcs('icelake'),
     ],
   }
 }

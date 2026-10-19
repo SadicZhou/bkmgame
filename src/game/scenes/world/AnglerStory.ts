@@ -58,6 +58,11 @@ export function anglerStory(host: StoryHost, name: string): void {
     return
   }
 
+  if (GameState.hasFlag('game_clear') && !GameState.hasFlag('fish_nation_done')) {
+    nation(say, host)
+    return
+  }
+
   if (fishLogComplete(w) && !GameState.hasFlag(MASTER_REWARD.flag)) {
     say(['哇……湖里 6 种鱼你全都钓到了！连雾灯鳐都有！', '这是「钓鱼大师」的奖励，收下吧！'], () => {
       GameState.setFlag(MASTER_REWARD.flag, true)
@@ -115,4 +120,58 @@ export function anglerStory(host: StoryHost, name: string): void {
     `今天的题目：${contestText(next)}`,
     `赢了可以拿到 ${reward.coins} 焰币和${rain ? ITEMS[reward.itemId].name : '奖品'}哦。`,
   ])
+}
+
+/** 全国四钓点：每处一道题，答对记一处 */
+const NATION_SPOTS = [
+  { story: 'fish_q_lake', flag: 'fish_spot_lake', place: '雾泉', question: '只在起雾时浮上湖面的是哪一种？', answer: '雾灯鳐', options: ['泡泡鱼', '雾灯鳐', '沧澜鲸'] },
+  { story: 'fish_q_cloud', flag: 'fish_spot_cloud', place: '云海', question: '在云海里游的稀有伙伴叫什么？', answer: '云鳍鱼', options: ['泡泡鱼', '云鳍鱼', '珊冠鱼'] },
+  { story: 'fish_q_ice', flag: 'fish_spot_ice', place: '冰湖', question: '只在下雪的夜里出现的稀有伙伴叫什么？', answer: '冰晶狐', options: ['雪团兔', '冰晶狐', '霜铃鹤'] },
+  { story: 'fish_q_mine', flag: 'fish_spot_mine', place: '矿道', question: '只在晴天的峡谷里出现的稀有伙伴叫什么？', answer: '琥珀精', options: ['岩甲虫', '琥珀精', '磐角犀'] },
+] as const
+
+/**
+ * 通关后的全国钓鱼大赛：四处答完，澈交出金钓竿
+ * @author zjh
+ * @date 2026-10-19
+ */
+function nation(say: (lines: string[]) => void, host: StoryHost): void {
+  const done = NATION_SPOTS.filter((s) => GameState.hasFlag(s.flag))
+  if (done.length === NATION_SPOTS.length) {
+    GameState.addItem('gold_rod', 1)
+    GameState.setFlag('fish_nation_done', true)
+    say(['四处都答对了！这根金钓竿给你。', '带着它，稀有伙伴会更愿意露面。'])
+    host.toast('获得了重要物品「金钓竿」')
+    return
+  }
+  GameState.setFlag('fish_nation', true)
+  const left = NATION_SPOTS.filter((s) => !GameState.hasFlag(s.flag))
+    .map((s) => s.place)
+    .join('、')
+  say(['湖上的大赛你已经玩过啦。全国的还没开始。', '雾泉、云海、冰湖、矿道地下河，四处各一题。', `还剩：${left}。（${done.length}/4）`])
+}
+
+/**
+ * 钓点木牌出题；答对记下这一处
+ * @author zjh
+ * @date 2026-10-19
+ */
+export function fishSpotStory(host: StoryHost, storyId: string): void {
+  const spot = NATION_SPOTS.find((s) => s.story === storyId)
+  if (!spot || GameState.hasFlag(spot.flag)) return
+  host.say([`钓点木牌：${spot.place}。`, `钓点木牌：${spot.question}`], () => {
+    host.choose(
+      spot.place,
+      spot.options.map((label) => ({ id: label, label })),
+      (id) => {
+        if (id !== spot.answer) {
+          host.say(['钓点木牌：不对。再想想。'])
+          return
+        }
+        GameState.setFlag(spot.flag, true)
+        const n = NATION_SPOTS.filter((s) => GameState.hasFlag(s.flag)).length
+        host.say([`钓点木牌：对了。${spot.place}这一处算你过了。（${n}/4）`])
+      },
+    )
+  })
 }

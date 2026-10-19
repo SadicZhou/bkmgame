@@ -36,6 +36,8 @@ export interface EncounterContext {
   hasFlag?: (key: string) => boolean
   /** 星砂护符等对异色率的倍率，默认 1 */
   shinyMod?: number
+  /** 金钓竿：稀有伙伴权重再乘 2 */
+  goldRod?: boolean
 }
 
 export interface EncounterPick {
@@ -81,6 +83,7 @@ export function entryWeight(ctx: EncounterContext, e: EncounterEntry): number {
   w *= weatherSpeciesMod(ctx.weather, sp.type)
   if (rare && ctx.rarePity >= RARE_PITY) w *= 3
   if (rare && ctx.lureActive) w *= 2
+  if (rare && ctx.goldRod) w *= 2
   if (rare && ctx.leadAbility === 'guide') w *= 1.5
   if (ctx.migrationSpecies === e.speciesId) w *= 5
   return w
