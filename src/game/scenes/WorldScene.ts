@@ -11,7 +11,7 @@ import { anchorFeet, hasCharArt, idleFrame, playerSheet, registerCharAnims, step
 import { SPECIES, battleName, type CreatureInstance } from '../data/creatures'
 import { decorBlocks } from '../data/decor'
 import { ITEMS } from '../data/items'
-import { MAPS, isTallGrass, resolveTile, visibleNpcs, type HasFlag, type MapDef, type NpcDef, type TileKind, type WarpDef } from '../data/maps'
+import { MAPS, isTallGrass, resolveTile, type HasFlag, type MapDef, type NpcDef, type TileKind, type WarpDef } from '../data/maps'
 import { MINOR_EVENTS, PHENOMENON_RULES } from '../data/phenomena'
 import { WEATHER_INFO } from '../data/weather'
 import { GameState, type Facing, type PendingBattle } from '../state/GameState'
@@ -34,6 +34,7 @@ import { WorldMenus } from '../ui/WorldMenus'
 import { BOLTS, BOLT_SAFE, DUNE_GATE, boltPhase, boltStrikes, healWithKindler, isBoltTile, rodsLit, tickDuneStorm } from '../systems/Dunes'
 import { cloudWindEnd } from '../systems/Cloud'
 import { heatTick, towerBoltAt, towerWindEnd } from '../systems/Tower'
+import { healThird } from '../systems/Postgame'
 import { lightAllyLamps, nightTownActive } from '../systems/Night'
 import { BOARD_FLAG, boardSpeed } from '../systems/Vehicle'
 import { FROST_FLAGS, ICE_BLOCKS, SLIDE_GOALS, blockFlag, blockPos, chipCold, iceBlockAt, leadIsFlame, slideEnd, slideFlag, tickCold, tryPushIce } from '../systems/Frost'
@@ -294,9 +295,11 @@ export class WorldScene extends Phaser.Scene {
     const notices = GameState.notices.splice(0)
     const chainId = GameState.chainNpcId
     GameState.chainNpcId = null
-    const next = chainId ? visibleNpcs(this.map, hasFlag).find((n) => n.id === chainId) : undefined
+    const next = chainId ? this.map.npcs.find((n) => n.id === chainId) : undefined
     const chain = () => {
-      if (next && this.hasAbleCreature()) this.interact.challenge(next)
+      if (!next || !this.hasAbleCreature()) return
+      if (next.id.startsWith('champ_') && healThird(GameState.party) > 0) this.flashToast('短暂休息，伙伴们恢复了三成体力。')
+      this.interact.challenge(next)
     }
     const openNight = () => {
       if (!nightTownActive(this.map.id, (k) => !!GameState.hasFlag(k)) && this.map.id === 'town' && GameState.hasFlag('chapter7_done') && !GameState.hasFlag('night_started')) {

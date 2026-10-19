@@ -5,6 +5,7 @@
  */
 
 import type { MapDef, NpcDef, TileKind } from './maps'
+import { postgameNpcs } from './postgameNpcs'
 import { TS, borderWalls, fill } from './mapKit'
 
 const W = 11
@@ -429,6 +430,7 @@ export function buildTowerTop(): MapDef {
         lines: ['……'],
         team: [{ speciesId: 'dawnphoenix', level: 52 }],
       },
+      ...postgameNpcs('towertop'),
     ],
   }
 }

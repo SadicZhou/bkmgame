@@ -8,6 +8,7 @@
 import { TS, parseAscii } from './mapKit'
 import type { MapDef, NpcDef } from './maps'
 import { MUSH_GRANNY, mushroomSpots } from './mushrooms'
+import { postgameNpcs } from './postgameNpcs'
 
 /** 第三章旗标 */
 export const FOREST_FLAGS = {
@@ -275,6 +276,7 @@ export function buildForest(): MapDef {
         ],
         afterLines: ['（林语鹿轻轻摇了摇头，鹿角上的铃铛叮叮当当地响。）'],
       },
+      ...postgameNpcs('forest'),
     ],
   }
 }

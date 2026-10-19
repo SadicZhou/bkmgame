@@ -141,6 +141,7 @@ function paintOne(g: Icon, id: string): void {
   else if (id === 'torn_photo') photoItem(g)
   else if (id === 'white_feather') feather(g)
   else if (id === 'kid_lamp') kidLamp(g)
+  else if (id === 'gold_crown') crown(g)
 }
 
 /** 喷雾罐：喷嘴、金属颈、标签和罐底 */
@@ -443,6 +444,17 @@ function photoItem(g: Icon): void {
   g.ellipse(40, 24, 3, 3, 0xfff6a0)
   g.rect(18, 38, 16, 2, 0xd8d0c4)
   g.rect(18, 42, 12, 2, 0xd8d0c4)
+}
+
+/** 金冠饰：细冠和一颗暖色宝石 */
+function crown(g: Icon): void {
+  g.rect(16, 34, 32, 8, 0xf0c85a)
+  g.rect(18, 36, 28, 4, 0xffe08a)
+  g.rect(16, 22, 6, 14, 0xe0b040)
+  g.rect(29, 16, 6, 20, 0xf0c85a)
+  g.rect(42, 22, 6, 14, 0xe0b040)
+  g.ellipse(32, 30, 4, 4, 0xfff6c8)
+  g.dot(32, 29, 0xfffaf0)
 }
 
 /** 白风羽 */

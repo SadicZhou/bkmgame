@@ -10,6 +10,7 @@ import { buildCanyon, buildHammerTown, buildMine } from './canyonMap'
 import { buildDunes, buildObservatory } from './dunesMap'
 import { buildCloudBridge, buildCloudFeather, buildCloudMill, buildCloudShrine, buildCloudStart } from './cloudMap'
 import { buildTower1, buildTower2, buildTower3, buildTower4, buildTower5, buildTower6, buildTower7, buildTower8, buildTower9, buildTowerTop } from './towerMap'
+import { postgameNpcs } from './postgameNpcs'
 import { buildBellHall, buildFrostPeak, buildFrostVillage, buildIceLake } from './frostMap'
 import { buildForest } from './forestMap'
 import { buildLake } from './lakeMap'
@@ -114,6 +115,8 @@ export interface NpcDef {
   ordeal?: boolean
   /** 夜幕鸦体力低于一半时，对手认输 */
   surrender?: boolean
+  /** 不画在地图上，只给连战调用 */
+  offstage?: boolean
   /** prop 的贴图（不填则不显示，由装饰物负责外观） */
   texture?: string
   /** 闲逛半径（格，曼哈顿距离）：在出生点附近随机走动；不填则原地站立 */
@@ -286,6 +289,7 @@ function buildTown(): MapDef {
         color: 0xf0d060,
         lines: ['旅人！我们送你！'],
       },
+      ...postgameNpcs('town'),
       {
         id: 'night_lamp_square',
         name: '熄灯精英',
@@ -708,6 +712,7 @@ function buildPass(): MapDef {
         ],
         afterLines: ['火种重新安静下来了。', '谢谢你，焰迹旅人。这条山道永远欢迎你。'],
       },
+      ...postgameNpcs('pass'),
     ],
   }
 }
@@ -850,7 +855,7 @@ export function resolveTile(map: MapDef, x: number, y: number, hasFlag: HasFlag)
 export function visibleNpcs(map: MapDef, hasFlag: HasFlag): NpcDef[] {
   const hidden = (h: NpcDef['hideIf']) => (Array.isArray(h) ? h.some(hasFlag) : !!h && hasFlag(h))
   const shown = (s: NpcDef['showIf']) => (Array.isArray(s) ? s.every(hasFlag) : !s || hasFlag(s))
-  return map.npcs.filter((n) => shown(n.showIf) && !hidden(n.hideIf))
+  return map.npcs.filter((n) => !n.offstage && shown(n.showIf) && !hidden(n.hideIf))
 }
 
 /**

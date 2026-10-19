@@ -436,6 +436,7 @@ async function runSteps(r: Runner): Promise<void> {
     ...chapter7Steps(r),
     ...chapter8Steps(r),
     ...chapter9Steps(r),
+    ...chapter10Steps(r),
   ]
   for (const [name, run] of steps) {
     if (!(await r.step(name, run))) break
@@ -971,6 +972,68 @@ function chapter9Steps(r: Runner): [string, () => Promise<string | true>][] {
         const next = await r.winBattle()
         await r.until(() => r.active('Ending'), 5000)
         return check(next === 'Ending' && has('phoenix_trial') && has('game_clear'), `去向 ${next}`)
+      },
+    ],
+  ]
+}
+
+/**
+ * 后日谈：冠军之路九连战，灯灯的五处足迹
+ * 终章停在结局画面，这里先选继续冒险
+ * @author zjh
+ * @date 2026-10-19
+ */
+function chapter10Steps(r: Runner): [string, () => Promise<string | true>][] {
+  const has = GameState.hasFlag
+  const talk = async (mapId: string, x: number, y: number, facing: 'up' | 'down' | 'left' | 'right') => {
+    const ws = await r.enterWorld(mapId, x, y, facing)
+    ws.tryInteract()
+    if (!(await r.until(() => ws.dialogue.isOpen, 4000))) return false
+    await r.closeDialogue(ws)
+    await r.until(() => !r.world().busy, 4000)
+    return true
+  }
+  return [
+    [
+      '继续冒险 → 冠军之路九连战',
+      async () => {
+        if (r.active('Ending')) {
+          await r.wait(1200)
+          r.scene<Phaser.Scene & { press(i: number): void }>('Ending').press(0)
+          if (!(await r.until(() => r.active('World'), 8000))) return '没有回到大地图'
+        }
+        const ws = await r.enterWorld('town', 8, 9, 'down')
+        ws.tryInteract()
+        if (!(await r.toBattle(ws))) return '苔没有开战'
+        for (let i = 0; i < 9; i++) {
+          if (i > 0 && !(await r.toBattle(r.world()))) return `第 ${i + 1} 场没有接上`
+          const next = await r.winBattle()
+          if (next === 'lost') return '冠军之路战败'
+        }
+        await r.until(() => r.active('World') && !r.world().busy, 8000)
+        await r.closeDialogue(r.world())
+        return check(has('champion_clear') && has('champion_title') && GameState.itemCount('gold_crown') === 1, '称号或金冠饰没有发下')
+      },
+    ],
+    [
+      '灯灯的五处足迹 → 微光灵',
+      async () => {
+        if (!(await talk('town', 9, 9, 'down'))) return '墨尘没有指路'
+        if (!has('trace_started')) return '没有开始足迹'
+        const spots: [string, number, number, 'up' | 'down' | 'left' | 'right', string][] = [
+          ['pass', 3, 18, 'right', 'trace_pass'],
+          ['lake', 9, 13, 'right', 'trace_lake'],
+          ['forest', 2, 25, 'up', 'trace_forest'],
+          ['town', 10, 9, 'down', 'trace_town'],
+          ['towertop', 3, 4, 'up', 'trace_tower'],
+        ]
+        for (const [mapId, x, y, facing, flag] of spots) {
+          if (!(await talk(mapId, x, y, facing))) return `${flag} 没有对话`
+          if (!has(flag)) return `没有写入 ${flag}`
+        }
+        if (!(await talk('town', 9, 9, 'down'))) return '墨尘没有送礼'
+        const gift = [...GameState.party, ...GameState.storage].find((c) => c.speciesId === 'wisp')
+        return check(has('trace_done') && !!gift && gift.talent.hp === 20, '微光灵没有满资质')
       },
     ],
   ]

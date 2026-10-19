@@ -7,6 +7,7 @@
 
 import { TS, parseAscii } from './mapKit'
 import type { MapDef } from './maps'
+import { postgameNpcs } from './postgameNpcs'
 
 /** 浮桥开放旗标 */
 export const BRIDGE_FLAG = 'bridge_open'
@@ -186,6 +187,7 @@ export function buildLake(): MapDef {
         ],
         afterLines: ['（沧澜鲸轻轻摆动尾鳍，湖面泛起温柔的涟漪。）'],
       },
+      ...postgameNpcs('lake'),
     ],
   }
 }

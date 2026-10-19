@@ -12,6 +12,7 @@ import { anglerStory } from './AnglerStory'
 import { CANYON_STORIES } from './CanyonStory'
 import { CLOUD_STORIES } from './CloudStory'
 import { TOWER_STORIES } from './TowerStory'
+import { POSTGAME_STORIES } from './PostgameStory'
 import { DUNE_STORIES } from './DuneStory'
 import { FROST_STORIES } from './FrostStory'
 import { FOREST_STORIES } from './ForestStory'
@@ -118,6 +119,7 @@ const STORIES: Record<string, StoryFn> = {
   ...FROST_STORIES,
   ...CLOUD_STORIES,
   ...TOWER_STORIES,
+  ...POSTGAME_STORIES,
 }
 
 /**
