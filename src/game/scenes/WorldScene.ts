@@ -481,7 +481,9 @@ export class WorldScene extends Phaser.Scene {
     let ny = this.tileY + dy
     let tile = resolveTile(this.map, nx, ny, hasFlag)
     if (!tile || decorBlocks(this.map.id, nx, ny) || this.occupiedByNpc(nx, ny) || this.eventView.uniqueAt(nx, ny)) return
-    if (this.field.blocks(nx, ny) || iceBlockAt(nx, ny, (k) => GameState.getFlag(k))) return
+    if (this.field.blocks(nx, ny)) return
+    // 冰块只存在于冰湖。默认停在 (10,7)，不能拿到别的地图上挡路
+    if (this.map.id === 'icelake' && iceBlockAt(nx, ny, (k) => GameState.getFlag(k))) return
     const throughGate = this.map.id === 'dunes' && nx === DUNE_GATE.x && ny === DUNE_GATE.y && rodsLit((k) => GameState.getFlag(k))
     if (!throughGate && !this.field.opens(nx, ny) && !this.ride.canEnter(tile)) return
     if (GameState.hasFlag(BOARD_FLAG) && tile === 'ice') {
