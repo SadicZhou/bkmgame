@@ -15,6 +15,7 @@ import { settleStoryBattle, type StoryOutcome } from '../../systems/BattleOutcom
 import { FRIENDSHIP_GAIN } from '../../systems/Bond'
 import { addFriendship } from '../../systems/Growth'
 import { syncNightRelay } from '../../systems/Night'
+import { openTowerStairs } from '../../systems/Tower'
 import { endPhenomenon } from '../../systems/Phenomenon'
 import { rematchCountKey, winDayKey } from '../../systems/Rematch'
 import { dayOf } from '../../systems/WorldClock'
@@ -87,6 +88,10 @@ export function settleBattle(b: BattleState, pending: PendingBattle): BattleSett
         GameState.notices.push(`获得了重要物品「${ITEMS[id]?.name ?? id}」`)
       }
       if (pending.winLines?.length) GameState.notices.push(...pending.winLines)
+      openTowerStairs(
+        (k) => !!GameState.getFlag(k),
+        (k) => GameState.setFlag(k, true),
+      )
       if (syncNightRelay((k) => !!GameState.getFlag(k), (k) => GameState.setFlag(k, true))) {
         GameState.notices.push('五盏路灯都亮了。钟楼下，有个人在等你。')
       }

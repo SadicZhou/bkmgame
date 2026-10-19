@@ -51,6 +51,12 @@ export interface PendingBattle {
   lossLines?: string[]
   /** 双打：第二只伙伴也会出手 */
   doubles?: boolean
+  /** 本场不受属性克制 */
+  neutral?: boolean
+  /** 守护战：打满 8 回合也算赢，攻击至少留 1 HP */
+  ordeal?: boolean
+  /** 夜幕鸦低于半血时结束战斗 */
+  surrender?: boolean
   /** 训练家再战（胜利后累计再战次数） */
   rematch?: boolean
   /** 战斗场地天气（室内 / 城镇为 null） */

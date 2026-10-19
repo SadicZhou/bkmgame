@@ -27,6 +27,8 @@ interface WorldProbe extends Phaser.Scene {
   tryInteract(): void
   tryMove(dx: number, dy: number): void
   setFacing(f: Facing): void
+  tileX: number
+  tileY: number
 }
 
 interface StepResult {
@@ -433,6 +435,7 @@ async function runSteps(r: Runner): Promise<void> {
     ...chapter6Steps(r),
     ...chapter7Steps(r),
     ...chapter8Steps(r),
+    ...chapter9Steps(r),
   ]
   for (const [name, run] of steps) {
     if (!(await r.step(name, run))) break
@@ -792,6 +795,182 @@ function chapter8Steps(r: Runner): [string, () => Promise<string | true>][] {
         if (next === 'lost') return '输给了暖灯熊'
         const rewards = has('chapter8_done') && has('badge_hearth') && GameState.itemCount('kid_lamp') === 1
         return check(next === 'Chapter' && rewards, `去向 ${next}，奖励${rewards ? '齐全' : '缺失'}`)
+      },
+    ],
+  ]
+}
+
+/**
+ * 终章：镇口进塔，九层试炼，墨尘，曦焰凤
+ * 前一章停在章节卡上，这里先离开卡片
+ * @author zjh
+ * @date 2026-10-19
+ */
+function chapter9Steps(r: Runner): [string, () => Promise<string | true>][] {
+  const has = GameState.hasFlag
+  const beat = async (mapId: string, x: number, y: number, facing: 'up' | 'down' | 'left' | 'right') => {
+    const ws = await r.enterWorld(mapId, x, y, facing)
+    ws.tryInteract()
+    if (!(await r.toBattle(ws))) return '没有进入战斗'
+    const next = await r.winBattle()
+    if (next === 'lost') return '战斗失败'
+    if (next === 'Ending') return next
+    await r.until(() => r.active('World') && !r.world().busy, 8000)
+    await r.closeDialogue(r.world())
+    return next
+  }
+  const climb = async (mapId: string, x: number, y: number, dx = 0, dy = -1) => {
+    const ws = await r.enterWorld(mapId, x, y, dy < 0 ? 'up' : dx > 0 ? 'right' : 'left')
+    ws.tryMove(dx, dy)
+    await r.wait(800)
+    await r.until(() => r.active('World') && !r.world().busy, 8000)
+    await r.closeDialogue(r.world())
+  }
+  return [
+    [
+      '镇口送行 → 灰烬之塔',
+      async () => {
+        if (r.active('Chapter')) await leaveChapter(r)
+        const ws = await r.enterWorld('town', 8, 9, 'down')
+        ws.tryInteract()
+        if (!(await r.until(() => ws.dialogue.isOpen, 4000))) return '小路没有送行'
+        await r.closeDialogue(ws)
+        const arrived = await r.until(() => GameState.mapId === 'tower1' && r.active('World') && !r.world().busy, 8000)
+        return check(arrived, `停在 ${GameState.mapId}`)
+      },
+    ],
+    [
+      '第 1 层守关',
+      async () => {
+        const next = await beat('tower1', 5, 4, 'up')
+        if (next !== 'World') return next || '第 1 层没有回来'
+        await climb('tower1', 5, 2, 0, -1)
+        return check(has('tower_floor_1') && GameState.mapId === 'tower2', `停在 ${GameState.mapId}`)
+      },
+    ],
+    [
+      '第 2 层守关',
+      async () => {
+        const next = await beat('tower2', 5, 4, 'up')
+        if (next !== 'World') return next || '第 2 层没有回来'
+        await climb('tower2', 5, 2, 0, -1)
+        return check(has('tower_floor_2') && GameState.mapId === 'tower3', `停在 ${GameState.mapId}`)
+      },
+    ],
+    [
+      '水闸 → 第 3 层守关',
+      async () => {
+        const gate = await r.enterWorld('tower3', 2, 4, 'left')
+        gate.tryInteract()
+        if (!(await r.until(() => gate.dialogue.isOpen, 4000))) return '没有拉开水闸'
+        await r.closeDialogue(gate)
+        const next = await beat('tower3', 5, 3, 'up')
+        if (next !== 'World') return next || '第 3 层没有回来'
+        await climb('tower3', 5, 2, 0, -1)
+        return check(has('tower_sluice') && has('tower_floor_3') && GameState.mapId === 'tower4', `停在 ${GameState.mapId}`)
+      },
+    ],
+    [
+      '四音石 → 第 4 层楼梯',
+      async () => {
+        const next = await beat('tower4', 5, 4, 'up')
+        if (next !== 'World') return next || '第 4 层没有回来'
+        const spots: [number, number, 'up' | 'down' | 'left' | 'right'][] = [
+          [3, 4, 'left'],
+          [4, 5, 'up'],
+          [6, 5, 'up'],
+          [8, 3, 'down'],
+        ]
+        for (const [x, y, facing] of spots) {
+          const ws = await r.enterWorld('tower4', x, y, facing)
+          ws.tryInteract()
+          if (!(await r.until(() => ws.dialogue.isOpen, 4000))) return `音石没有响应 ${x},${y}`
+          await r.closeDialogue(ws)
+        }
+        await climb('tower4', 5, 2, 0, -1)
+        return check(has('tower_notes_solved') && has('tower_floor_4') && GameState.mapId === 'tower5', `停在 ${GameState.mapId}`)
+      },
+    ],
+    [
+      '推石 → 第 5 层楼梯',
+      async () => {
+        const next = await beat('tower5', 5, 4, 'up')
+        if (next !== 'World') return next || '第 5 层没有回来'
+        const ws = await r.enterWorld('tower5', 5, 3, 'up')
+        ws.tryInteract()
+        if (!(await r.until(() => ws.dialogue.isOpen, 4000))) return '没有推开石头'
+        await r.closeDialogue(ws)
+        await climb('tower5', 5, 2, 0, -1)
+        return check(has('tower_rock_moved') && has('tower_floor_5') && GameState.mapId === 'tower6', `停在 ${GameState.mapId}`)
+      },
+    ],
+    [
+      '第 6 层守关',
+      async () => {
+        const next = await beat('tower6', 5, 4, 'up')
+        if (next !== 'World') return next || '第 6 层没有回来'
+        await climb('tower6', 5, 2, 0, -1)
+        return check(has('tower_floor_6') && GameState.mapId === 'tower7', `停在 ${GameState.mapId}`)
+      },
+    ],
+    [
+      '冰面滑到守关前',
+      async () => {
+        const ws = await r.enterWorld('tower7', 5, 4, 'up')
+        ws.tryMove(0, -1)
+        await r.wait(900)
+        await r.until(() => !r.world().busy, 8000)
+        if (r.world().tileY !== 3) return `滑到了 ${r.world().tileX},${r.world().tileY}`
+        const next = await beat('tower7', 5, 3, 'up')
+        if (next !== 'World') return next || '第 7 层没有回来'
+        await climb('tower7', 5, 4, 0, -1)
+        if (r.world().tileY !== 2) return `滑到了 ${r.world().tileX},${r.world().tileY}`
+        await climb('tower7', 5, 2, 0, -1)
+        return check(has('tower_floor_7') && GameState.mapId === 'tower8', `停在 ${GameState.mapId}`)
+      },
+    ],
+    [
+      '风道 → 第 8 层守关',
+      async () => {
+        const ws = await r.enterWorld('tower8', 2, 3, 'right')
+        ws.tryMove(1, 0)
+        await r.wait(900)
+        await r.until(() => !r.world().busy, 8000)
+        if (r.world().tileX !== 7 || r.world().tileY !== 3) return `风停在 ${r.world().tileX},${r.world().tileY}`
+        const next = await beat('tower8', 7, 3, 'right')
+        if (next !== 'World') return next || '第 8 层没有回来'
+        await climb('tower8', 7, 3, 0, -1)
+        return check(has('tower_floor_8') && GameState.mapId === 'tower9', `停在 ${GameState.mapId}`)
+      },
+    ],
+    [
+      '绯打开塔顶',
+      async () => {
+        const ws = await r.enterWorld('tower9', 2, 4, 'up')
+        ws.tryInteract()
+        if (!(await r.until(() => ws.dialogue.isOpen, 4000))) return '绯没有说话'
+        await r.closeDialogue(ws)
+        await climb('tower9', 5, 2, 0, -1)
+        return check(has('tower_floor_9') && GameState.mapId === 'towertop', `停在 ${GameState.mapId}`)
+      },
+    ],
+    [
+      '墨尘认输',
+      async () => {
+        const next = await beat('towertop', 5, 4, 'up')
+        if (next !== 'World') return next || '墨尘战没有回来'
+        return check(has('mochen_beaten'), '没有写入 mochen_beaten')
+      },
+    ],
+    [
+      '曦焰凤 → 九灯同明',
+      async () => {
+        const ws = await r.enterWorld('towertop', 5, 3, 'up')
+        ws.tryInteract()
+        if (!(await r.toBattle(ws))) return '没有进入守护战'
+        const next = await r.winBattle()
+        await r.until(() => r.active('Ending'), 5000)
+        return check(next === 'Ending' && has('phoenix_trial') && has('game_clear'), `去向 ${next}`)
       },
     ],
   ]

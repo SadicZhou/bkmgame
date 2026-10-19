@@ -153,6 +153,9 @@ export class NpcInteract {
       lossFlags: npc.lossFlags,
       lossLines: npc.lossLines,
       doubles: npc.doubles,
+      neutral: npc.neutral,
+      ordeal: npc.ordeal,
+      surrender: npc.surrender,
       ...this.host.returnInfo(),
     })
   }

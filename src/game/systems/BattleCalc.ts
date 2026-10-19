@@ -81,7 +81,7 @@ export function calcDamage(
 ): DamageResult {
   const atkType = SPECIES[attacker.speciesId].type
   const defType = SPECIES[defender.speciesId].type
-  const mult = typeMultiplier(move.type, defType)
+  const mult = s.neutral ? 1 : typeMultiplier(move.type, defType)
   const stab = move.type === atkType ? STAB : 1
   const crit = rng() < critRate(attacker, move) + bondCritBonus(s, attacker)
 

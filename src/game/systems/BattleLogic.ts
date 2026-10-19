@@ -57,6 +57,12 @@ export interface BattleOptions {
   allyName?: string
   /** 双打 */
   doubles?: boolean
+  /** 属性克制失效 */
+  neutral?: boolean
+  /** 守护战：留 1 HP，第 8 回合结束即胜利 */
+  ordeal?: boolean
+  /** 夜幕鸦低于半血时认输 */
+  surrender?: boolean
 }
 
 /**
@@ -92,6 +98,9 @@ export function startBattle(
     badges: opts.badges ?? [],
     bond: !!opts.bond,
     doubles: !!opts.doubles,
+    neutral: !!opts.neutral,
+    ordeal: !!opts.ordeal,
+    surrender: !!opts.surrender,
     vol: {},
     pendingLearns: [],
     turn: 1,
@@ -202,6 +211,10 @@ function onPlayerFainted(s: BattleState): void {
  * @date 2026-10-14
  */
 function checkFaints(s: BattleState): void {
+  // 守护战里，玩家伙伴最少留 1 点体力
+  if (s.ordeal) {
+    for (const c of s.playerParty) if (c.hp <= 0) c.hp = 1
+  }
   for (let guard = 0; guard < 4 && !s.over; guard++) {
     const e = activeEnemy(s)
     const p = activePlayer(s)
@@ -329,7 +342,10 @@ function executeMove(s: BattleState, side: Side, slotIndex: number): void {
   const { dmg, mult, crit } = calcDamage(s, user, target, move)
   const endured = tryEndure(s, target, dmg)
   const gritted = !endured && tryBondEndure(s, target, dmg)
-  const dealt = dealDamage(target, endured || gritted ? target.hp - 1 : dmg)
+  let amount = endured || gritted ? Math.max(0, target.hp - 1) : dmg
+  if (s.ordeal && s.playerParty.some((c) => c.uid === target.uid)) amount = Math.min(amount, Math.max(0, target.hp - 1))
+  const dealt = dealDamage(target, amount)
+  if (maybeSurrender(s)) return
   say(s, `${name} 使用 ${move.name}！${effectText(mult, crit)}`, sideAnim(side, 'hitEnemy', 'hitPlayer'), mult)
   if (endured) say(s, `${battleName(target)} 的「守护者」让它撑住了！`)
   if (gritted) say(s, `${battleName(target)} 不想让你担心，咬牙撑住了！`)
@@ -407,6 +423,27 @@ function endOfTurn(s: BattleState): void {
     }
   }
   s.turn += 1
+  if (s.ordeal && !s.over && s.turn > 8) {
+    say(s, '曦焰凤收起翅膀：「你们已经证明了。」')
+    s.won = true
+    s.over = true
+  }
+}
+
+/**
+ * 墨尘的夜幕鸦亮起灯灯的颜色后，战斗结束
+ * @author zjh
+ * @date 2026-10-19
+ */
+function maybeSurrender(s: BattleState): boolean {
+  if (!s.surrender || s.over) return false
+  const crow = s.enemyParty.find((c) => c.speciesId === 'nightcrow' && c.hp > 0 && c.hp * 2 < c.maxHp)
+  if (!crow) return false
+  say(s, '夜幕鸦全身亮起一圈暖光。')
+  say(s, '墨尘：……灯灯？够了。')
+  s.won = true
+  s.over = true
+  return true
 }
 
 /** 携带异象信物时，唯一精灵第一回合被信物吸引、不会行动 */

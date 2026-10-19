@@ -33,6 +33,7 @@ import { WorldEventsView } from '../ui/WorldEventsView'
 import { WorldMenus } from '../ui/WorldMenus'
 import { BOLTS, BOLT_SAFE, DUNE_GATE, boltPhase, boltStrikes, healWithKindler, isBoltTile, rodsLit, tickDuneStorm } from '../systems/Dunes'
 import { cloudWindEnd } from '../systems/Cloud'
+import { heatTick, towerBoltAt, towerWindEnd } from '../systems/Tower'
 import { lightAllyLamps, nightTownActive } from '../systems/Night'
 import { BOARD_FLAG, boardSpeed } from '../systems/Vehicle'
 import { FROST_FLAGS, ICE_BLOCKS, SLIDE_GOALS, blockFlag, blockPos, chipCold, iceBlockAt, leadIsFlame, slideEnd, slideFlag, tickCold, tryPushIce } from '../systems/Frost'
@@ -79,6 +80,8 @@ export class WorldScene extends Phaser.Scene {
   private moving = false
   /** 过渡中（切图/进战斗/演出），屏蔽输入 */
   private busy = false
+  /** 第 2 层烫脚计步，换图后重计 */
+  private towerHeat = 0
   private facing: Facing = 'down'
   /** 是否使用 AI 行走图（缺图时回退到代码绘制） */
   private charArt = false
@@ -480,6 +483,7 @@ export class WorldScene extends Phaser.Scene {
     let nx = this.tileX + dx
     let ny = this.tileY + dy
     let tile = resolveTile(this.map, nx, ny, hasFlag)
+    if (this.map.id === 'tower3' && tile === 'water' && GameState.hasFlag('tower_sluice')) tile = 'path'
     if (!tile || decorBlocks(this.map.id, nx, ny) || this.occupiedByNpc(nx, ny) || this.eventView.uniqueAt(nx, ny)) return
     if (this.field.blocks(nx, ny)) return
     // 冰块只存在于冰湖。默认停在 (10,7)，不能拿到别的地图上挡路
@@ -502,14 +506,25 @@ export class WorldScene extends Phaser.Scene {
         tile = resolveTile(this.map, nx, ny, hasFlag) ?? tile
       }
     }
-    if (this.map.id === 'icelake' && tile === 'ice') {
+    if (this.map.id === 'tower8') {
+      const blown = towerWindEnd(this.tileX, this.tileY, dx)
+      if (blown) {
+        nx = blown.x
+        ny = blown.y
+        tile = resolveTile(this.map, nx, ny, hasFlag) ?? tile
+      }
+    }
+    if ((this.map.id === 'icelake' || this.map.id === 'tower7') && tile === 'ice') {
       const end = slideEnd(
         this.tileX,
         this.tileY,
         dx,
         dy,
         (x, y) => resolveTile(this.map, x, y, hasFlag),
-        (x, y) => !!iceBlockAt(x, y, (k) => GameState.getFlag(k)) || !!this.occupiedByNpc(x, y) || decorBlocks(this.map.id, x, y),
+        (x, y) =>
+          (this.map.id === 'icelake' && !!iceBlockAt(x, y, (k) => GameState.getFlag(k))) ||
+          !!this.occupiedByNpc(x, y) ||
+          decorBlocks(this.map.id, x, y),
       )
       if (end.x === this.tileX && end.y === this.tileY) return
       nx = end.x
@@ -558,6 +573,24 @@ export class WorldScene extends Phaser.Scene {
     if (warp) {
       this.useWarp(warp, fromX, fromY)
       return
+    }
+    if (this.map.id === 'tower6' && towerBoltAt(this.tileX, this.tileY)) {
+      for (const c of GameState.party) if (c.hp > 1) c.hp = Math.max(1, c.hp - 4)
+      this.tileX = fromX
+      this.tileY = fromY
+      const ts = this.map.tileSize
+      this.player.setPosition(fromX * ts + ts / 2, fromY * ts + ts / 2)
+      this.flashToast('落雷劈在脚边，你退了回来。')
+      this.refreshHud()
+      return
+    }
+    if (this.map.id === 'tower2') {
+      this.towerHeat += 1
+      const msg = heatTick(this.towerHeat, GameState.party)
+      if (msg) {
+        this.flashToast(msg)
+        this.refreshHud()
+      }
     }
     if (this.map.id === 'dunes' && this.applyDuneStep()) return
     if (this.map.id === 'frostpeak') this.applyCold()

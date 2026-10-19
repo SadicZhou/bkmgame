@@ -41,6 +41,7 @@ const DRAWN = new Set([
   'cloudfin',
   'galeroc',
   'hearthbear',
+  'dawnphoenix',
 ])
 
 export function preloadCreatureArt(scene: Phaser.Scene): void {

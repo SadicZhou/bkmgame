@@ -34,7 +34,7 @@ export function settleStoryBattle(pending: PendingBattle, won: boolean): StoryOu
   if (!end) return { notes: [] }
   const notes = [...end.notes, ...grantChapterRewards(end, GameState)]
   if (end.ending) return { notes, next: { scene: 'Ending' } }
-  if (end.card) {
+  if (end.card && end.badge) {
     return { notes, next: { scene: 'Chapter', data: { ...end.card, badge: end.badge } } }
   }
   return { notes }

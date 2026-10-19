@@ -62,8 +62,9 @@ export class EndingScene extends Phaser.Scene {
       })
     }
 
+    const finale = GameState.hasFlag('phoenix_trial')
     const title = this.add
-      .text(width / 2, 60, '雾散灯明', {
+      .text(width / 2, 60, finale ? '九灯同明' : '雾散灯明', {
         fontFamily: 'Georgia, "Songti SC", serif',
         fontSize: '40px',
         color: '#ffe08a',
@@ -72,11 +73,17 @@ export class EndingScene extends Phaser.Scene {
       .setAlpha(0)
     this.tweens.add({ targets: title, alpha: 1, y: 70, duration: 1200 })
 
-    const lines = [
-      '山巅的火种重燃，湖心的灯台也再次亮起。',
-      '沧澜鲸的长鸣让雾泉湖畔恢复了平静。',
-      '可那些黑色灯罩是谁留下的？焰迹旅人的旅途，还在继续……',
-    ]
+    const lines = finale
+      ? [
+          '九座灯台的光从各地升起，在天上连成一只鸟。',
+          '灯灯停在墨尘肩上，就像十年前一样。',
+          '火会伤人，也会温暖人。重要的是，谁来守护它。',
+        ]
+      : [
+          '山巅的火种重燃，湖心的灯台也再次亮起。',
+          '沧澜鲸的长鸣让雾泉湖畔恢复了平静。',
+          '可那些黑色灯罩是谁留下的？焰迹旅人的旅途，还在继续……',
+        ]
     lines.forEach((l, i) => {
       const t = this.add
         .text(width / 2, 124 + i * 26, l, { fontSize: '16px', color: '#f0e6c8' })

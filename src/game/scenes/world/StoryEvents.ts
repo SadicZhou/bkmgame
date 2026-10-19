@@ -11,6 +11,7 @@ import { GameState } from '../../state/GameState'
 import { anglerStory } from './AnglerStory'
 import { CANYON_STORIES } from './CanyonStory'
 import { CLOUD_STORIES } from './CloudStory'
+import { TOWER_STORIES } from './TowerStory'
 import { DUNE_STORIES } from './DuneStory'
 import { FROST_STORIES } from './FrostStory'
 import { FOREST_STORIES } from './ForestStory'
@@ -44,7 +45,7 @@ export const FOREST_INTRO_LINES = [
   '泉守汐：拜托了，旅人。去看看吧。（湖畔东侧的林间小路已经可以通行）',
 ]
 
-type StoryFn = (host: StoryHost, name: string) => void | boolean
+export type StoryFn = (host: StoryHost, name: string) => void | boolean
 
 const has = (k: string) => GameState.hasFlag(k)
 
@@ -116,6 +117,7 @@ const STORIES: Record<string, StoryFn> = {
   ...DUNE_STORIES,
   ...FROST_STORIES,
   ...CLOUD_STORIES,
+  ...TOWER_STORIES,
 }
 
 /**

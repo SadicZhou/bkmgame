@@ -127,6 +127,12 @@ export interface BattleState {
   bond?: boolean
   /** 双打：双方第二只活着的伙伴每回合也会出手 */
   doubles?: boolean
+  /** 属性克制失效 */
+  neutral?: boolean
+  /** 守护战 */
+  ordeal?: boolean
+  /** 夜幕鸦半血认输 */
+  surrender?: boolean
   vol: Record<string, Volatile>
   pendingLearns: PendingLearn[]
   turn: number

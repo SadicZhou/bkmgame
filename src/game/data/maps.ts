@@ -9,6 +9,7 @@ import { decorBlocks } from './decor'
 import { buildCanyon, buildHammerTown, buildMine } from './canyonMap'
 import { buildDunes, buildObservatory } from './dunesMap'
 import { buildCloudBridge, buildCloudFeather, buildCloudMill, buildCloudShrine, buildCloudStart } from './cloudMap'
+import { buildTower1, buildTower2, buildTower3, buildTower4, buildTower5, buildTower6, buildTower7, buildTower8, buildTower9, buildTowerTop } from './towerMap'
 import { buildBellHall, buildFrostPeak, buildFrostVillage, buildIceLake } from './frostMap'
 import { buildForest } from './forestMap'
 import { buildLake } from './lakeMap'
@@ -107,6 +108,12 @@ export interface NpcDef {
   lossLines?: string[]
   /** 双打：双方各有两只同时在场 */
   doubles?: boolean
+  /** 本层战斗不受属性克制 */
+  neutral?: boolean
+  /** 守护战：攻击不会打倒玩家，打满 8 回合也算赢 */
+  ordeal?: boolean
+  /** 夜幕鸦体力低于一半时，对手认输 */
+  surrender?: boolean
   /** prop 的贴图（不填则不显示，由装饰物负责外观） */
   texture?: string
   /** 闲逛半径（格，曼哈顿距离）：在出生点附近随机走动；不填则原地站立 */
@@ -267,6 +274,17 @@ function buildTown(): MapDef {
         y: 9,
         color: 0x9b7ed9,
         lines: ['广场的救护站点着。今晚随便来，灯不会灭。'],
+      },
+      {
+        id: 'town_sendoff',
+        name: '小路',
+        story: 'town_sendoff',
+        showIf: 'chapter8_done',
+        hideIf: 'game_clear',
+        x: 8,
+        y: 10,
+        color: 0xf0d060,
+        lines: ['旅人！我们送你！'],
       },
       {
         id: 'night_lamp_square',
@@ -763,6 +781,16 @@ export const MAPS: Record<string, MapDef> = {
   cloudmill: buildCloudMill(),
   cloudbridge: buildCloudBridge(),
   cloudshrine: buildCloudShrine(),
+  tower1: buildTower1(),
+  tower2: buildTower2(),
+  tower3: buildTower3(),
+  tower4: buildTower4(),
+  tower5: buildTower5(),
+  tower6: buildTower6(),
+  tower7: buildTower7(),
+  tower8: buildTower8(),
+  tower9: buildTower9(),
+  towertop: buildTowerTop(),
 }
 
 /**

@@ -14,7 +14,8 @@ export interface ChapterEnd {
   card?: { title: string; subtitle: string }
   /** 战后说明 */
   notes: string[]
-  badge: BadgeId
+  /** 不填则终章不发新徽记 */
+  badge?: BadgeId
   /** 额外写入的旗标（解锁新区域等） */
   unlockFlags: string[]
   /** 奖励道具（重要物品，只发一次） */
@@ -119,6 +120,18 @@ export const CHAPTER_ENDS: ChapterEnd[] = [
     items: ['kid_lamp'],
     ending: false,
   },
+  {
+    bossFlag: 'phoenix_trial',
+    notes: [
+      '灵之灯台点亮了。九座灯的光在天上连成一只鸟。',
+      '夜幕鸦肩上的暖光落下来，变成灯灯，停在墨尘肩上。',
+      '墨尘：师父……火，不坏。',
+      '阿禾：嗯。坏的是我们以为只能一个人守着它。',
+      '火会伤人，也会温暖人。重要的是，谁来守护它。',
+    ],
+    unlockFlags: ['game_clear'],
+    ending: true,
+  },
 ]
 
 /**
@@ -146,10 +159,12 @@ export interface FlagStore {
  */
 export function grantChapterRewards(end: ChapterEnd, store: FlagStore): string[] {
   const out: string[] = []
-  const badge = BADGES[end.badge]
-  if (!store.getFlag(badge.flag)) {
-    store.setFlag(badge.flag, true)
-    out.push(`获得了「${badge.name}」！（${badge.desc}）`)
+  if (end.badge) {
+    const badge = BADGES[end.badge]
+    if (!store.getFlag(badge.flag)) {
+      store.setFlag(badge.flag, true)
+      out.push(`获得了「${badge.name}」！（${badge.desc}）`)
+    }
   }
   for (const f of end.unlockFlags) store.setFlag(f, true)
   for (const id of end.items ?? []) {
