@@ -83,6 +83,7 @@ export const CRITTERS: Record<string, CritterPalette> = {
   galeroc: { body: 0xf7fbff, belly: 0xfff6d8, accent: 0x68c8a8, ear: 0xd0e4f4, kind: 'bird', evolved: true, crown: true },
   hearthbear: { body: 0xc4844c, belly: 0xffe0a8, accent: 0xfff6c0, ear: 0x8a5a30, kind: 'bear', evolved: true },
   dawnphoenix: { body: 0xfff2c4, belly: 0xffe08a, accent: 0xfff8e8, ear: 0xf0c878, kind: 'bird', evolved: true },
+  auroradeer: { body: 0x7ec8a0, belly: 0xe8fff4, accent: 0xc8a0ff, ear: 0x5a9a78, kind: 'deer', evolved: true, extra: 'star' },
   skylark: { body: 0xa8d8f0, belly: 0xf0faff, accent: 0xffd070, ear: 0x88c0e0, kind: 'bird' },
   skyfinch: { body: 0x78b8e8, belly: 0xffffff, accent: 0xffc040, ear: 0x5898d0, kind: 'bird', evolved: true },
   starmarten: { body: 0x5a5ab0, belly: 0xd8d8ff, accent: 0xfff080, ear: 0x7a7ad0, kind: 'marten', extra: 'star' },

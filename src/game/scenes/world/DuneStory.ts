@@ -13,6 +13,18 @@ const flag = (k: string) => GameState.getFlag(k)
 
 function sui(host: StoryHost, name: string): void {
   const say = (lines: string[]) => host.say(lines.map((l) => `${name}：${l}`))
+  if (GameState.hasFlag('game_clear') && GameState.hasFlag(DUNE_FLAGS.chart)) {
+    if (!GameState.getFlag('rift_seed')) GameState.setFlag('rift_seed', Math.max(1, GameState.day()))
+    host.say(
+      [
+        `${name}：星图背面还有一层。通关之后它才肯打开。`,
+        `${name}：五层小路，每天的弯都不一样。你这次的路，我已经替你钉住了。`,
+        `${name}：最深处有一只很少露面的伙伴。打赢，它会跟着你。`,
+      ],
+      () => host.travel('rift1', 5, 6),
+    )
+    return
+  }
   if (GameState.hasFlag('chapter6_done') && !GameState.hasFlag('cloud_unlocked')) {
     GameState.addItem('star_glider', 1)
     GameState.setFlag('cloud_unlocked', true)

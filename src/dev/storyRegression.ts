@@ -17,6 +17,7 @@ import type { Facing } from '../game/state/GameState'
 import { GameState } from '../game/state/GameState'
 import { SAVE_KEY } from '../game/systems/SaveSystem'
 import { fightOut, type BattleProbe } from './autoBattle'
+import { riftRare, riftTrail } from '../game/data/riftMap'
 
 /** 回归中需要访问的 WorldScene 内部能力（开发调试专用） */
 interface WorldProbe extends Phaser.Scene {
@@ -438,6 +439,7 @@ async function runSteps(r: Runner): Promise<void> {
     ...chapter9Steps(r),
     ...chapter10Steps(r),
     ...guardianSteps(r),
+    ...riftSteps(r),
   ]
   for (const [name, run] of steps) {
     if (!(await r.step(name, run))) break
@@ -1077,6 +1079,68 @@ function guardianSteps(r: Runner): [string, () => Promise<string | true>][] {
       },
     ],
   ]
+}
+
+/** 星砂秘境：沿种子生成的路走到最深处并收服稀有伙伴 */
+function riftSteps(r: Runner): [string, () => Promise<string | true>][] {
+  return [
+    [
+      '星砂秘境五层 → 稀有伙伴',
+      async () => {
+        const ws = await r.enterWorld('observatory', 5, 3, 'up')
+        ws.tryInteract()
+        if (!(await r.until(() => r.world().dialogue.isOpen, 4000))) return '穗没有开口'
+        await r.closeDialogue(r.world())
+        if (!(await r.until(() => GameState.mapId === 'rift1' && r.active('World') && !r.world().busy, 8000))) return '没有进入秘境'
+        const seed = Number(GameState.getFlag('rift_seed') || 1)
+        for (let floor = 1; floor <= 4; floor++) {
+          const trail = riftTrail(seed, floor)
+          const walked = await walkTrail(r, trail.slice(0, -1))
+          if (walked !== true) return walked
+          const stand = trail[trail.length - 2]
+          const goal = trail[trail.length - 1]
+          r.world().tryMove(goal.x - stand.x, goal.y - stand.y)
+          const nextId = `rift${floor + 1}`
+          if (!(await r.until(() => GameState.mapId === nextId && r.active('World') && !r.world().busy, 8000))) {
+            return `没有进入${nextId}`
+          }
+        }
+        const trail = riftTrail(seed, 5)
+        const walked = await walkTrail(r, trail.slice(0, -1))
+        if (walked !== true) return walked
+        const stand = trail[trail.length - 2]
+        const npc = trail[trail.length - 1]
+        const dx = Math.sign(npc.x - stand.x)
+        const dy = Math.sign(npc.y - stand.y)
+        const face = dx < 0 ? 'left' : dx > 0 ? 'right' : dy < 0 ? 'up' : 'down'
+        r.world().setFacing(face)
+        r.world().tryInteract()
+        const rare = riftRare(seed)
+        if (!(await r.toBattle(r.world()))) return `${rare} 没有开战`
+        const next = await r.winBattle()
+        if (next === 'lost') return `输给了 ${rare}`
+        await r.until(() => r.active('World') && !r.world().busy, 8000)
+        await r.closeDialogue(r.world())
+        const owned = [...GameState.party, ...GameState.storage].some((c) => c.speciesId === rare)
+        return check(GameState.hasFlag(`pal_${rare}`) && owned, `没有收服 ${rare}`)
+      },
+    ],
+  ]
+}
+
+/** 按轨迹一格一格走，起点必须已经站在第一格 */
+async function walkTrail(r: Runner, trail: { x: number; y: number }[]): Promise<string | true> {
+  for (let i = 1; i < trail.length; i++) {
+    const dx = trail[i].x - trail[i - 1].x
+    const dy = trail[i].y - trail[i - 1].y
+    r.world().tryMove(dx, dy)
+    const arrived = await r.until(() => {
+      const w = r.world()
+      return !w.busy && w.tileX === trail[i].x && w.tileY === trail[i].y
+    }, 4000)
+    if (!arrived) return `走到 ${trail[i].x},${trail[i].y} 失败`
+  }
+  return true
 }
 
 /** 右上角结果面板 */

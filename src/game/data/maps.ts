@@ -4,7 +4,8 @@
  * @date 2026-10-14
  */
 
-import type { Facing } from '../state/GameState'
+import { GameState, type Facing } from '../state/GameState'
+import { buildRiftFloor } from './riftMap'
 import { decorBlocks } from './decor'
 import { buildCanyon, buildHammerTown, buildMine } from './canyonMap'
 import { buildDunes, buildObservatory } from './dunesMap'
@@ -799,6 +800,20 @@ export const MAPS: Record<string, MapDef> = {
   tower8: buildTower8(),
   tower9: buildTower9(),
   towertop: buildTowerTop(),
+}
+
+/**
+ * 按编号取地图。星砂秘境的五层是按种子现算的，不在静态表里。
+ * @author zjh
+ * @date 2026-10-19
+ */
+export function mapById(id: string): MapDef {
+  if (id.startsWith('rift')) {
+    const floor = Number(id.slice(4)) || 1
+    const seed = Number(GameState.getFlag('rift_seed') || 1)
+    return buildRiftFloor(seed, floor)
+  }
+  return MAPS[id] ?? MAPS.town
 }
 
 /**

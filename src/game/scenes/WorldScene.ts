@@ -11,7 +11,8 @@ import { anchorFeet, hasCharArt, idleFrame, playerSheet, registerCharAnims, step
 import { SPECIES, battleName, type CreatureInstance } from '../data/creatures'
 import { decorBlocks } from '../data/decor'
 import { ITEMS } from '../data/items'
-import { MAPS, isTallGrass, resolveTile, type HasFlag, type MapDef, type NpcDef, type TileKind, type WarpDef } from '../data/maps'
+import { MAPS, isTallGrass, mapById, resolveTile, type HasFlag, type MapDef, type NpcDef, type TileKind, type WarpDef } from '../data/maps'
+import { riftWeather } from '../data/riftMap'
 import { MINOR_EVENTS, PHENOMENON_RULES } from '../data/phenomena'
 import { WEATHER_INFO } from '../data/weather'
 import { GameState, type Facing, type PendingBattle } from '../state/GameState'
@@ -116,7 +117,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.map = MAPS[GameState.mapId] ?? MAPS.town
+    this.map = mapById(GameState.mapId)
     GameState.snapshotSceneFlags(this.map.id)
     this.tileX = GameState.playerX
     this.tileY = GameState.playerY
@@ -165,6 +166,10 @@ export class WorldScene extends Phaser.Scene {
     this.weather.setAmbient(AMBIENT_BY_MAP[this.map.id] ?? null)
     this.fireLights = decorLights(this.map, decorFlag)
     this.toaster = new Toaster(this)
+    if (this.map.id.startsWith('rift')) {
+      const info = WEATHER_INFO[this.fieldWeather() ?? 'sunny']
+      this.flashToast(`这一层是${info.label}。跟着没有墙的路往北走。`)
+    }
     this.ride = new RideController({
       scene: this,
       map: this.map,
@@ -725,6 +730,11 @@ export class WorldScene extends Phaser.Scene {
 
   /** 场地天气：只有户外地图有天气 */
   private fieldWeather() {
+    if (this.map.id.startsWith('rift')) {
+      const floor = Number(this.map.id.slice(4)) || 1
+      const seed = Number(GameState.getFlag('rift_seed') || 1)
+      return riftWeather(seed, floor)
+    }
     return this.map.outdoor ? GameState.weatherAt(this.map.id) : null
   }
 
