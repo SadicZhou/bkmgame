@@ -7,6 +7,7 @@
 
 import { TS, parseAscii } from './mapKit'
 import type { MapDef } from './maps'
+import { postgameNpcs } from './postgameNpcs'
 
 const back = '风把你托回来了。'
 
@@ -362,6 +363,7 @@ export function buildCloudShrine(): MapDef {
         color: 0xd0e8f8,
         lines: ['岚翼鹏仍低着头。'],
       },
+      ...postgameNpcs('cloudshrine'),
     ],
   }
 }

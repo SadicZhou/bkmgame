@@ -180,6 +180,7 @@ export function buildLake(): MapDef {
         lines: [],
         team: [{ speciesId: 'tidewhale', level: 20 }],
         defeatedKey: 'whale_beaten',
+        hideIf: 'whale_beaten',
         challengeLines: [
           '（巨大的鲸从湖心浮起，发出一声长长的哀鸣。）',
           '（灯台上的黑色灯罩让它痛苦地甩动尾鳍，湖面掀起了浪。）',

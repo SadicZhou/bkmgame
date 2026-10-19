@@ -6,6 +6,7 @@
  */
 
 import type { NpcDef } from './maps'
+import { palFlag } from '../systems/Postgame'
 
 interface Fight {
   id: string
@@ -82,6 +83,28 @@ function championNpcs(): NpcDef[] {
 }
 
 /**
+ * 通关后守在原处的守护兽。打赢就收服，每只一次
+ * @author zjh
+ * @date 2026-10-19
+ */
+function rematch(name: string, speciesId: string, x: number, y: number, color: number): NpcDef {
+  return {
+    id: `re_${speciesId}`,
+    name,
+    role: 'trainer',
+    recruit: true,
+    showIf: 'game_clear',
+    hideIf: palFlag(speciesId),
+    x,
+    y,
+    color,
+    lines: ['它还守在灯台边。'],
+    challengeLines: [`${name}看着你，低下了头。`, '再比一场。这一次，它愿意跟着你。'],
+    team: [{ speciesId, level: 55 }],
+  }
+}
+
+/**
  * 各地通关后才看得到的人和记号
  * @author zjh
  * @date 2026-10-19
@@ -112,6 +135,7 @@ export function postgameNpcs(mapId: string): NpcDef[] {
         color: 0xffe08a,
         lines: ['钟楼下面，有一点没熄的暖光。'],
       },
+      rematch('暖灯熊', 'hearthbear', 9, 2, 0xffc878),
     ]
   }
   if (mapId === 'pass') {
@@ -127,6 +151,7 @@ export function postgameNpcs(mapId: string): NpcDef[] {
         color: 0xff8f6b,
         lines: ['山道入口的石头还是热的。'],
       },
+      rematch('熔鬃狮', 'magmane', 7, 1, 0xff7050),
     ]
   }
   if (mapId === 'lake') {
@@ -142,6 +167,7 @@ export function postgameNpcs(mapId: string): NpcDef[] {
         color: 0x8ec8e0,
         lines: ['湖边的水纹里，有一点很小的光。'],
       },
+      rematch('沧澜鲸', 'tidewhale', 10, 3, 0x3a80c8),
     ]
   }
   if (mapId === 'forest') {
@@ -157,6 +183,7 @@ export function postgameNpcs(mapId: string): NpcDef[] {
         color: 0x7ecf8a,
         lines: ['树皮上有一道被小爪子蹭过的痕。'],
       },
+      rematch('林语鹿', 'echodeer', 15, 4, 0x7ad86a),
     ]
   }
   if (mapId === 'towertop') {
@@ -172,7 +199,12 @@ export function postgameNpcs(mapId: string): NpcDef[] {
         color: 0xfff2c4,
         lines: ['灯台的灰还在，光已经不在灰里了。'],
       },
+      rematch('曦焰凤', 'dawnphoenix', 5, 2, 0xfff0c0),
     ]
   }
+  if (mapId === 'mine') return [rematch('磐角犀', 'ridgerhino', 15, 2, 0xc4a484)]
+  if (mapId === 'dunes') return [rematch('雷鸣隼', 'stormfalcon', 10, 1, 0xf5d442)]
+  if (mapId === 'bellhall') return [rematch('霜铃鹤', 'frostcrane', 5, 1, 0xd8f4ff)]
+  if (mapId === 'cloudshrine') return [rematch('岚翼鹏', 'galeroc', 5, 1, 0xf4f8ff)]
   return []
 }

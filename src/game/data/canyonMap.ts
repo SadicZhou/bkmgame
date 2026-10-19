@@ -7,6 +7,7 @@
 
 import { TS, parseAscii } from './mapKit'
 import type { MapDef, NpcDef } from './maps'
+import { postgameNpcs } from './postgameNpcs'
 
 export const CANYON_FLAGS = {
   unlocked: 'canyon_unlocked',
@@ -376,12 +377,14 @@ export function buildMine(): MapDef {
         lines: [],
         team: [{ speciesId: 'ridgerhino', level: 30 }],
         defeatedKey: CANYON_FLAGS.rhino,
+        hideIf: CANYON_FLAGS.rhino,
         challengeLines: ['（岩壁裂开。一只巨大的磐角犀站了起来，背上的岩甲布满十年前的裂痕。）', '（它看着砧，又看着你。然后低下了角。）'],
         winLines: [
           '砧：我不回熄灯会了。我要留下来修矿道。',
           '砧：旅人，如果你见到首领，帮我告诉他：山没有错。',
         ],
       },
+      ...postgameNpcs('mine'),
     ],
   }
 }

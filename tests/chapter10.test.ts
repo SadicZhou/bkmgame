@@ -7,7 +7,11 @@
 import { describe, expect, it } from 'vitest'
 import { createCreature } from '../src/game/data/creatures'
 import { MAPS, visibleNpcs } from '../src/game/data/maps'
-import { healThird, traceCount } from '../src/game/systems/Postgame'
+import { GUARDIANS, grantGuardian, healThird, traceCount } from '../src/game/systems/Postgame'
+import { badgePowerMod } from '../src/game/systems/BattleCalc'
+import { startBattle } from '../src/game/systems/BattleLogic'
+import { MOVES } from '../src/game/data/moves'
+import { GameState } from '../src/game/state/GameState'
 
 describe('后日谈', () => {
   it('P-01 只回复存活伙伴的三成体力', () => {
@@ -42,5 +46,26 @@ describe('后日谈', () => {
     const gift = createCreature('wisp', 30, { talentFloor: 20 })
     expect(gift.talent.hp).toBe(20)
     expect(gift.talent.atk).toBe(20)
+  })
+
+  it('P-04 九只守护兽各收服一次，凑齐后招式 ×1.03', () => {
+    const flags = new Set<string>()
+    const caught: string[] = []
+    const store = {
+      has: (k: string) => flags.has(k),
+      set: (k: string) => flags.add(k),
+      add: () => 'party' as const,
+      mark: (id: string) => caught.push(id),
+    }
+    expect(grantGuardian('magmane', 55, store).join('')).toContain('熔鬃狮')
+    expect(grantGuardian('magmane', 55, store)).toEqual([])
+    for (const id of GUARDIANS) grantGuardian(id, 55, store)
+    expect(flags.has('nine_lights')).toBe(true)
+    expect(caught).toContain('dawnphoenix')
+    GameState.newGame('flarehorn')
+    GameState.setFlag('nine_lights', true)
+    const battle = startBattle([createCreature('flarehorn', 20)], [createCreature('bushtail', 20)], 'wild')
+    expect(badgePowerMod(battle, battle.playerParty[0], MOVES.tackle)).toBeCloseTo(1.03)
+    GameState.clearFlag('nine_lights')
   })
 })

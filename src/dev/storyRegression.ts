@@ -437,6 +437,7 @@ async function runSteps(r: Runner): Promise<void> {
     ...chapter8Steps(r),
     ...chapter9Steps(r),
     ...chapter10Steps(r),
+    ...guardianSteps(r),
   ]
   for (const [name, run] of steps) {
     if (!(await r.step(name, run))) break
@@ -1034,6 +1035,45 @@ function chapter10Steps(r: Runner): [string, () => Promise<string | true>][] {
         if (!(await talk('town', 9, 9, 'down'))) return '墨尘没有送礼'
         const gift = [...GameState.party, ...GameState.storage].find((c) => c.speciesId === 'wisp')
         return check(has('trace_done') && !!gift && gift.talent.hp === 20, '微光灵没有满资质')
+      },
+    ],
+  ]
+}
+
+/**
+ * 守护兽重战：九处灯台各收服一次，集齐九灯徽章
+ * @author zjh
+ * @date 2026-10-19
+ */
+function guardianSteps(r: Runner): [string, () => Promise<string | true>][] {
+  const has = GameState.hasFlag
+  const spots: [string, number, number, 'up', string][] = [
+    ['pass', 7, 2, 'up', 'magmane'],
+    ['lake', 10, 4, 'up', 'tidewhale'],
+    ['forest', 15, 5, 'up', 'echodeer'],
+    ['mine', 15, 3, 'up', 'ridgerhino'],
+    ['dunes', 10, 2, 'up', 'stormfalcon'],
+    ['bellhall', 5, 2, 'up', 'frostcrane'],
+    ['cloudshrine', 5, 2, 'up', 'galeroc'],
+    ['town', 9, 3, 'up', 'hearthbear'],
+    ['towertop', 5, 3, 'up', 'dawnphoenix'],
+  ]
+  return [
+    [
+      '九处守护兽重战 → 九灯徽章',
+      async () => {
+        for (const [mapId, x, y, facing, speciesId] of spots) {
+          const ws = await r.enterWorld(mapId, x, y, facing)
+          ws.tryInteract()
+          if (!(await r.toBattle(ws))) return `${speciesId} 没有开战`
+          const next = await r.winBattle()
+          if (next === 'lost') return `输给了 ${speciesId}`
+          await r.until(() => r.active('World') && !r.world().busy, 8000)
+          await r.closeDialogue(r.world())
+          if (!has(`pal_${speciesId}`)) return `没有收服 ${speciesId}`
+        }
+        const owned = spots.every((s) => [...GameState.party, ...GameState.storage].some((c) => c.speciesId === s[4]))
+        return check(has('nine_lights') && owned, '九灯徽章或伙伴不齐')
       },
     ],
   ]

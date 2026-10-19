@@ -269,6 +269,7 @@ export function buildForest(): MapDef {
         lines: [],
         team: [{ speciesId: 'echodeer', level: 24 }],
         defeatedKey: FOREST_FLAGS.deer,
+        hideIf: FOREST_FLAGS.deer,
         challengeLines: [
           '（林心古树下，鹿角挂着上百颗小铃铛，却一声不响。）',
           '（林语鹿看着你。它张开嘴——没有声音。）',

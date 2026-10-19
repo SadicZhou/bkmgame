@@ -7,6 +7,7 @@
 
 import { TS, parseAscii } from './mapKit'
 import type { MapDef, NpcDef } from './maps'
+import { postgameNpcs } from './postgameNpcs'
 import { DUNE_FLAGS, ROD_IDS, rodFlag } from '../systems/Dunes'
 
 const RODS: { i: (typeof ROD_IDS)[number]; x: number; y: number }[] = [
@@ -132,6 +133,7 @@ export function buildDunes(): MapDef {
         lines: [],
         team: [{ speciesId: 'stormfalcon', level: 34 }],
         defeatedKey: DUNE_FLAGS.falcon,
+        hideIf: DUNE_FLAGS.falcon,
         challengeLines: ['（雷心坑中央，一只隼被细细的锁链缠住翅膀。它每扇一次，天上就落下一条雷。）'],
         winLines: [
           '（锁链烧断了。雷声停了半拍，沙暴散开，远处的霜铃峰映着一层极光。）',
@@ -139,6 +141,7 @@ export function buildDunes(): MapDef {
           '绯：下一座灯台在霜铃峰。朔和望已经先走了。',
         ],
       },
+      ...postgameNpcs('dunes'),
     ],
   }
 }

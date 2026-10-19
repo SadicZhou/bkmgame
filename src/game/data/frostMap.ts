@@ -7,6 +7,7 @@
 
 import { TS, parseAscii } from './mapKit'
 import type { MapDef } from './maps'
+import { postgameNpcs } from './postgameNpcs'
 
 /**
  * 山麓村。雪伯把暖炉石交给旅人
@@ -230,6 +231,7 @@ export function buildBellHall(): MapDef {
         lines: [],
         team: [{ speciesId: 'frostcrane', level: 38 }],
         defeatedKey: 'crane_beaten',
+        hideIf: 'crane_beaten',
         challengeLines: ['（铃殿中央，一只冰蓝的鹤冻在冰柱里。冰柱外缠着黑色灯罩的锁链。它的眼睛动了一下。）'],
         winLines: [
           '（冰柱碎开。霜铃鹤展翅，峰顶的冰铃一齐响了起来。）',
@@ -238,6 +240,7 @@ export function buildBellHall(): MapDef {
           '朔：我们不回去了。旅人，小心首领身边那个戴风筝面具的人。鸢什么都知道，却什么都不说。',
         ],
       },
+      ...postgameNpcs('bellhall'),
     ],
   }
 }

@@ -16,6 +16,7 @@ import { FRIENDSHIP_GAIN } from '../../systems/Bond'
 import { addFriendship } from '../../systems/Growth'
 import { syncNightRelay } from '../../systems/Night'
 import { openTowerStairs } from '../../systems/Tower'
+import { grantGuardian } from '../../systems/Postgame'
 import { endPhenomenon } from '../../systems/Phenomenon'
 import { rematchCountKey, winDayKey } from '../../systems/Rematch'
 import { dayOf } from '../../systems/WorldClock'
@@ -88,6 +89,15 @@ export function settleBattle(b: BattleState, pending: PendingBattle): BattleSett
         GameState.notices.push(`获得了重要物品「${ITEMS[id]?.name ?? id}」`)
       }
       if (pending.winLines?.length) GameState.notices.push(...pending.winLines)
+      if (pending.recruit && pending.enemies[0]) {
+        const lines = grantGuardian(pending.enemies[0].speciesId, pending.enemies[0].level, {
+          has: (k) => !!GameState.getFlag(k),
+          set: (k) => GameState.setFlag(k, true),
+          add: (c) => GameState.addCreature(c),
+          mark: (id) => GameState.markCaught(id),
+        })
+        if (lines.length) GameState.notices.push(...lines)
+      }
       openTowerStairs(
         (k) => !!GameState.getFlag(k),
         (k) => GameState.setFlag(k, true),

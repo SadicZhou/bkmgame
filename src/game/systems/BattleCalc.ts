@@ -7,6 +7,7 @@
 import { SPECIES, typeMultiplier, type CreatureInstance, type MoveDef } from '../data/creatures'
 import { GameState } from '../state/GameState'
 import { BADGE_POWER } from '../data/badges'
+import { NINE_LIGHTS_POWER } from './Postgame'
 import { weatherPowerMod } from '../data/weather'
 import { attackerPowerMod, critRate, defenderDamageMod, evasionMod, speedMod } from './AbilityHooks'
 import { volOf, type BattleState } from './BattleCore'
@@ -23,8 +24,10 @@ export const STAB = 1.2
  * @date 2026-10-15
  */
 export function badgePowerMod(s: BattleState, attacker: CreatureInstance, move: MoveDef): number {
-  if (!s.badges?.includes(move.type)) return 1
-  return s.playerParty.includes(attacker) ? BADGE_POWER : 1
+  const own = s.playerParty.includes(attacker)
+  const badge = own && s.badges?.includes(move.type) ? BADGE_POWER : 1
+  const nine = own && GameState.hasFlag('nine_lights') ? NINE_LIGHTS_POWER : 1
+  return badge * nine
 }
 
 /**

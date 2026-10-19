@@ -57,6 +57,8 @@ export interface PendingBattle {
   ordeal?: boolean
   /** 夜幕鸦低于半血时结束战斗 */
   surrender?: boolean
+  /** 胜利后收服对手的第一只 */
+  recruit?: boolean
   /** 训练家再战（胜利后累计再战次数） */
   rematch?: boolean
   /** 战斗场地天气（室内 / 城镇为 null） */

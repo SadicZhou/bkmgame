@@ -98,7 +98,8 @@ export class NpcInteract {
    * @date 2026-10-15
    */
   private talkFighter(npc: NpcDef, say: (lines: string[], after?: () => void) => void): void {
-    const beaten = npc.defeatedKey ? GameState.getFlag(npc.defeatedKey) : true
+    // 没有击败旗标的再战：每次都能打，收服后由 hideIf 把它收走
+    const beaten = npc.recruit ? false : npc.defeatedKey ? !!GameState.getFlag(npc.defeatedKey) : true
     if (beaten && rematchReady(npc, (k) => GameState.getFlag(k), dayOf(GameState.world.totalSteps))) {
       if (!this.host.hasAbleCreature()) {
         say(['又见面了！不过你的伙伴们看起来很累……休息好了再来找我比一场吧。'])
@@ -156,6 +157,7 @@ export class NpcInteract {
       neutral: npc.neutral,
       ordeal: npc.ordeal,
       surrender: npc.surrender,
+      recruit: npc.recruit,
       ...this.host.returnInfo(),
     })
   }

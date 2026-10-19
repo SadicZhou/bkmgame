@@ -117,6 +117,8 @@ export interface NpcDef {
   surrender?: boolean
   /** 不画在地图上，只给连战调用 */
   offstage?: boolean
+  /** 打赢后收服队伍里的第一只，每只守护兽只此一次 */
+  recruit?: boolean
   /** prop 的贴图（不填则不显示，由装饰物负责外观） */
   texture?: string
   /** 闲逛半径（格，曼哈顿距离）：在出生点附近随机走动；不填则原地站立 */
@@ -704,6 +706,7 @@ function buildPass(): MapDef {
           { speciesId: 'magmane', level: 13 },
         ],
         defeatedKey: 'boss_beaten',
+        hideIf: 'boss_beaten',
         challengeLines: [
           '……旅人，你也是来夺走火种的吗？',
           '熔鬃狮在咆哮，火种的光芒已经乱了。',
