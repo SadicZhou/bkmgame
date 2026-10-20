@@ -144,6 +144,9 @@ function paintOne(g: Icon, id: string): void {
   else if (id === 'kid_lamp') kidLamp(g)
   else if (id === 'gold_crown') crown(g)
   else if (id === 'travel_journal') journal(g)
+  else if (id === 'fest_ribbon') festRibbon(g)
+  else if (id === 'fest_lantern') festLantern(g)
+  else if (id === 'fest_star') festStar(g)
 }
 
 /** 喷雾罐：喷嘴、金属颈、标签和罐底 */
@@ -446,6 +449,31 @@ function photoItem(g: Icon): void {
   g.ellipse(40, 24, 3, 3, 0xfff6a0)
   g.rect(18, 38, 16, 2, 0xd8d0c4)
   g.rect(18, 42, 12, 2, 0xd8d0c4)
+}
+
+/** 千灯穗：暖色丝带 */
+function festRibbon(g: Icon): void {
+  g.rect(28, 10, 8, 36, 0xe07050)
+  g.rect(30, 12, 4, 32, 0xffc080)
+  g.ellipse(32, 44, 10, 6, 0xffe08a)
+  g.dot(32, 18, 0xfff6c8)
+}
+
+/** 纸灯饰：小灯笼 */
+function festLantern(g: Icon): void {
+  g.rect(30, 10, 4, 8, 0xc4a060)
+  g.round(20, 18, 24, 28, 0xffe0a0)
+  g.rect(24, 26, 16, 12, 0xfff6c8)
+  g.dot(32, 30, 0xfffaf0)
+  g.rect(22, 44, 20, 3, 0xe0b060)
+}
+
+/** 星火别针：小星 */
+function festStar(g: Icon): void {
+  g.ellipse(32, 30, 10, 10, 0xffe08a)
+  g.rect(30, 16, 4, 28, 0xffc878)
+  g.rect(18, 28, 28, 4, 0xffc878)
+  g.dot(32, 30, 0xfffaf0)
 }
 
 /** 旅团手账：旧封面和一枚暖色书签 */

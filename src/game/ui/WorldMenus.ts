@@ -16,6 +16,7 @@ import { nightTownActive } from '../systems/Night'
 import { Sfx } from '../systems/AudioBeeps'
 import { applyItemToCreature, checkItemOnCreature } from '../systems/BattleLogic'
 import { BEACONS, DUNE_FLAGS } from '../systems/Dunes'
+import { FEST_GIFTS, festOwnedCount } from '../systems/Festival'
 import { BOND_FLAG, FRIENDSHIP_GAIN, bondBar, bondStage, nextBondStage } from '../systems/Bond'
 import { anglerRecord, beatsRecord, fishLogCount, todayContest } from '../systems/FishLog'
 import { rockSlideReason, teachRockSlide } from '../systems/MoveBooks'
@@ -81,7 +82,12 @@ export class WorldMenus {
             (GameState.hasFlag(MUSH_FLAGS.title) ? '\n称号：菇菇朋友（伞灵菇老奶奶）' : '') +
             (GameState.hasFlag('champion_title') ? '\n称号：焰迹冠军' : '') +
             (GameState.hasFlag('nine_lights') ? '\n九灯徽章：全部招式 ×1.03' : '') +
-            (GameState.hasFlag('dex_complete') ? '\n旅团手账：异色出现率 ×2' : ''),
+            (GameState.hasFlag('dex_complete') ? '\n旅团手账：异色出现率 ×2' : '') +
+            (festOwnedCount((id) => GameState.itemCount(id))
+              ? `\n千灯饰品：${FEST_GIFTS.filter((g) => GameState.itemCount(g.id) > 0)
+                  .map((g) => g.name)
+                  .join('、')}（${festOwnedCount((id) => GameState.itemCount(id))}/${FEST_GIFTS.length}）`
+              : ''),
           onSelect: () => Sfx.cancel(),
         },
         {

@@ -442,6 +442,7 @@ async function runSteps(r: Runner): Promise<void> {
     ...riftSteps(r),
     ...fishNationSteps(r),
     ...dexSteps(r),
+    ...festivalSteps(r),
   ]
   for (const [name, run] of steps) {
     if (!(await r.step(name, run))) break
@@ -1202,6 +1203,30 @@ function dexSteps(r: Runner): [string, () => Promise<string | true>][] {
         if (!(await r.until(() => r.world().dialogue.isOpen, 4000))) return '阿禾没有开口'
         await r.closeDialogue(r.world())
         return check(GameState.hasFlag('dex_complete') && GameState.itemCount('travel_journal') === 1, '没有拿到旅团手账')
+      },
+    ],
+  ]
+}
+
+/** 千灯节：拨到第 30 天，进镇找饰品摊领限定饰品 */
+function festivalSteps(r: Runner): [string, () => Promise<string | true>][] {
+  return [
+    [
+      '千灯节 → 限定饰品',
+      async () => {
+        const { DAY_STEPS } = await import('../game/systems/WorldClock')
+        const { visibleNpcs, MAPS } = await import('../game/data/maps')
+        GameState.world.totalSteps = 29 * DAY_STEPS
+        GameState.setFlag('game_clear', true)
+        const ws = await r.enterWorld('town', 7, 9, 'up')
+        if (!GameState.hasFlag('@festival')) return '今天不是千灯节'
+        const guests = ['fest_stall', 'fest_path', 'fest_fei', 'fest_mochen_fest']
+        const ids = visibleNpcs(MAPS.town, (k) => GameState.hasFlag(k)).map((n) => n.id)
+        if (!guests.every((id) => ids.includes(id))) return `旧友没到齐：缺 ${guests.filter((id) => !ids.includes(id)).join(',')}`
+        ws.tryInteract()
+        if (!(await r.until(() => r.world().dialogue.isOpen, 4000))) return '饰品摊没有开口'
+        await r.closeDialogue(r.world())
+        return check(GameState.itemCount('fest_ribbon') === 1 && GameState.hasFlag('fest_claimed_30'), '没有领到千灯穗')
       },
     ],
   ]

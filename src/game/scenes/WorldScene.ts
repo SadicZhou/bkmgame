@@ -36,6 +36,7 @@ import { BOLTS, BOLT_SAFE, DUNE_GATE, boltPhase, boltStrikes, healWithKindler, i
 import { cloudWindEnd } from '../systems/Cloud'
 import { heatTick, towerBoltAt, towerWindEnd } from '../systems/Tower'
 import { healThird } from '../systems/Postgame'
+import { festivalToday } from '../systems/Festival'
 import { lightAllyLamps, nightTownActive } from '../systems/Night'
 import { BOARD_FLAG, boardSpeed } from '../systems/Vehicle'
 import { FROST_FLAGS, ICE_BLOCKS, SLIDE_GOALS, blockFlag, blockPos, chipCold, iceBlockAt, leadIsFlame, slideEnd, slideFlag, tickCold, tryPushIce } from '../systems/Frost'
@@ -128,7 +129,10 @@ export class WorldScene extends Phaser.Scene {
     this.lightUpPending = needsLightUp(this.map, hasFlag)
     // 进入地图 / 战斗结束后重新计算安全步数
     GameState.world.stepsSinceEncounter = 0
-    this.cameras.main.setBackgroundColor(nightTownActive(this.map.id, (k) => !!GameState.hasFlag(k)) ? 0x1c2438 : this.map.bgColor)
+    const fest = this.map.id === 'town' && festivalToday(GameState.day(), GameState.hasFlag('game_clear'))
+    this.cameras.main.setBackgroundColor(
+      nightTownActive(this.map.id, (k) => !!GameState.hasFlag(k)) ? 0x1c2438 : fest ? 0x2a2040 : this.map.bgColor,
+    )
     this.cameras.main.setZoom(1)
 
     const decorFlag = this.decorFlag()
@@ -170,6 +174,7 @@ export class WorldScene extends Phaser.Scene {
       const info = WEATHER_INFO[this.fieldWeather() ?? 'sunny']
       this.flashToast(`这一层是${info.label}。跟着没有墙的路往北走。`)
     }
+    if (fest) this.flashToast('今天是千灯节。旧友都回来了，广场有饰品摊。')
     this.ride = new RideController({
       scene: this,
       map: this.map,

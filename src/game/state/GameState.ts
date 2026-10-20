@@ -19,6 +19,7 @@ import {
   type GameFlags,
   type SaveData,
 } from '../systems/SaveSystem'
+import { festivalToday } from '../systems/Festival'
 import { createWorld, dayOf, isNight, weatherOf, type WorldSave } from '../systems/WorldClock'
 import { migrateChapters } from './saveMigrate'
 
@@ -218,13 +219,17 @@ class GameStateStore {
   hasFlag = (key: string): boolean => (key.startsWith('@') ? !!this.sceneFlags[key] : !!this.flags[key])
 
   /**
-   * 进入地图时刷新 @night / @rain；城镇没有自己的天气，跟随青苔草地
+   * 进入地图时刷新 @night / @rain / @festival；城镇没有自己的天气，跟随青苔草地
    * @author zjh
    * @date 2026-10-15
    */
   snapshotSceneFlags(mapId: string): void {
     const weather = this.weatherAt(mapId) ?? this.weatherAt('meadow')
-    this.sceneFlags = { '@night': this.night(), '@rain': weather === 'rain' || weather === 'storm' }
+    this.sceneFlags = {
+      '@night': this.night(),
+      '@rain': weather === 'rain' || weather === 'storm',
+      '@festival': festivalToday(this.day(), !!this.flags.game_clear),
+    }
   }
 
   itemCount(id: string): number {

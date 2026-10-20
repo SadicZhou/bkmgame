@@ -1,11 +1,13 @@
 /**
- * 灯灯的足迹：五处旧地都走过之后，墨尘把微光灵交给旅人
+ * 灯灯的足迹与千灯节饰品摊
  * @author zjh
  * @date 2026-10-19
  */
 
 import { createCreature } from '../../data/creatures'
+import { ITEMS } from '../../data/items'
 import { GameState } from '../../state/GameState'
+import { FEST_GIFTS, festClaimFlag, festGiftIndex } from '../../systems/Festival'
 import { TRACE_FLAGS, traceCount } from '../../systems/Postgame'
 import type { StoryFn, StoryHost } from './StoryEvents'
 
@@ -68,6 +70,33 @@ function mochen(host: StoryHost): void {
   )
 }
 
+/**
+ * 千灯节饰品摊：这一轮的限定饰品，一天只领一次
+ * @author zjh
+ * @date 2026-10-20
+ */
+function festStall(host: StoryHost): void {
+  const day = GameState.day()
+  const claim = festClaimFlag(day)
+  const gift = FEST_GIFTS[festGiftIndex(day)]
+  if (GameState.hasFlag(claim)) {
+    host.say([`饰品摊：今天的「${gift.name}」你已经拿过了。`, '下一次千灯节再来，会换另一件。'])
+    return
+  }
+  GameState.setFlag(claim, true)
+  if (GameState.itemCount(gift.id) > 0) {
+    GameState.coins += 100
+    host.refreshHud()
+    host.say([`饰品摊：这一件你已经有了。`, `换成 100 焰币吧。还是千灯节，别空手走。`])
+    host.toast('获得 100 焰币')
+    return
+  }
+  GameState.addItem(gift.id, 1)
+  host.refreshHud()
+  host.say([`饰品摊：今天轮到「${gift.name}」。`, ITEMS[gift.id].desc, '没有战力加成，挂上就好看。'])
+  host.toast(`获得了重要物品「${gift.name}」`)
+}
+
 export const POSTGAME_STORIES: Record<string, StoryFn> = {
   trace_mochen: mochen,
   trace_pass: spot('trace_pass'),
@@ -75,4 +104,5 @@ export const POSTGAME_STORIES: Record<string, StoryFn> = {
   trace_forest: spot('trace_forest'),
   trace_town: spot('trace_town'),
   trace_tower: spot('trace_tower'),
+  fest_stall: festStall,
 }

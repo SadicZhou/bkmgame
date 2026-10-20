@@ -60,6 +60,9 @@ export const ITEMS: Record<string, ItemDef> = {
     price: 0,
     desc: '阿禾旅团传下来的旧手账。写满了各地的伙伴。带着它时，异色伙伴出现率 ×2。',
   },
+  fest_ribbon: { id: 'fest_ribbon', name: '千灯穗', kind: 'key', value: 0, price: 0, desc: '千灯节的穗带。没有战力加成，只是好看。' },
+  fest_lantern: { id: 'fest_lantern', name: '纸灯饰', kind: 'key', value: 0, price: 0, desc: '千灯节的小纸灯。挂在腰带上会轻轻晃。' },
+  fest_star: { id: 'fest_star', name: '星火别针', kind: 'key', value: 0, price: 0, desc: '千灯节的星火别针。夜里会亮一点点。' },
   fold_board: { id: 'fold_board', name: '折叠滑板', kind: 'vehicle', value: 0, price: 200, desc: '旅团杂货铺的折叠滑板。在野外展开后走得更快；室内会自动收起，不能和骑乘同时使用。' },
 }
 
@@ -95,6 +98,9 @@ export const KEY_ITEMS: string[] = [
   'kid_lamp',
   'gold_crown',
   'travel_journal',
+  'fest_ribbon',
+  'fest_lantern',
+  'fest_star',
 ]
 
 /** 商店货架顺序 */

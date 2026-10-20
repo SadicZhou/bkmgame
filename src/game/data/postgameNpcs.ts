@@ -119,6 +119,43 @@ function fishSign(id: string, story: string, flag: string, x: number, y: number)
   }
 }
 
+/** 千灯节来镇上的旧友 */
+function festGuest(id: string, name: string, x: number, y: number, color: number, lines: string[]): NpcDef {
+  return {
+    id,
+    name,
+    x,
+    y,
+    color,
+    showIf: '@festival',
+    lines,
+  }
+}
+
+function festivalNpcs(): NpcDef[] {
+  return [
+    {
+      id: 'fest_stall',
+      name: '饰品摊',
+      story: 'fest_stall',
+      showIf: '@festival',
+      x: 7,
+      y: 8,
+      color: 0xffc878,
+      lines: ['今天轮到哪一件饰品呢？'],
+    },
+    festGuest('fest_path', '小路', 6, 10, 0xf0d060, ['小路：千灯节！我做的灯全挂出来了！']),
+    festGuest('fest_fei', '执灯·绯', 4, 9, 0xe07050, ['绯：每年这一天，灯会自己想亮。']),
+    festGuest('fest_anvil', '掘手·砧', 5, 10, 0xc08050, ['砧：锤停一天。去看灯。']),
+    festGuest('fest_twins', '朔与望', 11, 9, 0xd0e8f8, ['望：两个人一起放灯。朔说，别抢。']),
+    festGuest('fest_shio', '泉守汐', 12, 8, 0x7ec8c0, ['汐：湖上的灯，也会跟着晃。']),
+    festGuest('fest_kite', '司风·鸢', 10, 8, 0x88c0d8, ['鸢：风把灯笼托得很高。好看。']),
+    festGuest('fest_mochen_fest', '墨尘', 12, 6, 0x2a2a38, ['墨尘：灯灯也在看。']),
+    festGuest('fest_sui', '星图师穗', 4, 7, 0xf0e0a0, ['穗：今晚的星，跟灯分不清。']),
+    festGuest('fest_moss', '巡护员苔', 11, 7, 0x5b8c5a, ['苔：公告板上写着：千灯节，欢迎回来。']),
+  ]
+}
+
 /**
  * 各地通关后才看得到的人和记号
  * @author zjh
@@ -128,6 +165,7 @@ export function postgameNpcs(mapId: string): NpcDef[] {
   if (mapId === 'town') {
     return [
       ...championNpcs(),
+      ...festivalNpcs(),
       {
         id: 'trace_mochen',
         name: '墨尘',
