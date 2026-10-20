@@ -7,6 +7,7 @@
 import { GameState } from '../../state/GameState'
 import { Sfx } from '../../systems/AudioBeeps'
 import { MILL_A, MILL_B, MILL_C, toggleMill, type MillId } from '../../systems/Cloud'
+import { dexComplete } from '../../systems/Postgame'
 import type { StoryHost } from './StoryEvents'
 
 function mill(id: MillId): (host: StoryHost, name: string) => void {
@@ -70,6 +71,18 @@ const ANSWERS = [
  * @date 2026-10-16
  */
 function townElder(host: StoryHost, name: string): boolean {
+  if (GameState.hasFlag('game_clear') && !GameState.hasFlag('dex_complete') && dexComplete(GameState.dex.caught)) {
+    GameState.addItem('travel_journal', 1)
+    GameState.setFlag('dex_complete', true)
+    host.say([
+      `${name}：图鉴……都收齐了。`,
+      `${name}：这一本是旅团的旧手账。从前每个执灯人都要往里面写自己遇见的伙伴。`,
+      `${name}：现在，该你写了。带着它走，异色的伙伴会更容易露面。`,
+      `${name}：等你再看见结局那一幕，会多一点暖光。`,
+    ])
+    host.toast('获得了重要物品「旅团手账」')
+    return true
+  }
   if (!GameState.hasFlag('roc_beaten') || GameState.hasFlag('he_confessed')) return false
   if (!GameState.hasFlag('cloud_photo')) {
     host.say([`${name}：你从云上下来了。`, `${name}：先把那半张照片找回来，我才说得出口。`])

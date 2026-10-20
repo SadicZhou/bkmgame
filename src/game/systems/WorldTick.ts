@@ -74,7 +74,9 @@ function encounterCtx(mapId: string, source: EncounterSource): EncounterContext 
     migrationSpecies: minor?.id === 'migration' ? minor.speciesId : undefined,
     shimmer: minor?.id === 'shimmer',
     hasFlag: GameState.hasFlag,
-    shinyMod: GameState.itemCount('star_charm') > 0 ? 1.5 : 1,
+    shinyMod:
+      (GameState.itemCount('star_charm') > 0 ? 1.5 : 1) *
+      (GameState.itemCount('travel_journal') > 0 || GameState.hasFlag('dex_complete') ? 2 : 1),
     goldRod: GameState.itemCount('gold_rod') > 0,
   }
 }

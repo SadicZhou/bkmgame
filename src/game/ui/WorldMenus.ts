@@ -80,7 +80,8 @@ export class WorldMenus {
             (badges.length ? badges.map((b) => `◆ ${b.name}：${b.desc}`).join('\n') : '击败各章节的守护兽后可以获得徽记。') +
             (GameState.hasFlag(MUSH_FLAGS.title) ? '\n称号：菇菇朋友（伞灵菇老奶奶）' : '') +
             (GameState.hasFlag('champion_title') ? '\n称号：焰迹冠军' : '') +
-            (GameState.hasFlag('nine_lights') ? '\n九灯徽章：全部招式 ×1.03' : ''),
+            (GameState.hasFlag('nine_lights') ? '\n九灯徽章：全部招式 ×1.03' : '') +
+            (GameState.hasFlag('dex_complete') ? '\n旅团手账：异色出现率 ×2' : ''),
           onSelect: () => Sfx.cancel(),
         },
         {

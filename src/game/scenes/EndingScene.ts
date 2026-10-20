@@ -73,11 +73,13 @@ export class EndingScene extends Phaser.Scene {
       .setAlpha(0)
     this.tweens.add({ targets: title, alpha: 1, y: 70, duration: 1200 })
 
+    const journal = GameState.hasFlag('dex_complete') || GameState.itemCount('travel_journal') > 0
     const lines = finale
       ? [
           '九座灯台的光从各地升起，在天上连成一只鸟。',
           '灯灯停在墨尘肩上，就像十年前一样。',
           '火会伤人，也会温暖人。重要的是，谁来守护它。',
+          ...(journal ? ['手账最后一页多了一行字：这一次，五个人都在灯下。'] : []),
         ]
       : [
           '山巅的火种重燃，湖心的灯台也再次亮起。',
@@ -86,29 +88,40 @@ export class EndingScene extends Phaser.Scene {
         ]
     lines.forEach((l, i) => {
       const t = this.add
-        .text(width / 2, 124 + i * 26, l, { fontSize: '16px', color: '#f0e6c8' })
+        .text(width / 2, 118 + i * 24, l, { fontSize: '15px', color: '#f0e6c8' })
         .setOrigin(0.5)
         .setAlpha(0)
       this.tweens.add({ targets: t, alpha: 1, delay: 800 + i * 700, duration: 800 })
     })
+    if (finale && journal) {
+      const names = ['阿禾', '小路', '墨尘', '绯', '苔']
+      names.forEach((n, i) => {
+        const x = width / 2 - 120 + i * 60
+        const glow = this.add.circle(x, 208, 14, 0xffe08a, 0.35).setAlpha(0)
+        const label = this.add.text(x, 224, n, { fontSize: '12px', color: '#ffe08a' }).setOrigin(0.5).setAlpha(0)
+        this.tweens.add({ targets: [glow, label], alpha: 1, delay: 3200 + i * 180, duration: 500 })
+        this.tweens.add({ targets: glow, alpha: 0.55, yoyo: true, repeat: -1, duration: 900, delay: 3600 + i * 80 })
+      })
+    }
 
     // 队伍展示
+    const partyY = finale && journal ? 268 : 252
     const party = GameState.party
     const gap = Math.min(96, (width - 80) / Math.max(1, party.length))
     const startX = width / 2 - (gap * (party.length - 1)) / 2
     party.forEach((c, i) => {
       const x = startX + i * gap
-      const img = setCreatureScale(this.add.image(x, 252, spriteKey(c)), 1.4).setAlpha(0)
+      const img = setCreatureScale(this.add.image(x, partyY, spriteKey(c)), 1.4).setAlpha(0)
       this.add
-        .text(x, 296, `${battleName(c)}\nLv.${c.level}`, { fontSize: '12px', color: '#e8f5ee', align: 'center' })
+        .text(x, partyY + 44, `${battleName(c)}\nLv.${c.level}`, { fontSize: '12px', color: '#e8f5ee', align: 'center' })
         .setOrigin(0.5, 0)
       this.tweens.add({ targets: img, alpha: 1, delay: 2600 + i * 200, duration: 500 })
-      this.tweens.add({ targets: img, y: 246, yoyo: true, repeat: -1, duration: 600 + i * 80, delay: 3000 })
+      this.tweens.add({ targets: img, y: partyY - 6, yoyo: true, repeat: -1, duration: 600 + i * 80, delay: 3000 })
     })
 
     const dexCaught = GameState.dex.caught.filter((id) => DEX_ORDER.includes(id)).length
     const stats = `游玩时长 ${formatTime(GameState.totalSeconds())} ｜ 第 ${GameState.day()} 天 ｜ 图鉴 ${dexCaught}/${DEX_ORDER.length} ｜ 焰币 ${GameState.coins}`
-    this.add.text(width / 2, 346, stats, { fontSize: '13px', color: '#b8f0d0' }).setOrigin(0.5)
+    this.add.text(width / 2, finale && journal ? 356 : 346, stats, { fontSize: '13px', color: '#b8f0d0' }).setOrigin(0.5)
     this.add
       .text(width / 2, 368, '（已自动存档）  制作：周建豪 · Embertrail', { fontSize: '11px', color: '#8a7a90' })
       .setOrigin(0.5)

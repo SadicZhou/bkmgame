@@ -143,6 +143,7 @@ function paintOne(g: Icon, id: string): void {
   else if (id === 'white_feather') feather(g)
   else if (id === 'kid_lamp') kidLamp(g)
   else if (id === 'gold_crown') crown(g)
+  else if (id === 'travel_journal') journal(g)
 }
 
 /** 喷雾罐：喷嘴、金属颈、标签和罐底 */
@@ -445,6 +446,18 @@ function photoItem(g: Icon): void {
   g.ellipse(40, 24, 3, 3, 0xfff6a0)
   g.rect(18, 38, 16, 2, 0xd8d0c4)
   g.rect(18, 42, 12, 2, 0xd8d0c4)
+}
+
+/** 旅团手账：旧封面和一枚暖色书签 */
+function journal(g: Icon): void {
+  g.round(16, 10, 32, 44, 0x8a6040)
+  g.rect(18, 12, 28, 40, 0xc49a6c)
+  g.rect(20, 16, 24, 2, 0xe8d0a8)
+  g.rect(20, 22, 18, 2, 0xd8c090)
+  g.rect(20, 28, 20, 2, 0xd8c090)
+  g.rect(20, 34, 14, 2, 0xd8c090)
+  g.rect(42, 20, 4, 18, 0xe07050)
+  g.dot(44, 18, 0xffc080)
 }
 
 /** 金冠饰：细冠和一颗暖色宝石 */

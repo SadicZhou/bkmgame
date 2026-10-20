@@ -1,10 +1,14 @@
 /**
- * 通关后：冠军之路回血、灯灯足迹、守护兽收服与九灯徽章
+ * 通关后：冠军之路回血、灯灯足迹、守护兽收服与九灯徽章、全图鉴
  * @author zjh
  * @date 2026-10-19
  */
 
-import { SPECIES, createCreature, type CreatureInstance } from '../data/creatures'
+import { DEX_ORDER, SPECIES, createCreature, type CreatureInstance } from '../data/creatures'
+
+/** 旅团手账：异色出现率再 ×2 */
+export const JOURNAL_SHINY = 2
+export const DEX_DONE_FLAG = 'dex_complete'
 
 /** 九只守护兽。收服旗标是 pal_物种 id */
 export const GUARDIANS = ['magmane', 'tidewhale', 'echodeer', 'ridgerhino', 'stormfalcon', 'frostcrane', 'galeroc', 'hearthbear', 'dawnphoenix'] as const
@@ -48,6 +52,15 @@ export const TRACE_FLAGS = ['trace_pass', 'trace_lake', 'trace_forest', 'trace_t
  */
 export function traceCount(has: (key: string) => boolean): number {
   return TRACE_FLAGS.filter((k) => has(k)).length
+}
+
+/**
+ * 主图鉴是否已经全部收服（异象精灵另算）
+ * @author zjh
+ * @date 2026-10-20
+ */
+export function dexComplete(caught: string[]): boolean {
+  return DEX_ORDER.every((id) => caught.includes(id))
 }
 
 /** 发守护兽时需要的存档操作 */

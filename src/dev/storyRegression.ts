@@ -441,6 +441,7 @@ async function runSteps(r: Runner): Promise<void> {
     ...guardianSteps(r),
     ...riftSteps(r),
     ...fishNationSteps(r),
+    ...dexSteps(r),
   ]
   for (const [name, run] of steps) {
     if (!(await r.step(name, run))) break
@@ -1175,6 +1176,32 @@ function fishNationSteps(r: Runner): [string, () => Promise<string | true>][] {
         if (!(await r.until(() => r.world().dialogue.isOpen, 4000))) return '澈没有发奖'
         await r.closeDialogue(r.world())
         return check(GameState.hasFlag('fish_nation_done') && GameState.itemCount('gold_rod') === 1, '没有拿到金钓竿')
+      },
+    ],
+  ]
+}
+
+/** 全图鉴：收齐主图鉴后找阿禾领旅团手账 */
+function dexSteps(r: Runner): [string, () => Promise<string | true>][] {
+  return [
+    [
+      '全图鉴 → 旅团手账',
+      async () => {
+        const { DEX_ORDER } = await import('../game/data/creatures')
+        for (const id of DEX_ORDER) GameState.markCaught(id)
+        await r.enterWorld('town', 8, 5, 'up')
+        const elder = (
+          r.world() as WorldProbe & {
+            walkers: { walkers: { x: number; y: number; body: { npc: { id: string } } }[] }
+          }
+        ).walkers.walkers.find((w) => w.body.npc.id === 'elder')
+        if (!elder) return '找不到阿禾'
+        const stand = { x: elder.x, y: elder.y + 1 }
+        const ws = await r.enterWorld('town', stand.x, stand.y, 'up')
+        ws.tryInteract()
+        if (!(await r.until(() => r.world().dialogue.isOpen, 4000))) return '阿禾没有开口'
+        await r.closeDialogue(r.world())
+        return check(GameState.hasFlag('dex_complete') && GameState.itemCount('travel_journal') === 1, '没有拿到旅团手账')
       },
     ],
   ]
