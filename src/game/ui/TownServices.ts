@@ -7,7 +7,8 @@
 import { MOVES, SPECIES, battleName, fullSlot, spriteKey, MAX_MOVES, type CreatureInstance } from '../data/creatures'
 import { PARTY_LIMIT } from '../data/items'
 import { MAPS } from '../data/maps'
-import { MINOR_EVENTS, PHENOMENA, PHENOMENON_RULES } from '../data/phenomena'
+import { PHENOMENA, PHENOMENON_RULES } from '../data/phenomena'
+import { minorBoardLine } from '../systems/EventHints'
 import { WEATHER_INFO } from '../data/weather'
 import { GameState } from '../state/GameState'
 import { Sfx } from '../systems/AudioBeeps'
@@ -67,11 +68,8 @@ export class TownServices {
       const goal = w.phenomenon.token ? '已获得异象信物' : `${def.goalLabel} ${w.phenomenon.goalDone}/${total}`
       lines.push(`【异象进行中】「${def.name}」出现在${MAPS[def.mapId].name}！还剩约 ${w.phenomenon.stepsLeft} 步。（${goal}）`)
     }
-    if (w.minor.id && w.minor.mapId) {
-      const m = MINOR_EVENTS[w.minor.id]
-      const extra = w.minor.id === 'migration' && w.minor.speciesId ? `：大量${SPECIES[w.minor.speciesId].name}出没` : ''
-      lines.push(`【${m.name}】${MAPS[w.minor.mapId].name}${extra}。${m.desc}（剩 ${w.minor.stepsLeft} 步）`)
-    }
+    const minorLine = minorBoardLine(w)
+    if (minorLine) lines.push(minorLine)
     if (w.lureSteps > 0) lines.push(`引兽铃还在响，剩 ${w.lureSteps} 步。`)
     if (w.repelSteps > 0) lines.push(`驱兽香还有效，剩 ${w.repelSteps} 步。`)
     lines.push(this.rumor())

@@ -8,12 +8,13 @@
 
 import Phaser from 'phaser'
 import { anchorFeet, hasCharArt, idleFrame, playerSheet, registerCharAnims, stepBob } from '../graphics/CharArt'
-import { SPECIES, battleName, type CreatureInstance } from '../data/creatures'
+import { battleName, type CreatureInstance } from '../data/creatures'
 import { decorBlocks } from '../data/decor'
 import { ITEMS } from '../data/items'
 import { MAPS, isTallGrass, mapById, resolveTile, type HasFlag, type MapDef, type NpcDef, type TileKind, type WarpDef } from '../data/maps'
 import { riftWeather } from '../data/riftMap'
-import { MINOR_EVENTS, PHENOMENON_RULES } from '../data/phenomena'
+import { PHENOMENON_RULES } from '../data/phenomena'
+import { minorEndedToast, minorHudLine, minorStartedToast } from '../systems/EventHints'
 import { WEATHER_INFO } from '../data/weather'
 import { GameState, type Facing, type PendingBattle } from '../state/GameState'
 import { Sfx } from '../systems/AudioBeeps'
@@ -662,13 +663,15 @@ export class WorldScene extends Phaser.Scene {
       redraw = true
     }
     if (res.minorStarted) {
-      const m = MINOR_EVENTS[res.minorStarted.id]
-      const where = MAPS[res.minorStarted.mapId]?.name ?? ''
-      const extra = res.minorStarted.speciesId ? `（${SPECIES[res.minorStarted.speciesId].name}）` : ''
-      this.flashToast(`【${m.name}】${where}${extra}`)
+      this.flashToast(
+        minorStartedToast(res.minorStarted.id, res.minorStarted.mapId, res.minorStarted.speciesId),
+      )
       redraw = true
     }
-    if (res.minorEnded) redraw = true
+    if (res.minorEnded) {
+      this.flashToast(minorEndedToast(res.minorEnded))
+      redraw = true
+    }
     if (res.goal) {
       const { def, done, total, tokenGained } = res.goal
       Sfx.confirm()
@@ -949,9 +952,9 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
-   * HUD：地图 · 天数时段 · 天气 · 首发 · 焰币；第二行显示进行中的异象
+   * HUD：地图 · 天数时段 · 天气 · 首发 · 焰币；后续行显示异象与小事件
    * @author zjh
-   * @date 2026-10-14
+   * @date 2026-10-22
    */
   private refreshHud(): void {
     const w = GameState.world
@@ -968,6 +971,8 @@ export class WorldScene extends Phaser.Scene {
       const goal = w.phenomenon.token ? '已得信物' : `${def.goalLabel} ${w.phenomenon.goalDone}/${total}`
       text += `\n✧ 异象「${def.name}」@${MAPS[def.mapId].name} · ${goal}`
     }
+    const minor = minorHudLine(w, this.map.id)
+    if (minor) text += `\n${minor}`
     this.hudText.setText(text)
   }
 }
