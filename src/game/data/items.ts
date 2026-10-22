@@ -98,6 +98,25 @@ export const ITEMS: Record<string, ItemDef> = {
     price: 0,
     desc: '雪人大赛的金牌奖品。带着它时霜铃峰寒冷涨得更慢，伙伴被冻结的几率减半。',
   },
+  lamp_paper: { id: 'lamp_paper', name: '薄灯纸', kind: 'key', value: 0, price: 0, desc: '山麓纸铺剩下的薄棉纸。望做纸灯要用。' },
+  lamp_wick: { id: 'lamp_wick', name: '软灯芯', kind: 'key', value: 0, price: 0, desc: '篝火旁抽出来的软灯芯。' },
+  aurora_dust: { id: 'aurora_dust', name: '极光碎屑', kind: 'key', value: 0, price: 0, desc: '心火极光落在峰顶的一点碎屑，摸起来是暖的。' },
+  wang_paper_lamp: {
+    id: 'wang_paper_lamp',
+    name: '望的纸灯',
+    kind: 'key',
+    value: 0,
+    price: 0,
+    desc: '望糊好的纸灯，还没点燃。满月夜放到霜铃峰北口石台上。',
+  },
+  heart_paper_lamp: {
+    id: 'heart_paper_lamp',
+    name: '心火纸灯',
+    kind: 'key',
+    value: 0,
+    price: 0,
+    desc: '望回赠的纸灯。灯里有一点心火。终章如果还需要暖光，它会帮你。',
+  },
 }
 
 /** 背包分页 */
@@ -141,6 +160,11 @@ export const KEY_ITEMS: string[] = [
   'coal_eyes',
   'ice_carrot',
   'warm_scarf',
+  'lamp_paper',
+  'lamp_wick',
+  'aurora_dust',
+  'wang_paper_lamp',
+  'heart_paper_lamp',
 ]
 
 /** 商店货架顺序 */

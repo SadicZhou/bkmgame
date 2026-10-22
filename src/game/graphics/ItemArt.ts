@@ -151,6 +151,10 @@ function paintOne(g: Icon, id: string): void {
   else if (id === 'coal_eyes') coalEyes(g)
   else if (id === 'ice_carrot') iceCarrot(g)
   else if (id === 'warm_scarf') warmScarf(g)
+  else if (id === 'lamp_paper') lampPaper(g)
+  else if (id === 'lamp_wick') lampWick(g)
+  else if (id === 'aurora_dust') auroraDust(g)
+  else if (id === 'wang_paper_lamp' || id === 'heart_paper_lamp') kidLamp(g)
 }
 
 /** 喷雾罐：喷嘴、金属颈、标签和罐底 */
@@ -540,6 +544,29 @@ function warmScarf(g: Icon): void {
   g.rect(18, 30, 28, 4, 0xff7070)
   g.rect(14, 34, 8, 12, 0xc04040)
   g.rect(42, 34, 8, 12, 0xc04040)
+}
+
+/** 薄灯纸 */
+function lampPaper(g: Icon): void {
+  g.rect(18, 16, 28, 32, 0xfff8e8)
+  g.rect(20, 18, 24, 28, 0xfff0d0)
+  g.rect(22, 22, 20, 2, 0xe8d8b0)
+}
+
+/** 软灯芯 */
+function lampWick(g: Icon): void {
+  g.rect(30, 14, 4, 28, 0xe8d0a0)
+  g.ellipse(32, 14, 4, 4, 0xfff0c0)
+  g.dot(32, 12, 0xff8040)
+}
+
+/** 极光碎屑 */
+function auroraDust(g: Icon): void {
+  g.dot(24, 28, 0xa0e8ff)
+  g.dot(32, 24, 0xffc0e0)
+  g.dot(40, 30, 0xc0ffd0)
+  g.dot(28, 36, 0xffe080)
+  g.dot(36, 34, 0xd0d0ff)
 }
 
 /** 小路的灯：纸灯笼和短提手 */

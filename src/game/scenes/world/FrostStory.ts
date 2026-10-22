@@ -1,12 +1,24 @@
 /**
- * 第六章剧情：雪伯的暖炉石、泉守汐、篝火取暖、雪人大赛
+ * 第六章剧情：雪伯、汐、篝火、雪人大赛、望的纸灯
  * @author zjh
  * @date 2026-10-22
  */
 
+import { ITEMS } from '../../data/items'
 import { GameState } from '../../state/GameState'
 import { Sfx } from '../../systems/AudioBeeps'
 import { FROST_FLAGS, warmCold } from '../../systems/Frost'
+import {
+  HEART_LAMP,
+  LAMP_PARTS,
+  UNLIT_LAMP,
+  WANG_LAMP_DONE,
+  craftWangLamp,
+  lampPartsCount,
+  lampPartsReady,
+  pickLampPart,
+  placeWangLamp,
+} from '../../systems/PaperLampQuest'
 import {
   SNOWMAN_DONE_FLAG,
   SNOWMAN_PARTS,
@@ -114,6 +126,73 @@ function pickPart(id: (typeof SNOWMAN_PARTS)[number]['id']) {
   }
 }
 
+/**
+ * 望：收集材料 → 糊灯 → 提醒满月夜放灯
+ * @author zjh
+ * @date 2026-10-22
+ */
+function wang(host: StoryHost, name: string): void {
+  const say = (lines: string[], after?: () => void) => host.say(lines.map((l) => `${name}：${l}`), after)
+  GameState.setFlag('side_wang_lamp_started', true)
+  if (GameState.hasFlag(WANG_LAMP_DONE)) {
+    say(['石台上的光，我看见了。谢谢你。'])
+    return
+  }
+  if (GameState.itemCount(UNLIT_LAMP) > 0) {
+    say(['满月夜去霜铃峰北边的石台放灯。夜里铃影最长的时候。'])
+    return
+  }
+  if (lampPartsReady()) {
+    const r = craftWangLamp()
+    if ('reason' in r) {
+      host.say([r.reason])
+      return
+    }
+    Sfx.win()
+    host.say(r.lines, () => {
+      host.toast(`获得了「${ITEMS[UNLIT_LAMP].name}」`)
+      host.refreshHud()
+    })
+    return
+  }
+  const n = lampPartsCount()
+  say([
+    '首领哥哥每年冬天都来放一盏纸灯。我想自己做一盏。',
+    '需要薄灯纸、软灯芯，还有峰顶的极光碎屑。',
+    n > 0 ? `你已经找来 ${n}/${LAMP_PARTS.length} 样了。` : '灯纸在山麓，灯芯在篝火旁，碎屑在峰顶北边。',
+  ])
+}
+
+function wangPlace(host: StoryHost): void {
+  const r = placeWangLamp(GameState.world.totalSteps)
+  if ('reason' in r) {
+    host.say([r.reason])
+    return
+  }
+  Sfx.win()
+  host.say(r.lines, () => {
+    host.toast(`获得了重要物品「${ITEMS[HEART_LAMP].name}」`)
+    host.toast('支线「望的纸灯」完成')
+    host.refreshHud()
+    host.refreshNpcs()
+  })
+}
+
+function pickLamp(id: (typeof LAMP_PARTS)[number]['id']) {
+  return (host: StoryHost): void => {
+    const r = pickLampPart(id)
+    if ('reason' in r) {
+      host.say([r.reason])
+      return
+    }
+    Sfx.confirm()
+    host.say(r.lines, () => {
+      host.refreshHud()
+      host.refreshNpcs()
+    })
+  }
+}
+
 export const FROST_STORIES = {
   frost_elder: elder,
   frost_shio: shio,
@@ -123,4 +202,9 @@ export const FROST_STORIES = {
   pick_snow_ball: pickPart('snow_ball'),
   pick_coal_eyes: pickPart('coal_eyes'),
   pick_ice_carrot: pickPart('ice_carrot'),
+  frost_wang: wang,
+  wang_lamp_place: wangPlace,
+  pick_lamp_paper: pickLamp('lamp_paper'),
+  pick_lamp_wick: pickLamp('lamp_wick'),
+  pick_aurora_dust: pickLamp('aurora_dust'),
 }
