@@ -58,6 +58,7 @@ export function defenderDamageMod(c: CreatureInstance, move: MoveDef, typeMult: 
   }
   if (c.abilityId === 'magma_armor' && move.type === 'tide') m *= 0.75
   if (c.abilityId === 'grove_guard' && move.type === 'leaf') m *= 0.5
+  if (c.abilityId === 'lightning_rod' && move.type === 'volt') m *= 0.5
   return m / kindredMod(c)
 }
 
@@ -104,6 +105,22 @@ export function onEnter(s: BattleState, side: Side): void {
       say(s, `${battleName(c)} 的「潮歌」！`)
       tryApplyVolatile(s, other(side), foe, 'confused', false)
     }
+  } else if (c.abilityId === 'mirage') {
+    volOf(s, c).phantomShield = true
+    say(s, `${battleName(c)} 的身影晃了一下——「幻影」！`)
+  }
+}
+
+/**
+ * 受到伤害后：引雷
+ * @author zjh
+ * @date 2026-10-22
+ */
+export function onDamaged(s: BattleState, defSide: Side, defender: CreatureInstance, move: MoveDef, dealt: number): void {
+  if (dealt <= 0 || defender.hp <= 0) return
+  if (defender.abilityId === 'lightning_rod' && move.type === 'volt') {
+    say(s, `${battleName(defender)} 的「引雷」！`)
+    changeStages(s, defSide, defender, { atk: 1 })
   }
 }
 

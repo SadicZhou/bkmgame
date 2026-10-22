@@ -52,6 +52,8 @@ const LIST: AbilityDef[] = [
   { id: 'tide_song', name: '潮歌', desc: '出场时 30% 令对手混乱。' },
   { id: 'flock_feather', name: '群羽', desc: '出场时自身速度 +1 阶。' },
   { id: 'grove_guard', name: '守林', desc: '受到叶系伤害 ×0.5。' },
+  { id: 'lightning_rod', name: '引雷', desc: '受到雷系伤害 ×0.5，并提升自身攻击 1 阶。' },
+  { id: 'mirage', name: '幻影', desc: '出场后第一次受到的伤害 ×0.5。' },
 ]
 
 export const ABILITIES: Record<string, AbilityDef> = Object.fromEntries(LIST.map((a) => [a.id, a]))

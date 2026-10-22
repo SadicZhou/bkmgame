@@ -89,6 +89,8 @@ export interface Volatile {
   lampGuard: boolean
   /** 熊抱：大于 0 时不能换人，每回合结束减 1 */
   noSwitch: number
+  /** 幻影：出场后第一次受伤减半，用过后清除 */
+  phantomShield: boolean
 }
 
 /** 升级时想学但槽满的技能，战后交给玩家决定 */
@@ -152,6 +154,7 @@ export function freshVolatile(): Volatile {
     bondUsed: false,
     lastLight: false,
     lampGuard: false,
+    phantomShield: false,
     noSwitch: 0,
   }
 }

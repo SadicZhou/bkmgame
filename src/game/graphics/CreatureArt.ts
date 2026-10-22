@@ -48,6 +48,8 @@ const DRAWN = new Set([
   'tideshark',
   'plumeowl',
   'treesprite',
+  'thundercorn',
+  'miragefox',
 ])
 
 export function preloadCreatureArt(scene: Phaser.Scene): void {

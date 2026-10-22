@@ -16,7 +16,7 @@ import {
 import { ITEMS, PARTY_LIMIT, catchChance } from '../data/items'
 import type { ElementType } from '../data/types'
 import { WEATHER_INFO, type Weather } from '../data/weather'
-import { guaranteedEscape, isType, onContact, onEnter, onFaint, onHit, onRoundEnd, onTurnEnd, tryEndure } from './AbilityHooks'
+import { guaranteedEscape, isType, onContact, onDamaged, onEnter, onFaint, onHit, onRoundEnd, onTurnEnd, tryEndure } from './AbilityHooks'
 import { chooseEnemyMove } from './BattleAI'
 import { calcDamage, effectiveSpeed, rollHit } from './BattleCalc'
 import {
@@ -350,7 +350,10 @@ function executeMove(s: BattleState, side: Side, slotIndex: number): void {
     say(s, `${name} 使用 ${move.name}！但是没有命中……`, 'miss')
     return
   }
+  const targetVol = volOf(s, target)
+  const phantom = targetVol.phantomShield
   const { dmg, mult, crit } = calcDamage(s, user, target, move)
+  if (phantom) targetVol.phantomShield = false
   const endured = tryEndure(s, target, dmg)
   const gritted = !endured && tryBondEndure(s, target, dmg)
   let amount = endured || gritted ? Math.max(0, target.hp - 1) : dmg
@@ -358,6 +361,7 @@ function executeMove(s: BattleState, side: Side, slotIndex: number): void {
   const dealt = dealDamage(target, amount)
   if (maybeSurrender(s)) return
   say(s, `${name} 使用 ${move.name}！${effectText(mult, crit)}`, sideAnim(side, 'hitEnemy', 'hitPlayer'), mult)
+  if (phantom) say(s, `${battleName(target)} 的「幻影」化解了这一击的锋芒！`)
   if (endured) say(s, `${battleName(target)} 的「守护者」让它撑住了！`)
   if (gritted) say(s, `${battleName(target)} 不想让你担心，咬牙撑住了！`)
 
@@ -367,6 +371,7 @@ function executeMove(s: BattleState, side: Side, slotIndex: number): void {
   }
   if (move.contact) onContact(s, side, user, target)
   onHit(s, side, user, target, move, crit)
+  onDamaged(s, other(side), target, move, dealt)
   applyEffect(s, side, user, target, move, dealt)
   if (s.doubles && move.spread && dealt > 0) {
     const foes = side === 'player' ? s.enemyParty : s.playerParty

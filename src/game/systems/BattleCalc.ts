@@ -100,7 +100,9 @@ export function calcDamage(
   const raw = ((2 * attacker.level) / 5 + 2) * movePower(attacker, move) * (atk / def)
 
   const night = s.night && move.type === 'spirit' ? 1.1 : 1
-  const wall = volOf(s, defender).frostWall > 0 ? 0.5 : 1
+  const defVol = volOf(s, defender)
+  const wall = defVol.frostWall > 0 ? 0.5 : 1
+  const phantom = defVol.phantomShield ? 0.5 : 1
   const total =
     (raw / 12) *
     mult *
@@ -112,6 +114,7 @@ export function calcDamage(
     weatherPowerMod(s.weather, move.type) *
     night *
     wall *
+    phantom *
     (0.9 + rng() * 0.2)
   return { dmg: Math.max(1, Math.round(total)), mult, crit }
 }

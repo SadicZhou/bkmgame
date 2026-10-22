@@ -174,6 +174,12 @@ const LIST: MoveDef[] = [
   sta('siren_song', '鲛人之歌', 'tide', 100, 10, '令对手混乱，自身速度 +1。潮歌鲛专属。', { special: 'siren_song' }),
   atk('thousand_plume', '千羽', 'gale', 36, -1, 10, '必定命中。千羽鸮专属。'),
   sta('tree_ring', '年轮', 'spirit', -1, 5, '回复 40% HP，自身防御 +1。树灵童专属。', { special: 'tree_ring' }),
+  atk('sky_thunder', '天雷', 'volt', 45, 90, 5, '20% 令对手麻痹。雷角麟专属。', {
+    effect: { chance: 20, target: 'foe', status: 'paralyze' },
+  }),
+  sta('mirage_veil', '蜃楼', 'gale', 100, 10, '降低对手攻击、速度各 1 阶。蜃影狐专属。', {
+    effect: { chance: 100, target: 'foe', stages: { atk: -1, spd: -1 } },
+  }),
 
   // ── 挣扎：PP 全部耗尽时自动使用 ──
   atk('struggle', '挣扎', 'normal', 20, -1, 1, 'PP 耗尽时的最后一搏，自身损失 1/4 最大 HP。', { contact: true }),
