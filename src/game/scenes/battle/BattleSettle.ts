@@ -78,7 +78,16 @@ export function settleBattle(b: BattleState, pending: PendingBattle): BattleSett
 
   if (b.won || b.fled || pending.allyParty) {
     if (b.won) {
-      GameState.coins += b.coinsEarned
+      let earned = b.coinsEarned
+      if (
+        pending.rematch &&
+        GameState.world.minor.id === 'gathering' &&
+        GameState.world.minor.mapId === pending.returnMapId
+      ) {
+        earned *= 2
+        notes.push('训练家集会：再战焰币翻倍！')
+      }
+      GameState.coins += earned
       if (pending.flagOnWin) {
         GameState.setFlag(pending.flagOnWin, true)
         if (pending.kind === 'trainer') GameState.setFlag(winDayKey(pending.flagOnWin), dayOf(GameState.world.totalSteps))

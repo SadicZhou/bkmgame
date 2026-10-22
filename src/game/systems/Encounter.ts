@@ -16,6 +16,8 @@ export const SAFE_STEPS = 3
 export const RARE_PITY = 30
 export const SHINY_RATE = 1 / 400
 export const STRONG_RATE = 0.1
+/** 强壮群小事件期间的强壮个体概率 */
+export const STRONG_HERD_RATE = 0.4
 
 export interface EncounterContext {
   table: EncounterTable
@@ -29,9 +31,10 @@ export interface EncounterContext {
   repelActive: boolean
   caught: string[]
   rarePity: number
-  /** 小事件：迁徙潮物种 / 闪耀时刻 */
+  /** 小事件：迁徙潮物种 / 闪耀时刻 / 强壮群 */
   migrationSpecies?: string
   shimmer?: boolean
+  strongHerd?: boolean
   /** 剧情旗标（条目 requireFlag 用；不传视为都没有） */
   hasFlag?: (key: string) => boolean
   /** 星砂护符等对异色率的倍率，默认 1 */
@@ -107,7 +110,7 @@ export function pickEncounter(ctx: EncounterContext, rng: Rng = Math.random): En
       break
     }
   }
-  const strong = rng() < STRONG_RATE
+  const strong = rng() < (ctx.strongHerd ? STRONG_HERD_RATE : STRONG_RATE)
   const level = entry.minLv + Math.floor(rng() * (entry.maxLv - entry.minLv + 1)) + (strong ? 2 : 0)
   if (ctx.repelActive && level < ctx.leadLevel) return null
   const shiny = rng() < SHINY_RATE * (ctx.shimmer ? 3 : 1) * (ctx.shinyMod ?? 1)

@@ -37,7 +37,8 @@ describe('流浪商人', () => {
     w.totalSteps = 100
     w.outdoorSteps = 150
     // chance 命中、抽到 merchant（第 4 个 id）、地图 0、空地 1
-    const r = rollMinor(w, env(sequence(0.05, 0.8, 0.1, 0.4)))
+    // 6 个小事件里 merchant 下标 3：rng∈[3/6,4/6)
+    const r = rollMinor(w, env(sequence(0.05, 0.55, 0.1, 0.4)))
     expect(r?.id).toBe('merchant')
     expect(w.minor.mapId).toBe('meadow')
     expect(w.minor.spot).toEqual(tiles[1])

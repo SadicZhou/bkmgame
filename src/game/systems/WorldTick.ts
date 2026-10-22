@@ -73,6 +73,7 @@ function encounterCtx(mapId: string, source: EncounterSource): EncounterContext 
     rarePity: w.rarePity[mapId] ?? 0,
     migrationSpecies: minor?.id === 'migration' ? minor.speciesId : undefined,
     shimmer: minor?.id === 'shimmer',
+    strongHerd: minor?.id === 'strong_herd',
     hasFlag: GameState.hasFlag,
     shinyMod:
       (GameState.itemCount('star_charm') > 0 ? 1.5 : 1) *

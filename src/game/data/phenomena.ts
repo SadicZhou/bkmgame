@@ -236,7 +236,7 @@ export const PHENOMENON_RULES = {
   goalCount: { track: 5, collect: 3 } as Record<PhenomenonGoal, number>,
 }
 
-export type MinorEventId = 'migration' | 'shimmer' | 'crystal' | 'merchant'
+export type MinorEventId = 'migration' | 'shimmer' | 'crystal' | 'merchant' | 'strong_herd' | 'gathering'
 
 export interface MinorEventDef {
   id: MinorEventId
@@ -255,6 +255,18 @@ export const MINOR_EVENTS: Record<MinorEventId, MinorEventDef> = {
     name: '流浪商人',
     duration: 600,
     desc: '一位行商在野外摆摊，出售资质卡与技能书等稀货。',
+  },
+  strong_herd: {
+    id: 'strong_herd',
+    name: '强壮群',
+    duration: 300,
+    desc: '本地图强壮个体出现率升至 40%。',
+  },
+  gathering: {
+    id: 'gathering',
+    name: '训练家集会',
+    duration: 600,
+    desc: '本地图已击败的训练家可立刻再战，再战焰币翻倍。',
   },
 }
 

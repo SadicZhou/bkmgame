@@ -100,7 +100,9 @@ export class NpcInteract {
   private talkFighter(npc: NpcDef, say: (lines: string[], after?: () => void) => void): void {
     // 没有击败旗标的再战：每次都能打，收服后由 hideIf 把它收走
     const beaten = npc.recruit ? false : npc.defeatedKey ? !!GameState.getFlag(npc.defeatedKey) : true
-    if (beaten && rematchReady(npc, (k) => GameState.getFlag(k), dayOf(GameState.world.totalSteps))) {
+    const gathering =
+      GameState.world.minor.id === 'gathering' && GameState.world.minor.mapId === this.host.map.id
+    if (beaten && rematchReady(npc, (k) => GameState.getFlag(k), dayOf(GameState.world.totalSteps), gathering)) {
       if (!this.host.hasAbleCreature()) {
         say(['又见面了！不过你的伙伴们看起来很累……休息好了再来找我比一场吧。'])
         return

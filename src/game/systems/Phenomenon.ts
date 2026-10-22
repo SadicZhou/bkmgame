@@ -220,7 +220,10 @@ export function rollMinor(w: WorldSave, env: PhenomenonEnv): MinorStart | null {
   const mapId = env.unlockedMaps[Math.floor(rng() * env.unlockedMaps.length)]
   m.id = id
   m.mapId = mapId
-  m.stepsLeft = id === 'merchant' ? Math.max(80, stepsToNextPhase(w.totalSteps)) : MINOR_EVENTS[id].duration
+  m.stepsLeft =
+    id === 'merchant' || id === 'gathering'
+      ? Math.max(80, stepsToNextPhase(w.totalSteps))
+      : MINOR_EVENTS[id].duration
   m.speciesId = undefined
   m.spot = undefined
   if (id === 'migration') {

@@ -19,12 +19,14 @@ export const winDayKey = (defeatedKey: string) => `${defeatedKey}_day`
 export const rematchCountKey = (defeatedKey: string) => `${defeatedKey}_rematch`
 
 /**
- * 是否可以再战：设了 rematchDays、已击败、距上次获胜已满天数（旧档没有记录按第 0 天算）
+ * 是否可以再战：设了 rematchDays、已击败、距上次获胜已满天数（旧档没有记录按第 0 天算）。
+ * 训练家集会进行中时可立刻再战（忽略冷却天数）。
  * @author zjh
  * @date 2026-10-15
  */
-export function rematchReady(npc: NpcDef, getFlag: GetFlag, today: number): boolean {
+export function rematchReady(npc: NpcDef, getFlag: GetFlag, today: number, gathering = false): boolean {
   if (!npc.rematchDays || !npc.defeatedKey || !getFlag(npc.defeatedKey)) return false
+  if (gathering) return true
   const won = Number(getFlag(winDayKey(npc.defeatedKey)) ?? 0)
   return today - won >= npc.rematchDays
 }
