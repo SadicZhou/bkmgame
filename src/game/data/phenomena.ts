@@ -236,11 +236,12 @@ export const PHENOMENON_RULES = {
   goalCount: { track: 5, collect: 3 } as Record<PhenomenonGoal, number>,
 }
 
-export type MinorEventId = 'migration' | 'shimmer' | 'crystal'
+export type MinorEventId = 'migration' | 'shimmer' | 'crystal' | 'merchant'
 
 export interface MinorEventDef {
   id: MinorEventId
   name: string
+  /** 默认持续步数；流浪商人会按「当前昼/夜剩余」覆盖 */
   duration: number
   desc: string
 }
@@ -249,7 +250,23 @@ export const MINOR_EVENTS: Record<MinorEventId, MinorEventDef> = {
   migration: { id: 'migration', name: '迁徙潮', duration: 300, desc: '某种伙伴成群出现（出现率 ×5）。' },
   shimmer: { id: 'shimmer', name: '闪耀时刻', duration: 200, desc: '异色伙伴出现率 ×3。' },
   crystal: { id: 'crystal', name: '心火结晶', duration: 600, desc: '地图上出现发光的心火结晶，拾取可获得焰币或道具。' },
+  merchant: {
+    id: 'merchant',
+    name: '流浪商人',
+    duration: 600,
+    desc: '一位行商在野外摆摊，出售资质卡与技能书等稀货。',
+  },
 }
+
+/** 流浪商人货架：id → 售价（焰币） */
+export const MERCHANT_STOCK: { id: string; price: number }[] = [
+  { id: 'talent_fruit', price: 320 },
+  { id: 'honey_berry', price: 220 },
+  { id: 'pp_honey', price: 160 },
+  { id: 'book_tailwind', price: 480 },
+  { id: 'book_defog', price: 480 },
+  { id: 'star_charm', price: 900 },
+]
 
 /** 小事件判定参数 */
 export const MINOR_RULES = { rollInterval: 150, chance: 0.12 }

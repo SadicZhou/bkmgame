@@ -10,7 +10,7 @@ import { BADGES, ownedBadges } from '../data/badges'
 import { FISH_ORDER } from '../data/fishing'
 import { BAG_PAGES, ITEMS, ITEM_ORDER, SHOP_STOCK, itemIconKey, type ItemKind } from '../data/items'
 import { MUSH_FLAGS } from '../data/mushrooms'
-import { PHENOMENA } from '../data/phenomena'
+import { MERCHANT_STOCK, PHENOMENA } from '../data/phenomena'
 import { GameState } from '../state/GameState'
 import { nightTownActive } from '../systems/Night'
 import { Sfx } from '../systems/AudioBeeps'
@@ -19,7 +19,7 @@ import { BEACONS, DUNE_FLAGS } from '../systems/Dunes'
 import { FEST_GIFTS, festOwnedCount } from '../systems/Festival'
 import { BOND_FLAG, FRIENDSHIP_GAIN, bondBar, bondStage, nextBondStage } from '../systems/Bond'
 import { anglerRecord, beatsRecord, fishLogCount, todayContest } from '../systems/FishLog'
-import { rockSlideReason, teachRockSlide } from '../systems/MoveBooks'
+import { MOVE_BOOKS, bookReason, teachBook } from '../systems/MoveBooks'
 import { companionMark, companionRows } from './CompanionRows'
 import { abilityDetail, creatureDetail, rowLabel } from './CreatureInfo'
 import { ListPanel, type ListRow } from './ListPanel'
@@ -260,8 +260,8 @@ export class WorldMenus {
       this.toggleBoard(pageId, index)
       return
     }
-    if (id === 'book_rock_slide') {
-      this.openRockBook(index, pageId)
+    if (MOVE_BOOKS[id]) {
+      this.openMoveBook(id, index, pageId)
       return
     }
     if (kind === 'key') {
@@ -310,19 +310,21 @@ export class WorldMenus {
     this.openBagPage(pageId, index)
   }
 
-  /** 技能书·岩崩：选一只学得会的伙伴 */
-  private openRockBook(bagIndex: number, pageId: (typeof BAG_PAGES)[number]['id']): void {
+  /** 技能书：选一只学得会的伙伴 */
+  private openMoveBook(itemId: string, bagIndex: number, pageId: (typeof BAG_PAGES)[number]['id']): void {
+    const book = MOVE_BOOKS[itemId]
+    if (!book) return
     this.panel.open({
-      title: '把岩崩教给谁？',
+      title: `把${book.moveName}教给谁？`,
       rows: this.partyRows(
         (i) => {
           const c = GameState.party[i]
-          if (rockSlideReason(c) || !GameState.consumeItem('book_rock_slide')) return
-          this.hooks.toast(teachRockSlide(c))
-          if (GameState.itemCount('book_rock_slide') > 0) this.openRockBook(bagIndex, pageId)
+          if (bookReason(c, book) || !GameState.consumeItem(itemId)) return
+          this.hooks.toast(teachBook(c, book))
+          if (GameState.itemCount(itemId) > 0) this.openMoveBook(itemId, bagIndex, pageId)
           else this.openBagPage(pageId, 0)
         },
-        (c) => rockSlideReason(c),
+        (c) => bookReason(c, book),
       ),
       onCancel: () => this.openBagPage(pageId, bagIndex),
     })
@@ -531,6 +533,48 @@ export class WorldMenus {
       })
     this.panel.open({
       title: '杂货铺',
+      footer: this.coinsFooter(),
+      rows: rows(),
+      onCancel: () => {
+        this.panel.close()
+        onClose()
+      },
+    })
+  }
+
+  /**
+   * 流浪商人：稀货货架
+   * @author zjh
+   * @date 2026-10-22
+   */
+  openMerchantShop(onClose: () => void): void {
+    const rows = (): ListRow[] =>
+      MERCHANT_STOCK.map(({ id, price }) => {
+        const it = ITEMS[id]
+        const once = id === 'star_charm' && GameState.itemCount(id) > 0
+        return {
+          label: it.name,
+          right: once ? '已经有了' : `${price} 焰币 · 持有 ${GameState.itemCount(id)}`,
+          icon: itemIconKey(id),
+          detail: it.desc,
+          disabled: once,
+          onSelect: () => {
+            if (once) return
+            if (GameState.coins < price) {
+              Sfx.cancel()
+              this.hooks.toast('焰币不够哦')
+              return
+            }
+            GameState.coins -= price
+            GameState.addItem(id)
+            this.hooks.toast(`买下了 ${it.name}`)
+            this.hooks.refreshHud()
+            this.panel.update(rows(), this.coinsFooter())
+          },
+        }
+      })
+    this.panel.open({
+      title: '流浪商人',
       footer: this.coinsFooter(),
       rows: rows(),
       onCancel: () => {

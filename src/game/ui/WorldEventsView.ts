@@ -1,5 +1,5 @@
 /**
- * 地图上的事件表现：异象小目标（足迹 / 碎片）、异象中心的唯一精灵、心火结晶
+ * 地图上的事件表现：异象小目标（足迹 / 碎片）、异象中心的唯一精灵、心火结晶、流浪商人
  * 每次状态变化后调用 refresh() 重新绘制。
  * @author zjh
  * @date 2026-10-14
@@ -7,11 +7,12 @@
 
 import Phaser from 'phaser'
 import { setCreatureScale } from '../graphics/CreatureArt'
+import { npcArt } from '../graphics/CharArt'
 import { spriteKey } from '../data/creatures'
 import type { MapDef } from '../data/maps'
 import type { PhenomenonDef } from '../data/phenomena'
 import { GameState } from '../state/GameState'
-import { activePhenomenon, visibleGoalSpots } from '../systems/Phenomenon'
+import { activePhenomenon, merchantAt, visibleGoalSpots } from '../systems/Phenomenon'
 
 /** 各异象小目标物件贴图 */
 const GOAL_TEXTURE: Record<string, string> = {
@@ -40,6 +41,11 @@ export class WorldEventsView {
   uniqueAt(x: number, y: number): PhenomenonDef | null {
     const def = this.phenomenonHere()
     return def && def.center.x === x && def.center.y === y ? def : null
+  }
+
+  /** 该格子是否站着流浪商人 */
+  merchantHere(x: number, y: number): boolean {
+    return merchantAt(GameState.world, this.map.id, x, y)
   }
 
   /**
@@ -83,6 +89,19 @@ export class WorldEventsView {
       const img = this.scene.add.image(cx, cy, 'obj-crystal').setDepth(8)
       this.scene.tweens.add({ targets: img, y: cy - 4, yoyo: true, repeat: -1, duration: 700 })
       this.objects.push(img)
+    }
+    if (m.id === 'merchant' && m.mapId === this.map.id && m.spot) {
+      const { cx, cy } = at(m.spot.x, m.spot.y)
+      const art = npcArt(this.scene, 'wander_merchant')
+      const spr = art
+        ? this.scene.add.image(cx, cy + 8, art.key, art.frame).setOrigin(0.5, 1).setDepth(9)
+        : this.scene.add.circle(cx, cy, 10, 0xc8a060).setDepth(9)
+      const mark = this.scene.add
+        .text(cx, cy - 28, '商', { fontSize: '12px', color: '#fff8e0', stroke: '#402010', strokeThickness: 3 })
+        .setOrigin(0.5)
+        .setDepth(11)
+      this.scene.tweens.add({ targets: mark, y: cy - 32, yoyo: true, repeat: -1, duration: 700 })
+      this.objects.push(spr, mark)
     }
   }
 

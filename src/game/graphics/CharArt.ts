@@ -26,6 +26,7 @@ export const NPC_FRAME: Record<string, number> = {
   elder: 0,
   kid: 1,
   shop: 2,
+  wander_merchant: 2,
   granny: 3,
   storage: 4,
   ranger: 5,

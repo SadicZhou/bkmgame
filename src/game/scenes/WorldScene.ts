@@ -146,7 +146,7 @@ export class WorldScene extends Phaser.Scene {
       map: this.map,
       hasFlag,
       playerTile: () => ({ x: this.tileX, y: this.tileY }),
-      blockedByOthers: (x, y) => !!this.staticNpcAt(x, y) || !!this.eventView.uniqueAt(x, y),
+      blockedByOthers: (x, y) => !!this.staticNpcAt(x, y) || !!this.eventView.uniqueAt(x, y) || this.eventView.merchantHere(x, y),
       isThreat: (npc) => !!npc.defeatedKey && !GameState.getFlag(npc.defeatedKey),
       canSpot: (npc) => this.canBeSpotted(npc),
       onSpotted: (npc) => this.spottedBy(npc),
@@ -459,7 +459,10 @@ export class WorldScene extends Phaser.Scene {
    * @date 2026-10-15
    */
   private syncNpcs(): void {
-    this.roster.sync(hasFlag, (x, y) => (x === this.tileX && y === this.tileY) || !!this.eventView.uniqueAt(x, y))
+    this.roster.sync(
+      hasFlag,
+      (x, y) => (x === this.tileX && y === this.tileY) || !!this.eventView.uniqueAt(x, y) || this.eventView.merchantHere(x, y),
+    )
   }
 
   /** 没有对话、菜单、钓鱼、过场在进行 */
@@ -497,7 +500,14 @@ export class WorldScene extends Phaser.Scene {
     let ny = this.tileY + dy
     let tile = resolveTile(this.map, nx, ny, hasFlag)
     if (this.map.id === 'tower3' && tile === 'water' && GameState.hasFlag('tower_sluice')) tile = 'path'
-    if (!tile || decorBlocks(this.map.id, nx, ny) || this.occupiedByNpc(nx, ny) || this.eventView.uniqueAt(nx, ny)) return
+    if (
+      !tile ||
+      decorBlocks(this.map.id, nx, ny) ||
+      this.occupiedByNpc(nx, ny) ||
+      this.eventView.uniqueAt(nx, ny) ||
+      this.eventView.merchantHere(nx, ny)
+    )
+      return
     if (this.field.blocks(nx, ny)) return
     // 冰块只存在于冰湖。默认停在 (10,7)，不能拿到别的地图上挡路
     if (this.map.id === 'icelake' && iceBlockAt(nx, ny, (k) => GameState.getFlag(k))) return
@@ -714,11 +724,17 @@ export class WorldScene extends Phaser.Scene {
     return { x: this.tileX + d[0], y: this.tileY + d[1] }
   }
 
-  /** 面前有唯一精灵 / NPC 则互动，否则尝试钓鱼 */
+  /** 面前有唯一精灵 / 流浪商人 / NPC 则互动，否则尝试钓鱼 */
   private tryInteract(): void {
     const { x, y } = this.facingTile()
     if (this.field.tryInteract(x, y, x - this.tileX, y - this.tileY)) return
     if (this.pushIce(x, y)) return
+    if (this.eventView.merchantHere(x, y)) {
+      this.dialogue.open(['行商：路过看看？我这儿有正经稀货。'], () =>
+        this.menus.openMerchantShop(() => this.dialogue.open(['行商：天黑之前我还在。'])),
+      )
+      return
+    }
     const npc = this.occupiedByNpc(x, y)
     if (npc) this.walkers.greet(npc)
     if (this.interact.handle(this.eventView.uniqueAt(x, y), npc)) return

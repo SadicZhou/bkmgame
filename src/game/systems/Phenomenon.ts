@@ -18,7 +18,7 @@ import {
 import type { Weather } from '../data/weather'
 import { SHINY_RATE } from './Encounter'
 import type { Rng } from './Talent'
-import { dayOf, isFullMoon, isNight, type WorldSave } from './WorldClock'
+import { dayOf, isFullMoon, isNight, stepsToNextPhase, type WorldSave } from './WorldClock'
 
 /** 判定所需的外部信息 */
 export interface PhenomenonEnv {
@@ -220,17 +220,27 @@ export function rollMinor(w: WorldSave, env: PhenomenonEnv): MinorStart | null {
   const mapId = env.unlockedMaps[Math.floor(rng() * env.unlockedMaps.length)]
   m.id = id
   m.mapId = mapId
-  m.stepsLeft = MINOR_EVENTS[id].duration
+  m.stepsLeft = id === 'merchant' ? Math.max(80, stepsToNextPhase(w.totalSteps)) : MINOR_EVENTS[id].duration
   m.speciesId = undefined
   m.spot = undefined
   if (id === 'migration') {
     const pool = (ENCOUNTERS[mapId]?.grass ?? []).filter((e) => !e.time)
     m.speciesId = pool[Math.floor(rng() * pool.length)]?.speciesId
-  } else if (id === 'crystal') {
+  } else if (id === 'crystal' || id === 'merchant') {
     const tiles = env.openTiles(mapId)
     m.spot = tiles[Math.floor(rng() * tiles.length)]
   }
   return { id, mapId, speciesId: m.speciesId }
+}
+
+/**
+ * 流浪商人是否站在该格
+ * @author zjh
+ * @date 2026-10-22
+ */
+export function merchantAt(w: WorldSave, mapId: string, x: number, y: number): boolean {
+  const m = w.minor
+  return m.id === 'merchant' && m.mapId === mapId && !!m.spot && m.spot.x === x && m.spot.y === y
 }
 
 /** 每步推进小事件，结束时返回其 id */
