@@ -13,6 +13,7 @@ import { Sfx } from '../../systems/AudioBeeps'
 import { uniqueForBattle } from '../../systems/Phenomenon'
 import { rematchCountKey, rematchReady, rematchTeam } from '../../systems/Rematch'
 import { dayOf } from '../../systems/WorldClock'
+import { canDeliverTo, deliverLetter } from '../../systems/LetterQuest'
 import { runStory, type StoryHost } from './StoryEvents'
 import type { WorldHost } from './WorldHost'
 
@@ -52,6 +53,13 @@ export class NpcInteract {
   private talk(npc: NpcDef): void {
     const { host } = this
     const say = (lines: string[], after?: () => void) => host.dialogue.open(lines.map((l) => `${npc.name}：${l}`), after)
+    // 支线 S7-3：优先送信（须已满足对方首次剧情条件）
+    const letter = canDeliverTo(npc)
+    if (letter) {
+      const { lines, justDone } = deliverLetter(letter, npc.name)
+      host.dialogue.open(lines, justDone ? () => host.toast('支线「风羽的信」完成') : undefined)
+      return
+    }
     if (npc.story && runStory(npc.story, this.story(), npc.name)) return
 
     switch (npc.role) {

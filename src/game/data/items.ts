@@ -65,7 +65,14 @@ export const ITEMS: Record<string, ItemDef> = {
   hearth_stone: { id: 'hearth_stone', name: '暖炉石', kind: 'key', value: 0, price: 0, desc: '雪伯给的石头。在霜铃峰的篝火边按确认，可以把寒冷烘掉。' },
   star_glider: { id: 'star_glider', name: '星砂滑翔翼', kind: 'key', value: 0, price: 0, desc: '穗用星砂布扎的小翅膀。在霜铃峰的风柱边按确认，就能滑到云阶。' },
   torn_photo: { id: 'torn_photo', name: '合照残角', kind: 'key', value: 0, price: 0, desc: '缺角合照的右下角。背面写着「尘 与 灯灯，旅团第三年。」' },
-  white_feather: { id: 'white_feather', name: '白风羽', kind: 'key', value: 0, price: 0, desc: '鸢留下的信物。终章如果还需要风，它会把风送来。' },
+  white_feather: {
+    id: 'white_feather',
+    name: '白风羽',
+    kind: 'key',
+    value: 0,
+    price: 0,
+    desc: '鸢留下的信物。送完他留给旧友的五封短信后，出战时全队速度 +1 阶；终章还会把风送来。',
+  },
   kid_lamp: { id: 'kid_lamp', name: '小路的灯', kind: 'key', value: 0, price: 0, desc: '小路自己做的小灯。它点亮了小镇的初灯。终章还用得上。' },
   gold_crown: { id: 'gold_crown', name: '金冠饰', kind: 'key', value: 0, price: 0, desc: '冠军之路的奖品。一圈细金冠，不增加战力，只证明九个人都认了你。' },
   travel_journal: {

@@ -36,6 +36,7 @@ import {
 } from './BattleCore'
 import { FRIENDSHIP_GAIN, tryBondEndure } from './Bond'
 import { addFriendship, grantExp } from './Growth'
+import { applyWhiteFeather } from './LetterQuest'
 import { beforeMove, changeStages, tryApplyStatus, tryApplyVolatile } from './StatusEffects'
 
 export { activeEnemy, activePlayer } from './BattleCore'
@@ -119,6 +120,7 @@ export function startBattle(
   say(s, opts.allyName ? `${opts.allyName}：${go}（本场由${opts.allyName}的伙伴出战）` : go, 'swapPlayer')
   onEnter(s, 'player')
   onEnter(s, 'enemy')
+  applyWhiteFeather(s)
   return s
 }
 
