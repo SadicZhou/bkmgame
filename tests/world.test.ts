@@ -24,7 +24,7 @@ import { sequence } from './helpers'
 const tiles = Array.from({ length: 100 }, (_, i) => ({ x: i % 10, y: Math.floor(i / 10) }))
 
 function env(rng: () => number = () => 0): PhenomenonEnv {
-  return { hasFlag: () => true, unlockedMaps: ['meadow', 'pass'], openTiles: () => tiles, rng }
+  return { hasFlag: () => true, unlockedMaps: ['meadow', 'pass', 'lake'], openTiles: () => tiles, rng }
 }
 
 /** 晴朗的夜晚、刚好到判定点 */

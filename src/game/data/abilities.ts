@@ -47,6 +47,9 @@ const LIST: AbilityDef[] = [
   { id: 'wish', name: '许愿', desc: '打出会心后，自身速度 +1 阶。' },
   { id: 'bloom_scent', name: '花香', desc: '每回合结束回复 1/16 HP，并有 30% 解除自身异常状态。' },
   { id: 'magma_armor', name: '熔甲', desc: '受到潮系伤害 ×0.75。' },
+  { id: 'immovable', name: '不动', desc: '能力不会被降低。' },
+  { id: 'mist_veil', name: '雾隐', desc: '雾天闪避 +15%。' },
+  { id: 'tide_song', name: '潮歌', desc: '出场时 30% 令对手混乱。' },
 ]
 
 export const ABILITIES: Record<string, AbilityDef> = Object.fromEntries(LIST.map((a) => [a.id, a]))

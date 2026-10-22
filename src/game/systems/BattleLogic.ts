@@ -296,6 +296,11 @@ function useStatusMove(s: BattleState, side: Side, user: CreatureInstance, targe
       say(s, '一阵风吹散了场上的一切！', 'weather')
       return
     }
+    case 'siren_song': {
+      tryApplyVolatile(s, other(side), target, 'confused', true)
+      changeStages(s, side, user, { spd: 1 })
+      return
+    }
   }
   applyEffect(s, side, user, target, move, 0)
 }

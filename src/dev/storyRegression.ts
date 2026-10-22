@@ -443,6 +443,7 @@ async function runSteps(r: Runner): Promise<void> {
     ...fishNationSteps(r),
     ...dexSteps(r),
     ...festivalSteps(r),
+    ...uniqueDexSteps(r),
   ]
   for (const [name, run] of steps) {
     if (!(await r.step(name, run))) break
@@ -1203,6 +1204,34 @@ function dexSteps(r: Runner): [string, () => Promise<string | true>][] {
         if (!(await r.until(() => r.world().dialogue.isOpen, 4000))) return '阿禾没有开口'
         await r.closeDialogue(r.world())
         return check(GameState.hasFlag('dex_complete') && GameState.itemCount('travel_journal') === 1, '没有拿到旅团手账')
+      },
+    ],
+  ]
+}
+
+/** 异象录全收集：点亮全部异象后获得 unique_complete */
+function uniqueDexSteps(r: Runner): [string, () => Promise<string | true>][] {
+  void r
+  return [
+    [
+      '异象录全收集 → 异色加成',
+      async () => {
+        const { PHENOMENA } = await import('../game/data/phenomena')
+        const { uniqueDexComplete, UNIQUE_DONE_FLAG } = await import('../game/systems/Postgame')
+        const { endPhenomenon } = await import('../game/systems/Phenomenon')
+        GameState.setFlag('game_clear', true)
+        GameState.setFlag(UNIQUE_DONE_FLAG, false)
+        const last = PHENOMENA[PHENOMENA.length - 1]
+        GameState.world.phenomenon.caught = PHENOMENA.slice(0, -1).map((d) => d.id)
+        GameState.world.phenomenon.activeId = last.id
+        endPhenomenon(GameState.world, 'caught')
+        if (uniqueDexComplete(GameState.world.phenomenon.caught) && !GameState.hasFlag(UNIQUE_DONE_FLAG)) {
+          GameState.setFlag(UNIQUE_DONE_FLAG, true)
+        }
+        return check(
+          GameState.hasFlag(UNIQUE_DONE_FLAG) && GameState.world.phenomenon.caught.length === PHENOMENA.length,
+          '异象录未全亮或未写入 unique_complete',
+        )
       },
     ],
   ]

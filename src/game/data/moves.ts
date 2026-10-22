@@ -22,6 +22,7 @@ export type MoveSpecial =
   | 'snow_sure_hit'
   | 'friendship_power'
   | 'bear_hug'
+  | 'siren_song'
 
 /** 技能附加效果 */
 export interface MoveEffect {
@@ -165,6 +166,11 @@ const LIST: MoveDef[] = [
   atk('falling_star', '坠星', 'normal', 40, -1, 5, '必定命中。坠星貂专属。'),
   atk('thousand_bloom', '千花绽', 'leaf', 36, 100, 10, '回复造成伤害的 25%。花冠鹿专属。', { effect: { chance: 100, target: 'self', drainRatio: 0.25 } }),
   atk('lava_tide', '熔岩潮', 'flame', 42, 100, 5, '使用后自身速度 −1。熔晶龟专属。', { effect: { chance: 100, target: 'self', stages: { spd: -1 } } }),
+  atk('mountain_crush', '万钧', 'stone', 45, 85, 5, '以山岳之重砸下。古岩像专属。', { contact: true }),
+  atk('dragon_gate', '登龙门', 'tide', 36, -1, 10, '必定命中，自身速度 +1。雾隐鲤专属。', {
+    effect: { chance: 100, target: 'self', stages: { spd: 1 } },
+  }),
+  sta('siren_song', '鲛人之歌', 'tide', 100, 10, '令对手混乱，自身速度 +1。潮歌鲛专属。', { special: 'siren_song' }),
 
   // ── 挣扎：PP 全部耗尽时自动使用 ──
   atk('struggle', '挣扎', 'normal', 20, -1, 1, 'PP 耗尽时的最后一搏，自身损失 1/4 最大 HP。', { contact: true }),

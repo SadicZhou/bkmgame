@@ -16,7 +16,7 @@ import { FRIENDSHIP_GAIN } from '../../systems/Bond'
 import { addFriendship } from '../../systems/Growth'
 import { syncNightRelay } from '../../systems/Night'
 import { openTowerStairs } from '../../systems/Tower'
-import { grantGuardian } from '../../systems/Postgame'
+import { grantGuardian, UNIQUE_DONE_FLAG, uniqueDexComplete } from '../../systems/Postgame'
 import { endPhenomenon } from '../../systems/Phenomenon'
 import { rematchCountKey, winDayKey } from '../../systems/Rematch'
 import { dayOf } from '../../systems/WorldClock'
@@ -38,7 +38,12 @@ function settlePhenomenon(b: BattleState, pending: PendingBattle): string[] {
   const enemy = b.enemyParty[0]
   if (b.caught) {
     endPhenomenon(world, 'caught')
-    return [`✧ ${def.name} 平息了。异象录点亮了新的一页！`]
+    const notes = [`✧ ${def.name} 平息了。异象录点亮了新的一页！`]
+    if (uniqueDexComplete(world.phenomenon.caught) && !GameState.hasFlag(UNIQUE_DONE_FLAG)) {
+      GameState.setFlag(UNIQUE_DONE_FLAG, true)
+      notes.push('异象录全亮了！世间的异色伙伴似乎更容易遇见了。')
+    }
+    return notes
   }
   if (b.won) {
     endPhenomenon(world, 'failed')

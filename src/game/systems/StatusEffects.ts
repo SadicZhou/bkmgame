@@ -84,9 +84,10 @@ export function changeStages(
 ): void {
   if (target.hp <= 0) return
   const vol = volOf(s, target)
+  const immovable = target.abilityId === 'immovable' || opts.blockDrops
   for (const [key, delta] of Object.entries(stages) as [StageKey, number][]) {
     if (!delta) continue
-    if (delta < 0 && opts.blockDrops) {
+    if (delta < 0 && immovable) {
       say(s, `${battleName(target)} 的「不动」让能力没有下降！`)
       continue
     }

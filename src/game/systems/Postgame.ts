@@ -5,10 +5,15 @@
  */
 
 import { DEX_ORDER, SPECIES, createCreature, type CreatureInstance } from '../data/creatures'
+import { PHENOMENA } from '../data/phenomena'
 
 /** 旅团手账：异色出现率再 ×2 */
 export const JOURNAL_SHINY = 2
 export const DEX_DONE_FLAG = 'dex_complete'
+
+/** 异象录全收集：异色出现率再 ×2（可与手账叠乘） */
+export const UNIQUE_SHINY = 2
+export const UNIQUE_DONE_FLAG = 'unique_complete'
 
 /** 九只守护兽。收服旗标是 pal_物种 id */
 export const GUARDIANS = ['magmane', 'tidewhale', 'echodeer', 'ridgerhino', 'stormfalcon', 'frostcrane', 'galeroc', 'hearthbear', 'dawnphoenix'] as const
@@ -61,6 +66,15 @@ export function traceCount(has: (key: string) => boolean): number {
  */
 export function dexComplete(caught: string[]): boolean {
   return DEX_ORDER.every((id) => caught.includes(id))
+}
+
+/**
+ * 异象录是否已全部点亮（按已实现的异象条目）
+ * @author zjh
+ * @date 2026-10-20
+ */
+export function uniqueDexComplete(caughtPhenomenonIds: string[]): boolean {
+  return PHENOMENA.every((d) => caughtPhenomenonIds.includes(d.id))
 }
 
 /** 发守护兽时需要的存档操作 */

@@ -72,13 +72,15 @@ export function critRate(c: CreatureInstance, move: MoveDef): number {
   return rate
 }
 
-/** 闪避修正（命中率倍率）：雪隐 */
+/** 闪避修正（命中率倍率）：雪隐、雾隐 */
 export function evasionMod(s: BattleState, c: CreatureInstance): number {
-  return c.abilityId === 'snow_cloak' && s.weather === 'snow' ? 0.9 : 1
+  if (c.abilityId === 'snow_cloak' && s.weather === 'snow') return 0.9
+  if (c.abilityId === 'mist_veil' && s.weather === 'fog') return 0.85
+  return 1
 }
 
 /**
- * 出场时：威吓、顺风
+ * 出场时：威吓、顺风、潮歌
  * @author zjh
  * @date 2026-10-14
  */
@@ -92,6 +94,12 @@ export function onEnter(s: BattleState, side: Side): void {
   } else if (c.abilityId === 'tailwind_born') {
     say(s, `${battleName(c)} 乘着「顺风」！`)
     changeStages(s, side, c, { spd: 1 })
+  } else if (c.abilityId === 'tide_song') {
+    const foe = actorOf(s, other(side))
+    if (foe.hp > 0 && Math.random() < 0.3) {
+      say(s, `${battleName(c)} 的「潮歌」！`)
+      tryApplyVolatile(s, other(side), foe, 'confused', false)
+    }
   }
 }
 
