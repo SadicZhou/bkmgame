@@ -50,6 +50,8 @@ const DRAWN = new Set([
   'treesprite',
   'thundercorn',
   'miragefox',
+  'aurorafox',
+  'eclipsesprite',
 ])
 
 export function preloadCreatureArt(scene: Phaser.Scene): void {

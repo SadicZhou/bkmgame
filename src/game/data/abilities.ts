@@ -54,6 +54,8 @@ const LIST: AbilityDef[] = [
   { id: 'grove_guard', name: '守林', desc: '受到叶系伤害 ×0.5。' },
   { id: 'lightning_rod', name: '引雷', desc: '受到雷系伤害 ×0.5，并提升自身攻击 1 阶。' },
   { id: 'mirage', name: '幻影', desc: '出场后第一次受到的伤害 ×0.5。' },
+  { id: 'aurora_veil', name: '极光幕', desc: '出场后 3 回合内，受到伤害 ×0.75。' },
+  { id: 'eclipse_day', name: '蚀日', desc: '出场时将战斗天气变为「蚀」：非灵系招式威力 ×0.9。' },
 ]
 
 export const ABILITIES: Record<string, AbilityDef> = Object.fromEntries(LIST.map((a) => [a.id, a]))

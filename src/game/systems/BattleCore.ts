@@ -91,6 +91,8 @@ export interface Volatile {
   noSwitch: number
   /** 幻影：出场后第一次受伤减半，用过后清除 */
   phantomShield: boolean
+  /** 极光幕：剩余回合（>0 时受伤 ×0.75） */
+  auroraTurns: number
 }
 
 /** 升级时想学但槽满的技能，战后交给玩家决定 */
@@ -135,6 +137,8 @@ export interface BattleState {
   ordeal?: boolean
   /** 夜幕鸦半血认输 */
   surrender?: boolean
+  /** 蚀日：非灵系招式威力 ×0.9 */
+  eclipseField?: boolean
   vol: Record<string, Volatile>
   pendingLearns: PendingLearn[]
   turn: number
@@ -155,6 +159,7 @@ export function freshVolatile(): Volatile {
     lastLight: false,
     lampGuard: false,
     phantomShield: false,
+    auroraTurns: 0,
     noSwitch: 0,
   }
 }

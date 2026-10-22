@@ -108,6 +108,12 @@ export function onEnter(s: BattleState, side: Side): void {
   } else if (c.abilityId === 'mirage') {
     volOf(s, c).phantomShield = true
     say(s, `${battleName(c)} 的身影晃了一下——「幻影」！`)
+  } else if (c.abilityId === 'aurora_veil') {
+    volOf(s, c).auroraTurns = 3
+    say(s, `${battleName(c)} 披上了「极光幕」！`)
+  } else if (c.abilityId === 'eclipse_day') {
+    s.eclipseField = true
+    say(s, `${battleName(c)} 的「蚀日」！天色暗了下来。`, 'weather')
   }
 }
 

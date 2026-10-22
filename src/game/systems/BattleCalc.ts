@@ -103,6 +103,8 @@ export function calcDamage(
   const defVol = volOf(s, defender)
   const wall = defVol.frostWall > 0 ? 0.5 : 1
   const phantom = defVol.phantomShield ? 0.5 : 1
+  const aurora = defVol.auroraTurns > 0 ? 0.75 : 1
+  const eclipse = s.eclipseField && move.type !== 'spirit' ? 0.9 : 1
   const total =
     (raw / 12) *
     mult *
@@ -115,6 +117,8 @@ export function calcDamage(
     night *
     wall *
     phantom *
+    aurora *
+    eclipse *
     (0.9 + rng() * 0.2)
   return { dmg: Math.max(1, Math.round(total)), mult, crit }
 }

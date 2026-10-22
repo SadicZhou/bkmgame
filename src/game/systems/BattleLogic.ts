@@ -101,6 +101,7 @@ export function startBattle(
     neutral: !!opts.neutral,
     ordeal: !!opts.ordeal,
     surrender: !!opts.surrender,
+    eclipseField: false,
     vol: {},
     pendingLearns: [],
     turn: 1,
@@ -426,6 +427,10 @@ function endOfTurn(s: BattleState): void {
     if (vol.frostWall > 0) {
       vol.frostWall -= 1
       if (vol.frostWall === 0) say(s, `${name} 的霜壁消失了。`)
+    }
+    if (vol.auroraTurns > 0) {
+      vol.auroraTurns -= 1
+      if (vol.auroraTurns === 0) say(s, `${name} 的极光幕消散了。`)
     }
     checkFaints(s)
   }

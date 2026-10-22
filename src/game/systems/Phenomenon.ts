@@ -40,6 +40,10 @@ export function conditionsMet(w: WorldSave, def: PhenomenonDef, env: PhenomenonE
   if (!env.hasFlag(def.unlockFlag) || !env.unlockedMaps.includes(def.mapId)) return false
   if (w.phenomenon.caught.includes(def.id)) return false
   if ((w.phenomenon.cooldownUntilDay[def.id] ?? 0) > dayOf(w.totalSteps)) return false
+  if (def.requireOthersCaught) {
+    const others = PHENOMENA.filter((p) => p.id !== def.id)
+    if (!others.every((p) => w.phenomenon.caught.includes(p.id))) return false
+  }
   const weather = w.weatherByMap[def.mapId] as Weather | undefined
   if (def.weather && (!weather || !def.weather.includes(weather))) return false
   const night = isNight(w.totalSteps)

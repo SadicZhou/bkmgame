@@ -28,6 +28,8 @@ export interface PhenomenonDef {
   appearLines: string[]
   /** 地图上的氛围色 */
   tint: number
+  /** 需先收服其余全部异象（不含自身） */
+  requireOthersCaught?: boolean
 }
 
 export const PHENOMENA: PhenomenonDef[] = [
@@ -186,6 +188,38 @@ export const PHENOMENA: PhenomenonDef[] = [
     rumorText: '沙暴天的荒原会骗人。脚印走到一半就分叉，尽头据说是一只蜃影狐。',
     appearLines: ['蜃楼碎成沙粒，一只狐狸从光里走出来——', '蜃影狐歪着头，身后又闪过一个模糊的影子。'],
     tint: 0xe8c0a0,
+  },
+  {
+    id: 'aurora_night',
+    name: '极光之夜',
+    mapId: 'frostpeak',
+    uniqueSpeciesId: 'aurorafox',
+    unlockFlag: 'crane_beaten',
+    weather: ['sunny'],
+    time: 'night',
+    goal: 'collect',
+    goalLabel: '极光碎片',
+    center: { x: 8, y: 4 },
+    omenText: '【异象】霜铃峰的夜空垂下彩带——极光之夜！',
+    rumorText: '晴朗的夜里上霜铃峰，有时能看见极光。彩带尽头据说蹲着一只极光狐。',
+    appearLines: ['彩带落在雪地上，凝成一只狐狸的轮廓——', '极光狐抖了抖尾巴，雪粒都变成了小星星。'],
+    tint: 0xa0e0ff,
+  },
+  {
+    id: 'solar_eclipse',
+    name: '日蚀',
+    mapId: 'meadow',
+    uniqueSpeciesId: 'eclipsesprite',
+    unlockFlag: 'game_clear',
+    time: 'day',
+    goal: 'track',
+    goalLabel: '暗影足迹',
+    center: { x: 10, y: 7 },
+    requireOthersCaught: true,
+    omenText: '【异象】白昼忽然暗了下来——日蚀！所有影子都在动。',
+    rumorText: '有人说，把十二种异象都记下之后，太阳会被咬一口。那时青苔草地上会出现蚀影。',
+    appearLines: ['影子叠成一团，站了起来——', '蚀影没有眼睛，却好像一直在看着你。'],
+    tint: 0x403858,
   },
 ]
 

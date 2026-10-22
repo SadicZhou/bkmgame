@@ -180,6 +180,12 @@ const LIST: MoveDef[] = [
   sta('mirage_veil', '蜃楼', 'gale', 100, 10, '降低对手攻击、速度各 1 阶。蜃影狐专属。', {
     effect: { chance: 100, target: 'foe', stages: { atk: -1, spd: -1 } },
   }),
+  atk('aurora_beam', '极光', 'frost', 40, -1, 5, '必定命中，10% 令对手冻结。极光狐专属。', {
+    effect: { chance: 10, target: 'foe', status: 'freeze' },
+  }),
+  atk('eclipse_hour', '日蚀之刻', 'spirit', 45, 100, 5, '回复造成伤害的 50%。蚀影专属。', {
+    effect: { chance: 100, target: 'self', drainRatio: 0.5 },
+  }),
 
   // ── 挣扎：PP 全部耗尽时自动使用 ──
   atk('struggle', '挣扎', 'normal', 20, -1, 1, 'PP 耗尽时的最后一搏，自身损失 1/4 最大 HP。', { contact: true }),
