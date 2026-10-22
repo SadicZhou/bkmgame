@@ -14,7 +14,7 @@ import { ITEMS } from '../data/items'
 import { MAPS, isTallGrass, mapById, resolveTile, type HasFlag, type MapDef, type NpcDef, type TileKind, type WarpDef } from '../data/maps'
 import { riftWeather } from '../data/riftMap'
 import { PHENOMENON_RULES } from '../data/phenomena'
-import { minorEndedToast, minorHudLine, minorStartedToast } from '../systems/EventHints'
+import { enterEventToasts, minorEndedToast, minorHudLine, minorStartedToast } from '../systems/EventHints'
 import { WEATHER_INFO } from '../data/weather'
 import { GameState, type Facing, type PendingBattle } from '../state/GameState'
 import { Sfx } from '../systems/AudioBeeps'
@@ -220,6 +220,10 @@ export class WorldScene extends Phaser.Scene {
     fadeIn(this)
     showMapBanner(this, this.map.name)
     this.time.delayedCall(450, () => this.resumeStory())
+    // 横幅将落时提醒：本图有异象 / 小事件（战斗回图也会再提一句）
+    this.time.delayedCall(1600, () => {
+      for (const t of enterEventToasts(GameState.world, this.map.id)) this.flashToast(t)
+    })
   }
 
   /** 装饰层使用的旗标视图（灯台点亮演出前把灯台当作熄灭） */

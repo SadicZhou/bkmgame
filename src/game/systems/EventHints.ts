@@ -7,6 +7,7 @@
 import { SPECIES } from '../data/creatures'
 import { MAPS } from '../data/maps'
 import { MINOR_EVENTS, type MinorEventId } from '../data/phenomena'
+import { activePhenomenon } from './Phenomenon'
 import type { WorldSave } from './WorldClock'
 
 /** 小事件进行中的附加说明（按种类） */
@@ -99,4 +100,42 @@ export function minorEndedToast(id: MinorEventId): string {
     default:
       return `【${name}】结束了。`
   }
+}
+
+/**
+ * 进入事件地图时的小事件提醒；不在该图或无事件时返回 null
+ * @author zjh
+ * @date 2026-10-22
+ */
+export function minorEnterToast(w: WorldSave, mapId: string): string | null {
+  const m = w.minor
+  if (!m.id || m.mapId !== mapId) return null
+  const def = MINOR_EVENTS[m.id]
+  return `此地正逢【${def.name}】：${minorDetail(w)}（剩约 ${m.stepsLeft} 步）`
+}
+
+/**
+ * 进入异象地图时的提醒；不在该图或无异象时返回 null
+ * @author zjh
+ * @date 2026-10-22
+ */
+export function phenomenonEnterToast(w: WorldSave, mapId: string): string | null {
+  const def = activePhenomenon(w)
+  if (!def || def.mapId !== mapId) return null
+  const goal = w.phenomenon.token ? '已得信物，去异象中心吧' : `${def.goalLabel}进行中`
+  return `此地异象「${def.name}」：${goal}（剩约 ${w.phenomenon.stepsLeft} 步）`
+}
+
+/**
+ * 进图时要播的事件提示（异象优先，再小事件）
+ * @author zjh
+ * @date 2026-10-22
+ */
+export function enterEventToasts(w: WorldSave, mapId: string): string[] {
+  const out: string[] = []
+  const p = phenomenonEnterToast(w, mapId)
+  if (p) out.push(p)
+  const m = minorEnterToast(w, mapId)
+  if (m) out.push(m)
+  return out
 }
