@@ -1,12 +1,20 @@
 /**
- * 第六章剧情：雪伯的暖炉石、泉守汐、篝火取暖
+ * 第六章剧情：雪伯的暖炉石、泉守汐、篝火取暖、雪人大赛
  * @author zjh
- * @date 2026-10-16
+ * @date 2026-10-22
  */
 
 import { GameState } from '../../state/GameState'
 import { Sfx } from '../../systems/AudioBeeps'
 import { FROST_FLAGS, warmCold } from '../../systems/Frost'
+import {
+  SNOWMAN_DONE_FLAG,
+  SNOWMAN_PARTS,
+  buildSnowman,
+  pickSnowPart,
+  snowmanPartsCount,
+  snowmanPartsReady,
+} from '../../systems/SnowmanQuest'
 import type { StoryHost } from './StoryEvents'
 
 function elder(host: StoryHost, name: string): void {
@@ -51,8 +59,68 @@ function fire(host: StoryHost, name: string): void {
   host.say([`${name}：暖炉石烧热了。寒气散了。`], () => host.toast('寒冷消退了'))
 }
 
+/**
+ * 雪孩：说明大赛材料与进度
+ * @author zjh
+ * @date 2026-10-22
+ */
+function snowKid(host: StoryHost, name: string): void {
+  const say = (lines: string[]) => host.say(lines.map((l) => `${name}：${l}`))
+  GameState.setFlag('side_snowman', true)
+  if (GameState.hasFlag(SNOWMAN_DONE_FLAG)) {
+    say(['你的雪人还立在台上！围巾暖和不？'])
+    return
+  }
+  if (snowmanPartsReady()) {
+    say(['三样都齐了！去那边雪人台堆起来，我们给你打分！'])
+    return
+  }
+  const n = snowmanPartsCount()
+  say([
+    '冬天太长了，我们要办雪人大赛！',
+    '需要圆雪球、炭眼睛、冰胡萝卜。',
+    '圆雪球在山上新雪里团，炭在篝火旁，胡萝卜滚出菜窖了。',
+    n > 0 ? `你已经有 ${n}/${SNOWMAN_PARTS.length} 样啦。` : '齐了就去雪人台堆！',
+  ])
+}
+
+function snowPile(host: StoryHost): void {
+  const r = buildSnowman()
+  if ('reason' in r) {
+    host.say([r.reason])
+    return
+  }
+  Sfx.win()
+  host.say(r.lines, () => {
+    host.toast('获得了重要物品「御寒围巾」')
+    host.toast('支线「雪人大赛」完成')
+    host.refreshHud()
+    host.refreshNpcs()
+  })
+}
+
+function pickPart(id: (typeof SNOWMAN_PARTS)[number]['id']) {
+  return (host: StoryHost): void => {
+    const r = pickSnowPart(id)
+    if ('reason' in r) {
+      host.say([r.reason])
+      return
+    }
+    Sfx.confirm()
+    host.say(r.lines, () => {
+      host.refreshHud()
+      host.refreshNpcs()
+    })
+  }
+}
+
 export const FROST_STORIES = {
   frost_elder: elder,
   frost_shio: shio,
   frost_fire: fire,
+  snow_kid: snowKid,
+  snow_pile: snowPile,
+  pick_snow_ball: pickPart('snow_ball'),
+  pick_coal_eyes: pickPart('coal_eyes'),
+  pick_ice_carrot: pickPart('ice_carrot'),
 }

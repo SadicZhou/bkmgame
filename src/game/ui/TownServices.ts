@@ -10,6 +10,7 @@ import { MAPS } from '../data/maps'
 import { PHENOMENA, PHENOMENON_RULES } from '../data/phenomena'
 import { minorBoardLine } from '../systems/EventHints'
 import { CHICKS, CHICKS_DONE_FLAG, chicksHomeCount } from '../systems/ChickQuest'
+import { SNOWMAN_DONE_FLAG, SNOWMAN_PARTS, snowmanPartsCount } from '../systems/SnowmanQuest'
 import { LETTERS_DONE_FLAG, lettersActive, lettersDelivered, LETTER_FLAGS } from '../systems/LetterQuest'
 import { WEATHER_INFO } from '../data/weather'
 import { GameState } from '../state/GameState'
@@ -77,6 +78,9 @@ export class TownServices {
     }
     if (GameState.hasFlag('side_chicks') && !GameState.hasFlag(CHICKS_DONE_FLAG)) {
       lines.push(`【迷路的雏鸟】把羽毛岛的雏鸟送回各岛空巢。（已回家 ${chicksHomeCount()}/${CHICKS.length}）`)
+    }
+    if (GameState.hasFlag('side_snowman') && !GameState.hasFlag(SNOWMAN_DONE_FLAG)) {
+      lines.push(`【雪人大赛】收集圆雪球、炭眼睛、冰胡萝卜，在山麓雪人台堆雪人。（${snowmanPartsCount()}/${SNOWMAN_PARTS.length}）`)
     }
     if (w.lureSteps > 0) lines.push(`引兽铃还在响，剩 ${w.lureSteps} 步。`)
     if (w.repelSteps > 0) lines.push(`驱兽香还有效，剩 ${w.repelSteps} 步。`)

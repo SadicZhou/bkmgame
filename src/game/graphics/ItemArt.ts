@@ -147,6 +147,10 @@ function paintOne(g: Icon, id: string): void {
   else if (id === 'fest_ribbon') festRibbon(g)
   else if (id === 'fest_lantern') festLantern(g)
   else if (id === 'fest_star') festStar(g)
+  else if (id === 'snow_ball') snowBall(g)
+  else if (id === 'coal_eyes') coalEyes(g)
+  else if (id === 'ice_carrot') iceCarrot(g)
+  else if (id === 'warm_scarf') warmScarf(g)
 }
 
 /** 喷雾罐：喷嘴、金属颈、标签和罐底 */
@@ -506,6 +510,36 @@ function feather(g: Icon): void {
   g.rect(28, 24, 4, 2, 0xe8eef4)
   g.rect(34, 28, 4, 2, 0xe8eef4)
   g.dot(30, 20, 0xffffff)
+}
+
+/** 圆雪球 */
+function snowBall(g: Icon): void {
+  g.ellipse(32, 34, 14, 12, 0xf4faff)
+  g.ellipse(32, 32, 12, 10, 0xffffff)
+  g.dot(28, 30, 0xe8f0f8)
+}
+
+/** 炭眼睛 */
+function coalEyes(g: Icon): void {
+  g.ellipse(24, 32, 6, 5, 0x303030)
+  g.ellipse(40, 32, 6, 5, 0x303030)
+  g.dot(24, 31, 0x606060)
+  g.dot(40, 31, 0x606060)
+}
+
+/** 冰胡萝卜 */
+function iceCarrot(g: Icon): void {
+  g.rect(30, 18, 4, 22, 0xff9030)
+  g.rect(29, 16, 6, 4, 0x50a040)
+  g.rect(28, 20, 8, 16, 0xc8e8ff)
+}
+
+/** 御寒围巾 */
+function warmScarf(g: Icon): void {
+  g.rect(16, 28, 32, 8, 0xe05050)
+  g.rect(18, 30, 28, 4, 0xff7070)
+  g.rect(14, 34, 8, 12, 0xc04040)
+  g.rect(42, 34, 8, 12, 0xc04040)
 }
 
 /** 小路的灯：纸灯笼和短提手 */

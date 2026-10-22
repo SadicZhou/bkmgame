@@ -817,7 +817,12 @@ export class WorldScene extends Phaser.Scene {
 
   /** 霜铃峰积寒冷，满了以后每 10 步掉一点体力 */
   private applyCold(): void {
-    const next = tickCold(Number(GameState.getFlag('frost_cold') || 0), Number(GameState.getFlag('frost_full_steps') || 0), leadIsFlame(GameState.party))
+    const next = tickCold(
+      Number(GameState.getFlag('frost_cold') || 0),
+      Number(GameState.getFlag('frost_full_steps') || 0),
+      leadIsFlame(GameState.party),
+      GameState.itemCount('warm_scarf') > 0,
+    )
     GameState.setFlag('frost_cold', next.cold)
     GameState.setFlag('frost_full_steps', next.fullSteps)
     if (next.justFull) this.flashToast('冷得发抖。去篝火边暖一暖。')

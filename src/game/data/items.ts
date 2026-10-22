@@ -87,6 +87,17 @@ export const ITEMS: Record<string, ItemDef> = {
   fest_lantern: { id: 'fest_lantern', name: '纸灯饰', kind: 'key', value: 0, price: 0, desc: '千灯节的小纸灯。挂在腰带上会轻轻晃。' },
   fest_star: { id: 'fest_star', name: '星火别针', kind: 'key', value: 0, price: 0, desc: '千灯节的星火别针。夜里会亮一点点。' },
   fold_board: { id: 'fold_board', name: '折叠滑板', kind: 'vehicle', value: 0, price: 200, desc: '旅团杂货铺的折叠滑板。在野外展开后走得更快；室内会自动收起，不能和骑乘同时使用。' },
+  snow_ball: { id: 'snow_ball', name: '圆雪球', kind: 'key', value: 0, price: 0, desc: '刚团起来的圆雪球。雪人大赛的材料之一。' },
+  coal_eyes: { id: 'coal_eyes', name: '炭眼睛', kind: 'key', value: 0, price: 0, desc: '篝火旁捡的小炭块。雪人用它当眼睛。' },
+  ice_carrot: { id: 'ice_carrot', name: '冰胡萝卜', kind: 'key', value: 0, price: 0, desc: '山麓菜窖滚出来的胡萝卜，外头结了一层薄冰。' },
+  warm_scarf: {
+    id: 'warm_scarf',
+    name: '御寒围巾',
+    kind: 'key',
+    value: 0,
+    price: 0,
+    desc: '雪人大赛的金牌奖品。带着它时霜铃峰寒冷涨得更慢，伙伴被冻结的几率减半。',
+  },
 }
 
 /** 背包分页 */
@@ -126,6 +137,10 @@ export const KEY_ITEMS: string[] = [
   'fest_ribbon',
   'fest_lantern',
   'fest_star',
+  'snow_ball',
+  'coal_eyes',
+  'ice_carrot',
+  'warm_scarf',
 ]
 
 /** 商店货架顺序 */

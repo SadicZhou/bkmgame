@@ -34,16 +34,16 @@ export interface ColdTick {
 }
 
 /**
- * 霜铃峰走一步。焰系首发时寒冷涨得慢一半
+ * 霜铃峰走一步。焰系首发或御寒围巾时寒冷涨速减半
  * @author zjh
- * @date 2026-10-16
+ * @date 2026-10-22
  */
-export function tickCold(cold: number, fullSteps: number, flameLead: boolean): ColdTick {
+export function tickCold(cold: number, fullSteps: number, flameLead: boolean, scarf = false): ColdTick {
   if (cold >= COLD_MAX) {
     const steps = fullSteps + 1
     return { cold: COLD_MAX, fullSteps: steps, justFull: false, chip: steps % COLD_CHIP_EVERY === 0 }
   }
-  const gain = flameLead ? 0.5 : 1
+  const gain = flameLead || scarf ? 0.5 : 1
   const next = Math.min(COLD_MAX, Math.round((cold + gain) * 2) / 2)
   return { cold: next, fullSteps: 0, justFull: next >= COLD_MAX, chip: false }
 }

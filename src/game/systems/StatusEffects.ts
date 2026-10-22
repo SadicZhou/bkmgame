@@ -6,6 +6,7 @@
 
 import { SPECIES, battleName, type CreatureInstance } from '../data/creatures'
 import type { StageKey, StatusId, VolatileId } from '../data/moves'
+import { GameState } from '../state/GameState'
 import { dealDamage, say, sideAnim, volOf, type BattleState, type Side } from './BattleCore'
 
 export const STATUS_LABEL: Record<StatusId, string> = { burn: '灼烧', paralyze: '麻痹', freeze: '冻结' }
@@ -36,6 +37,17 @@ export function tryApplyStatus(s: BattleState, side: Side, target: CreatureInsta
   if (target.hp <= 0) return false
   if (target.status || immuneTo(target, status)) {
     if (loud) say(s, `但是对 ${battleName(target)} 没有效果……`)
+    return false
+  }
+  // 御寒围巾：己方被冻结时约一半几率挡下
+  if (
+    status === 'freeze' &&
+    side === 'player' &&
+    s.playerParty.includes(target) &&
+    GameState.itemCount('warm_scarf') > 0 &&
+    Math.random() < 0.5
+  ) {
+    if (loud) say(s, `${battleName(target)} 的围巾挡住了寒气！`)
     return false
   }
   target.status = status
