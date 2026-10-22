@@ -5,8 +5,14 @@
  * @date 2026-10-15
  */
 
-/** 钓鱼记录的展示顺序（雾泉湖畔全部可钓物种） */
+/** 钓鱼记录的展示顺序（雾泉湖畔全部可钓物种；集齐判定只用这一组） */
 export const FISH_ORDER: string[] = ['bubblefin', 'mistnewt', 'coralfin', 'wavefin', 'tideback', 'lanternray']
+
+/** 湖畔以外的可钓鱼种（不计入湖畔集齐大奖） */
+export const EXTRA_FISH_ORDER: string[] = ['cloudfin']
+
+/** 菜单展示用：湖畔 + 额外钓点 */
+export const ALL_FISH_ORDER: string[] = [...FISH_ORDER, ...EXTRA_FISH_ORDER]
 
 /** 各物种基准体长（cm），实际体长在 0.75～1.30 倍之间浮动 */
 export const FISH_BASE_CM: Record<string, number> = {
@@ -16,6 +22,7 @@ export const FISH_BASE_CM: Record<string, number> = {
   wavefin: 40,
   tideback: 30,
   lanternray: 55,
+  cloudfin: 42,
 }
 
 /** 体长浮动范围与强壮个体加成 */

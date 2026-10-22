@@ -123,6 +123,24 @@ function townElder(host: StoryHost, name: string): boolean {
   return true
 }
 
+/**
+ * 云钓翁：提示好钓竿钓云海；首次钓到云鳍鱼后祝贺
+ * @author zjh
+ * @date 2026-10-22
+ */
+function fisher(host: StoryHost, name: string): void {
+  const say = (lines: string[]) => host.say(lines.map((l) => `${name}：${l}`))
+  if (GameState.hasFlag('side_cloud_fish')) {
+    say(['云鳍鱼的鳍尖会挂着还没落下的雨。', '你已经见过了——云海会记得你。'])
+    return
+  }
+  if (GameState.itemCount('good_rod') <= 0) {
+    say(['南边那片云海下面有鱼。', '旧钓竿够不到那么深，得用好钓竿。沧澜鲸身边的那种。'])
+    return
+  }
+  say(['好钓竿！站到岸边，面朝云海甩竿吧。', '钓到云鳍鱼的话，再来跟我说一声。'])
+}
+
 export const CLOUD_STORIES = {
   cloud_pillar: pillar,
   cloud_mill_a: mill('a'),
@@ -133,6 +151,7 @@ export const CLOUD_STORIES = {
   cloud_fly: fly,
   town_photo: townPhoto,
   town_elder: townElder,
+  cloud_fisher: fisher,
 }
 
 export const CLOUD_MILL_FLAGS = [MILL_A, MILL_B, MILL_C]

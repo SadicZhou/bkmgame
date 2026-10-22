@@ -43,6 +43,10 @@ export class FishingController {
     if (!canFishAt(map, x, y, GameState.hasFlag)) return
     const rod = rodKindOf((id) => GameState.itemCount(id))
     if (!rod || !hasFishing(map.id, rod)) {
+      if (rod === 'rod' && hasFishing(map.id, 'goodRod')) {
+        host.toast('这里太深了，需要好钓竿。')
+        return
+      }
       if (hasFishing(map.id, 'rod')) host.toast('水里好像有伙伴在游……要是有钓竿就好了')
       return
     }
@@ -88,6 +92,12 @@ export class FishingController {
       lines.push(`超过了澈的纪录（${anglerRecord(enemy.speciesId)} cm）！去给他看看吧。`)
     }
     if (contest) lines.push('达到了钓鱼大赛的目标！战斗结束后去告诉钓鱼少年澈吧。')
+    // 支线 S7-2：起风岛首次钓到云鳍鱼
+    if (enemy.speciesId === 'cloudfin' && !GameState.hasFlag('side_cloud_fish')) {
+      GameState.setFlag('side_cloud_fish', true)
+      lines.push('（云海钓鱼：记下了第一尾云鳍鱼。去跟云钓翁说说吧。）')
+      host.toast('支线「云海钓鱼」完成')
+    }
     host.dialogue.open(lines, () => host.startWildBattle(enemy))
   }
 }

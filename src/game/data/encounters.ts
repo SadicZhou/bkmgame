@@ -155,7 +155,15 @@ export const ENCOUNTERS: Record<string, EncounterTable> = {
       { speciesId: 'frostfox', weight: 3, minLv: 33, maxLv: 35, time: 'night', weather: ['snow'] },
     ],
   },
-  cloudstart: cloudGrass(),
+  cloudstart: {
+    ...cloudGrass(),
+    /** 旧钓竿够不到云海底；好钓竿才有云鳍鱼（S7-2） */
+    goodRod: [
+      { speciesId: 'cloudfin', weight: 70, minLv: 37, maxLv: 39 },
+      { speciesId: 'bubblefin', weight: 20, minLv: 34, maxLv: 36 },
+      { speciesId: 'mistnewt', weight: 10, minLv: 35, maxLv: 37 },
+    ],
+  },
   cloudfeather: cloudGrass(),
   cloudmill: cloudGrass(),
   cloudbridge: cloudGrass(),

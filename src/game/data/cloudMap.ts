@@ -12,14 +12,18 @@ import { postgameNpcs } from './postgameNpcs'
 const back = '风把你托回来了。'
 
 export function buildCloudStart(): MapDef {
+  // 南缘开云海：面朝水面可钓鱼（好钓竿 → 云鳍鱼，支线 S7-2）
   const { width, height, tiles } = parseAscii([
-    '############',
-    '##........##',
-    '##........##',
-    '#####W######',
-    '##........##',
-    '##........##',
-    '############',
+    '##############',
+    '##..........##',
+    '##..........##',
+    '######W#######',
+    '##..........##',
+    '##..........##',
+    '##........####',
+    '##~~~~~~~~####',
+    '##~~~~~~~~####',
+    '##############',
   ])
   return {
     id: 'cloudstart',
@@ -31,7 +35,7 @@ export function buildCloudStart(): MapDef {
     bgColor: 0xb7e3f5,
     spawn: { x: 5, y: 5 },
     outdoor: true,
-    warps: [{ x: 5, y: 3, targetMap: 'cloudfeather', targetX: 5, targetY: 4, label: '羽毛岛' }],
+    warps: [{ x: 6, y: 3, targetMap: 'cloudfeather', targetX: 5, targetY: 4, label: '羽毛岛' }],
     npcs: [
       {
         id: 'cloud_sign_start',
@@ -41,6 +45,15 @@ export function buildCloudStart(): MapDef {
         y: 2,
         color: 0xc4a574,
         lines: ['风从这里往北，一直是顺的。', '站在风口上，就会滑到下一座岛。'],
+      },
+      {
+        id: 'cloud_fisher',
+        name: '云钓翁',
+        x: 3,
+        y: 6,
+        color: 0x6a9cc4,
+        story: 'cloud_fisher',
+        lines: ['云海下面也有鱼。'],
       },
       ...postgameNpcs('cloudstart'),
     ],
@@ -78,7 +91,7 @@ export function buildCloudFeather(): MapDef {
         requireFlag: 'cloud_mill_a',
         lockedLines: [back, '羽毛岛的风车还对着来路。'],
       },
-      { x: 5, y: 5, targetMap: 'cloudstart', targetX: 5, targetY: 4, label: '起风岛' },
+      { x: 5, y: 5, targetMap: 'cloudstart', targetX: 6, targetY: 4, label: '起风岛' },
     ],
     npcs: [
       {

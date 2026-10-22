@@ -81,7 +81,7 @@ describe('v3.9 云阶', () => {
     const shrine = MAPS.cloudshrine
     expect(shrine.tiles.length).toBe(shrine.width * shrine.height)
     expect(MAPS.cloudmill.width).toBe(16)
-    expect(MAPS.cloudstart.width).toBe(12)
+    expect(MAPS.cloudstart.width).toBe(14)
     const none = visibleNpcs(shrine, () => false).map((n) => n.id)
     expect(none).not.toContain('cloud_kite')
     const photo = visibleNpcs(shrine, (k) => k === 'cloud_photo').map((n) => n.id)

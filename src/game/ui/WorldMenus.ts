@@ -7,7 +7,7 @@
 
 import { DEX_ORDER, SPECIES, TYPE_LABEL, UNIQUE_ORDER, battleName, spriteKey, type CreatureInstance } from '../data/creatures'
 import { BADGES, ownedBadges } from '../data/badges'
-import { FISH_ORDER } from '../data/fishing'
+import { ALL_FISH_ORDER, FISH_ORDER } from '../data/fishing'
 import { BAG_PAGES, ITEMS, ITEM_ORDER, SHOP_STOCK, itemIconKey, type ItemKind } from '../data/items'
 import { MUSH_FLAGS } from '../data/mushrooms'
 import { MERCHANT_STOCK, PHENOMENA } from '../data/phenomena'
@@ -433,12 +433,13 @@ export class WorldMenus {
     const contestText = contest
       ? `\n今日大赛${contest.rain ? '【雨天限定】' : ''}：${SPECIES[contest.speciesId].name} ≥ ${contest.minSize} cm（${contest.claimed ? '已领奖' : contest.done ? '已达标，去找澈领奖' : '进行中'}）`
       : ''
-    const rows: ListRow[] = FISH_ORDER.map((id) => {
+    const rows: ListRow[] = ALL_FISH_ORDER.map((id) => {
       const sp = SPECIES[id]
       const rec = w.fishLog?.[id]
-      const record = `澈的纪录 ${anglerRecord(id)} cm`
+      const lake = FISH_ORDER.includes(id)
+      const record = lake ? `澈的纪录 ${anglerRecord(id)} cm` : '云海钓点'
       if (!rec) return { label: '？？？', icon: `spr-${id}`, iconDim: true, detail: `还没有钓到过。\n${record}${contestText}` }
-      const beat = beatsRecord(w, id)
+      const beat = lake && beatsRecord(w, id)
       return {
         label: `${beat ? '★ ' : ''}${sp.name}`,
         right: `${rec.count} 次 · 最大 ${rec.best} cm`,
@@ -449,7 +450,7 @@ export class WorldMenus {
     const broken = FISH_ORDER.filter((id) => beatsRecord(w, id)).length
     this.panel.open({
       title: '钓鱼记录',
-      footer: `${fishLogCount(w)}/${FISH_ORDER.length} · 破纪录 ${broken}`,
+      footer: `湖畔 ${fishLogCount(w)}/${FISH_ORDER.length} · 破纪录 ${broken}`,
       rows,
       onCancel: () => this.openMain(5),
     })
