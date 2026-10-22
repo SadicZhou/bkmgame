@@ -50,6 +50,8 @@ const LIST: AbilityDef[] = [
   { id: 'immovable', name: '不动', desc: '能力不会被降低。' },
   { id: 'mist_veil', name: '雾隐', desc: '雾天闪避 +15%。' },
   { id: 'tide_song', name: '潮歌', desc: '出场时 30% 令对手混乱。' },
+  { id: 'flock_feather', name: '群羽', desc: '出场时自身速度 +1 阶。' },
+  { id: 'grove_guard', name: '守林', desc: '受到叶系伤害 ×0.5。' },
 ]
 
 export const ABILITIES: Record<string, AbilityDef> = Object.fromEntries(LIST.map((a) => [a.id, a]))

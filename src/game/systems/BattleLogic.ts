@@ -301,6 +301,12 @@ function useStatusMove(s: BattleState, side: Side, user: CreatureInstance, targe
       changeStages(s, side, user, { spd: 1 })
       return
     }
+    case 'tree_ring': {
+      const healed = restoreHp(user, user.maxHp * 0.4)
+      say(s, healed > 0 ? `${name} 回复了 ${healed} HP！` : `${name} 的 HP 已经是满的。`, healed > 0 ? sideAnim(side, 'heal', 'healEnemy') : 'none')
+      changeStages(s, side, user, { def: 1 })
+      return
+    }
   }
   applyEffect(s, side, user, target, move, 0)
 }

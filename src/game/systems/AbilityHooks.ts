@@ -57,6 +57,7 @@ export function defenderDamageMod(c: CreatureInstance, move: MoveDef, typeMult: 
     if (move.type === 'flame') m *= 1.25
   }
   if (c.abilityId === 'magma_armor' && move.type === 'tide') m *= 0.75
+  if (c.abilityId === 'grove_guard' && move.type === 'leaf') m *= 0.5
   return m / kindredMod(c)
 }
 
@@ -80,7 +81,7 @@ export function evasionMod(s: BattleState, c: CreatureInstance): number {
 }
 
 /**
- * 出场时：威吓、顺风、潮歌
+ * 出场时：威吓、顺风、潮歌、群羽
  * @author zjh
  * @date 2026-10-14
  */
@@ -93,6 +94,9 @@ export function onEnter(s: BattleState, side: Side): void {
     changeStages(s, other(side), foe, { atk: -1 })
   } else if (c.abilityId === 'tailwind_born') {
     say(s, `${battleName(c)} 乘着「顺风」！`)
+    changeStages(s, side, c, { spd: 1 })
+  } else if (c.abilityId === 'flock_feather') {
+    say(s, `${battleName(c)} 的「群羽」！`)
     changeStages(s, side, c, { spd: 1 })
   } else if (c.abilityId === 'tide_song') {
     const foe = actorOf(s, other(side))

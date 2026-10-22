@@ -105,6 +105,8 @@ export const CRITTERS: Record<string, CritterPalette> = {
   rockidol: { body: 0x8a7860, belly: 0xd0c0a0, accent: 0xe8c878, ear: 0x6a5840, kind: 'lizard', evolved: true, extra: 'crystal' },
   mistcarp: { body: 0x90c8d8, belly: 0xe8f8ff, accent: 0xc0e8f0, ear: 0x70a8b8, kind: 'newt', extra: 'star' },
   tideshark: { body: 0x406888, belly: 0xb0d0e0, accent: 0x70b0d0, ear: 0x305068, kind: 'newt', evolved: true },
+  plumeowl: { body: 0xd8e8f8, belly: 0xffffff, accent: 0xa0c8e8, ear: 0xb0c8e0, kind: 'bird', evolved: true, extra: 'star' },
+  treesprite: { body: 0x6a9860, belly: 0xe8f8d8, accent: 0xc8e878, ear: 0x4a7848, kind: 'mushroom', evolved: true, extra: 'star' },
 }
 
 /**
