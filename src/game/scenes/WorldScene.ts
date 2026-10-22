@@ -14,6 +14,7 @@ import { ITEMS } from '../data/items'
 import { MAPS, isTallGrass, mapById, resolveTile, type HasFlag, type MapDef, type NpcDef, type TileKind, type WarpDef } from '../data/maps'
 import { riftWeather } from '../data/riftMap'
 import { PHENOMENON_RULES } from '../data/phenomena'
+import { chickHudLine, carryingChick } from '../systems/ChickQuest'
 import { enterEventToasts, minorEndedToast, minorHudLine, minorStartedToast } from '../systems/EventHints'
 import { WEATHER_INFO } from '../data/weather'
 import { GameState, type Facing, type PendingBattle } from '../state/GameState'
@@ -720,6 +721,7 @@ export class WorldScene extends Phaser.Scene {
     GameState.playerX = warp.targetX
     GameState.playerY = warp.targetY
     Sfx.confirm()
+    if (carryingChick()) this.flashToast('雏鸟紧紧抓着你的衣角……')
     this.busy = true
     const cam = this.cameras.main
     cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.restart())
@@ -977,6 +979,8 @@ export class WorldScene extends Phaser.Scene {
     }
     const minor = minorHudLine(w, this.map.id)
     if (minor) text += `\n${minor}`
+    const chick = chickHudLine()
+    if (chick) text += `\n${chick}`
     this.hudText.setText(text)
   }
 }

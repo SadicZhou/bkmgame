@@ -9,6 +9,7 @@ import { PARTY_LIMIT } from '../data/items'
 import { MAPS } from '../data/maps'
 import { PHENOMENA, PHENOMENON_RULES } from '../data/phenomena'
 import { minorBoardLine } from '../systems/EventHints'
+import { CHICKS, CHICKS_DONE_FLAG, chicksHomeCount } from '../systems/ChickQuest'
 import { LETTERS_DONE_FLAG, lettersActive, lettersDelivered, LETTER_FLAGS } from '../systems/LetterQuest'
 import { WEATHER_INFO } from '../data/weather'
 import { GameState } from '../state/GameState'
@@ -73,6 +74,9 @@ export class TownServices {
     if (minorLine) lines.push(minorLine)
     if (lettersActive() && !GameState.hasFlag(LETTERS_DONE_FLAG)) {
       lines.push(`【风羽的信】鸢拜托你把短信送给苔、峰、汐、锤婆、雪伯。（已送 ${lettersDelivered()}/${LETTER_FLAGS.length}）`)
+    }
+    if (GameState.hasFlag('side_chicks') && !GameState.hasFlag(CHICKS_DONE_FLAG)) {
+      lines.push(`【迷路的雏鸟】把羽毛岛的雏鸟送回各岛空巢。（已回家 ${chicksHomeCount()}/${CHICKS.length}）`)
     }
     if (w.lureSteps > 0) lines.push(`引兽铃还在响，剩 ${w.lureSteps} 步。`)
     if (w.repelSteps > 0) lines.push(`驱兽香还有效，剩 ${w.repelSteps} 步。`)

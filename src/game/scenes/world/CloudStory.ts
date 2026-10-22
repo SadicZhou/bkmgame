@@ -6,6 +6,16 @@
 
 import { GameState } from '../../state/GameState'
 import { Sfx } from '../../systems/AudioBeeps'
+import {
+  CHICKS,
+  CHICKS_DONE_FLAG,
+  carryingChick,
+  chickById,
+  chicksHomeCount,
+  claimChickReward,
+  deliverChickAt,
+  pickChick,
+} from '../../systems/ChickQuest'
 import { MILL_A, MILL_B, MILL_C, toggleMill, type MillId } from '../../systems/Cloud'
 import { dexComplete } from '../../systems/Postgame'
 import type { StoryHost } from './StoryEvents'
@@ -141,6 +151,71 @@ function fisher(host: StoryHost, name: string): void {
   say(['好钓竿！站到岸边，面朝云海甩竿吧。', '钓到云鳍鱼的话，再来跟我说一声。'])
 }
 
+/**
+ * 鸟妈妈：接支线 / 进度 / 发技能书顺风
+ * @author zjh
+ * @date 2026-10-22
+ */
+function chickMom(host: StoryHost, name: string): void {
+  const say = (lines: string[], after?: () => void) => host.say(lines.map((l) => `${name}：${l}`), after)
+  if (GameState.hasFlag(CHICKS_DONE_FLAG)) {
+    say(['孩子们都在自己的风里了。谢谢你，旅人。'])
+    return
+  }
+  const reward = claimChickReward()
+  if (reward) {
+    say(reward.lines, () => {
+      host.toast('获得了技能书「顺风」')
+      host.toast('支线「迷路的雏鸟」完成')
+    })
+    return
+  }
+  const hold = carryingChick()
+  if (hold) {
+    const c = chickById(hold)
+    say([`怀里那只要回${c?.label ?? ''}。`, '站上风口，顺着风滑过去，岛上有空巢。'])
+    return
+  }
+  const home = chicksHomeCount()
+  if (home > 0) {
+    say([`已经回家 ${home}/${CHICKS.length} 只。`, '旁边还有发抖的小家伙，轻轻抱起来，送到写着名字的那座岛。'])
+    return
+  }
+  say([
+    '一阵乱风，把四只雏鸟都吹到羽毛岛来了。',
+    '它们的巢分别在起风岛、风车岛、断桥岛和神殿。',
+    '你能不能一只一只抱过去？站上风口就能滑翔。送齐了我有谢礼。',
+  ])
+}
+
+function chickPick(id: string) {
+  return (host: StoryHost): void => {
+    const r = pickChick(id)
+    if (!r.ok) {
+      host.say([r.reason])
+      return
+    }
+    Sfx.confirm()
+    host.say(r.lines, () => {
+      host.refreshHud()
+      host.refreshNpcs()
+    })
+  }
+}
+
+function chickNest(mapId: string) {
+  return (host: StoryHost): void => {
+    const r = deliverChickAt(mapId)
+    if (!r) return
+    Sfx.confirm()
+    host.say(r.lines, () => {
+      host.refreshHud()
+      host.refreshNpcs()
+      if (r.justDone) host.toast('四只雏鸟都回家了')
+    })
+  }
+}
+
 export const CLOUD_STORIES = {
   cloud_pillar: pillar,
   cloud_mill_a: mill('a'),
@@ -152,6 +227,15 @@ export const CLOUD_STORIES = {
   town_photo: townPhoto,
   town_elder: townElder,
   cloud_fisher: fisher,
+  cloud_chick_mom: chickMom,
+  cloud_chick_start: chickPick('start'),
+  cloud_chick_mill: chickPick('mill'),
+  cloud_chick_bridge: chickPick('bridge'),
+  cloud_chick_shrine: chickPick('shrine'),
+  cloud_nest_start: chickNest('cloudstart'),
+  cloud_nest_mill: chickNest('cloudmill'),
+  cloud_nest_bridge: chickNest('cloudbridge'),
+  cloud_nest_shrine: chickNest('cloudshrine'),
 }
 
 export const CLOUD_MILL_FLAGS = [MILL_A, MILL_B, MILL_C]
