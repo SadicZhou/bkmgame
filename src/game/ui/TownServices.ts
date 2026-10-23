@@ -11,6 +11,7 @@ import { PHENOMENA, PHENOMENON_RULES } from '../data/phenomena'
 import { minorBoardLine } from '../systems/EventHints'
 import { CHICKS, CHICKS_DONE_FLAG, chicksHomeCount } from '../systems/ChickQuest'
 import { ECHO_DONE, ECHO_STAGES, echoStagesCleared } from '../systems/EchoQuest'
+import { NOTE_PAGES, NOTES_DONE, notesActive, notesCollected } from '../systems/NoteQuest'
 import { LAMP_PARTS, WANG_LAMP_DONE, lampPartsCount, wangLampActive } from '../systems/PaperLampQuest'
 import { SNOWMAN_DONE_FLAG, SNOWMAN_PARTS, snowmanPartsCount } from '../systems/SnowmanQuest'
 import { LETTERS_DONE_FLAG, lettersActive, lettersDelivered, LETTER_FLAGS } from '../systems/LetterQuest'
@@ -92,6 +93,13 @@ export class TownServices {
     }
     if (GameState.hasFlag('side_echo') && !GameState.hasFlag(ECHO_DONE)) {
       lines.push(`【霜铃的回响】限步冰滑挑战（${echoStagesCleared()}/${ECHO_STAGES.length}）。铃殿里的回响之铃。`)
+    }
+    if (notesActive() || GameState.hasFlag('side_notes_started')) {
+      if (!GameState.hasFlag(NOTES_DONE)) {
+        lines.push(
+          `【阿禾的旧笔记】收集散页（${notesCollected()}/${NOTE_PAGES.length}）：草地、湖畔、回音林、锤音镇、星砂荒原。交回阿禾旁旧书架。`,
+        )
+      }
     }
     if (w.lureSteps > 0) lines.push(`引兽铃还在响，剩 ${w.lureSteps} 步。`)
     if (w.repelSteps > 0) lines.push(`驱兽香还有效，剩 ${w.repelSteps} 步。`)

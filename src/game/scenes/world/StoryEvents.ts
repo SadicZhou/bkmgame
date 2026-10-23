@@ -17,6 +17,7 @@ import { DUNE_STORIES } from './DuneStory'
 import { FROST_STORIES } from './FrostStory'
 import { FOREST_STORIES } from './ForestStory'
 import { MUSHROOM_STORIES } from './MushroomStory'
+import { NOTE_STORIES } from './NoteStory'
 
 /** WorldScene 提供给剧情脚本的能力 */
 export interface StoryHost {
@@ -124,6 +125,7 @@ const STORIES: Record<string, StoryFn> = {
   ...CLOUD_STORIES,
   ...TOWER_STORIES,
   ...POSTGAME_STORIES,
+  ...NOTE_STORIES,
 }
 
 /**

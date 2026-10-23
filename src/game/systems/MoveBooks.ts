@@ -13,6 +13,8 @@ export interface BookDef {
   moveName: string
   /** 本系可学；若 learnset 已有该招也可学 */
   type?: ElementType
+  /** 任意伙伴可学（终章技能书） */
+  universal?: boolean
 }
 
 /** 已登记的技能书 */
@@ -20,6 +22,12 @@ export const MOVE_BOOKS: Record<string, BookDef> = {
   book_rock_slide: { itemId: 'book_rock_slide', moveId: 'rock_slide', moveName: '岩崩', type: 'stone' },
   book_tailwind: { itemId: 'book_tailwind', moveId: 'tailwind', moveName: '顺风', type: 'gale' },
   book_defog: { itemId: 'book_defog', moveId: 'defog', moveName: '吹散', type: 'gale' },
+  book_heart_echo: {
+    itemId: 'book_heart_echo',
+    moveId: 'heart_echo',
+    moveName: '心火共鸣',
+    universal: true,
+  },
 }
 
 /**
@@ -30,8 +38,10 @@ export const MOVE_BOOKS: Record<string, BookDef> = {
 export function bookReason(c: CreatureInstance, book: BookDef): string | null {
   const sp = SPECIES[c.speciesId]
   const listed = sp.learnset.some((e) => e.moveId === book.moveId)
-  if (book.type && sp.type !== book.type && !listed) return `学不会${book.moveName}`
-  if (!book.type && !listed) return `学不会${book.moveName}`
+  if (!book.universal) {
+    if (book.type && sp.type !== book.type && !listed) return `学不会${book.moveName}`
+    if (!book.type && !listed) return `学不会${book.moveName}`
+  }
   if (c.moves.some((m) => m.id === book.moveId)) return `已经会${book.moveName}了`
   if (c.moves.length >= MAX_MOVES) return '技能已经满了'
   return null

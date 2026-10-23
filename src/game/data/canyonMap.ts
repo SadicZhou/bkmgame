@@ -181,6 +181,18 @@ export function buildHammerTown(): MapDef {
         color: 0xf0d0a0,
         lines: ['山在抖，觉不好睡。', '要休息的话，我帮你的伙伴回复。'],
       },
+      {
+        id: 'note_stone_spot',
+        name: '磐谷页',
+        role: 'prop',
+        story: 'pick_note_stone',
+        x: 10,
+        y: 5,
+        color: 0xe8dcc0,
+        showIf: 'chapter8_done',
+        hideIf: 'got_note_stone',
+        lines: ['炉边石台上压着一页笔记。'],
+      },
     ],
   }
 }

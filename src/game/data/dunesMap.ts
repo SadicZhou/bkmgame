@@ -76,6 +76,18 @@ export function buildDunes(): MapDef {
     npcs: [
       ...rodNpcs(),
       {
+        id: 'note_volt_spot',
+        name: '星砂页',
+        role: 'prop',
+        story: 'pick_note_volt',
+        x: 14,
+        y: 6,
+        color: 0xe8dcc0,
+        showIf: 'chapter8_done',
+        hideIf: 'got_note_volt',
+        lines: ['沙窝里露出一页笔记。'],
+      },
+      {
         id: 'dune_shuo',
         name: '朔',
         x: 5,

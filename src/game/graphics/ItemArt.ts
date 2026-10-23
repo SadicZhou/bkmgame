@@ -135,7 +135,7 @@ function paintOne(g: Icon, id: string): void {
   else if (id === 'star_charm') charm(g)
   else if (id === 'canyon_ore') ore(g)
   else if (id === 'hearth_stone') hearth(g)
-  else if (id === 'book_rock_slide' || id === 'book_tailwind' || id === 'book_defog') book(g)
+  else if (id === 'book_rock_slide' || id === 'book_tailwind' || id === 'book_defog' || id === 'book_heart_echo') book(g)
   else if (id === 'charge_bottle') bottle(g)
   else if (id === 'fold_board') board(g)
   else if (id === 'star_glider') glider(g)
@@ -155,6 +155,7 @@ function paintOne(g: Icon, id: string): void {
   else if (id === 'lamp_wick') lampWick(g)
   else if (id === 'aurora_dust') auroraDust(g)
   else if (id === 'wang_paper_lamp' || id === 'heart_paper_lamp') kidLamp(g)
+  else if (id.startsWith('note_')) journal(g)
 }
 
 /** 喷雾罐：喷嘴、金属颈、标签和罐底 */

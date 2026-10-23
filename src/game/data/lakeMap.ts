@@ -71,6 +71,18 @@ export function buildLake(): MapDef {
         lines: ['湖心的灯台还亮着吗……'],
       },
       {
+        id: 'note_tide_spot',
+        name: '雾泉页',
+        role: 'prop',
+        story: 'pick_note_tide',
+        x: 4,
+        y: 12,
+        color: 0xe8dcc0,
+        showIf: 'chapter8_done',
+        hideIf: 'got_note_tide',
+        lines: ['码头木板缝里夹着一页笔记。'],
+      },
+      {
         id: 'lake_washer',
         name: '洗衣婶澜',
         x: 14,

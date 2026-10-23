@@ -277,6 +277,18 @@ export function buildForest(): MapDef {
         ],
         afterLines: ['（林语鹿轻轻摇了摇头，鹿角上的铃铛叮叮当当地响。）'],
       },
+      {
+        id: 'note_leaf_spot',
+        name: '回音页',
+        role: 'prop',
+        story: 'pick_note_leaf',
+        x: 4,
+        y: 26,
+        color: 0xe8dcc0,
+        showIf: 'chapter8_done',
+        hideIf: 'got_note_leaf',
+        lines: ['树根旁卷着一页笔记。'],
+      },
       ...postgameNpcs('forest'),
     ],
   }
