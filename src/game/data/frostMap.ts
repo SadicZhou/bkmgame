@@ -351,7 +351,64 @@ export function buildBellHall(): MapDef {
         story: 'frost_wang',
         lines: ['我想做一盏纸灯。'],
       },
+      {
+        id: 'echo_bell',
+        name: '回响之铃',
+        role: 'prop',
+        story: 'frost_echo',
+        x: 7,
+        y: 3,
+        color: 0xb8d8f0,
+        showIf: 'chapter6_done',
+        hideIf: 'side_echo_done',
+        lines: ['铃还在轻轻响。'],
+      },
       ...postgameNpcs('bellhall'),
+    ],
+  }
+}
+
+/**
+ * 霜铃的回响：限步冰滑挑战场（支线 S6-1）
+ * 码头 `-` 可停，冰 `*` 会滑；三关共用一张图
+ * @author zjh
+ * @date 2026-10-23
+ */
+export function buildFrostEcho(): MapDef {
+  const { width, height, tiles } = parseAscii([
+    '################',
+    '##-**********-##',
+    '##************##',
+    '##************##',
+    '##-**********-##',
+    '##************##',
+    '##************##',
+    '##-**********-##',
+    '##............##',
+    '################',
+  ])
+  return {
+    id: 'frostecho',
+    name: '霜铃回响',
+    width,
+    height,
+    tileSize: TS,
+    tiles,
+    bgColor: 0xc8d8e8,
+    spawn: { x: 2, y: 1 },
+    outdoor: true,
+    warps: [],
+    npcs: [
+      {
+        id: 'echo_sign',
+        name: '回响木牌',
+        role: 'prop',
+        story: 'echo_leave',
+        x: 5,
+        y: 8,
+        color: 0xc4a574,
+        lines: ['滑到本关码头。滑次用尽会回到起点。跟木牌说话可离开或重来。'],
+      },
     ],
   }
 }

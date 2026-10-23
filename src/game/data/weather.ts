@@ -34,6 +34,7 @@ export const WEATHER_TABLES: Record<string, Partial<Record<Weather, number>>> = 
   dunes: { sunny: 40, sand: 45, storm: 15 },
   frostpeak: { snow: 70, sunny: 20, fog: 10 },
   icelake: { snow: 80, sunny: 20 },
+  frostecho: { snow: 90, sunny: 10 },
   cloudstart: { sunny: 70, fog: 20, storm: 10 },
   cloudfeather: { sunny: 70, fog: 20, storm: 10 },
   cloudmill: { sunny: 60, fog: 20, storm: 20 },

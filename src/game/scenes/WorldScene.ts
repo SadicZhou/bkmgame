@@ -15,6 +15,14 @@ import { MAPS, isTallGrass, mapById, resolveTile, type HasFlag, type MapDef, typ
 import { riftWeather } from '../data/riftMap'
 import { PHENOMENON_RULES } from '../data/phenomena'
 import { chickHudLine, carryingChick } from '../systems/ChickQuest'
+import {
+  ECHO_MAP,
+  clearEchoStage,
+  echoHudLine,
+  failEchoStage,
+  isEchoGoal,
+  recordEchoSlide,
+} from '../systems/EchoQuest'
 import { enterEventToasts, minorEndedToast, minorHudLine, minorStartedToast } from '../systems/EventHints'
 import { WEATHER_INFO } from '../data/weather'
 import { GameState, type Facing, type PendingBattle } from '../state/GameState'
@@ -543,7 +551,7 @@ export class WorldScene extends Phaser.Scene {
         tile = resolveTile(this.map, nx, ny, hasFlag) ?? tile
       }
     }
-    if ((this.map.id === 'icelake' || this.map.id === 'tower7') && tile === 'ice') {
+    if ((this.map.id === 'icelake' || this.map.id === 'tower7' || this.map.id === ECHO_MAP) && tile === 'ice') {
       const end = slideEnd(
         this.tileX,
         this.tileY,
@@ -559,6 +567,15 @@ export class WorldScene extends Phaser.Scene {
       nx = end.x
       ny = end.y
       tile = resolveTile(this.map, nx, ny, hasFlag) ?? tile
+      if (this.map.id === ECHO_MAP && recordEchoSlide() === 'fail') {
+        const stage = failEchoStage()
+        if (stage) {
+          nx = stage.start.x
+          ny = stage.start.y
+          tile = resolveTile(this.map, nx, ny, hasFlag) ?? tile
+          this.flashToast(`滑次用尽！回到第 ${stage.id} 关起点。`)
+        }
+      }
     }
 
     const fromX = this.tileX
@@ -624,6 +641,7 @@ export class WorldScene extends Phaser.Scene {
     if (this.map.id === 'dunes' && this.applyDuneStep()) return
     if (this.map.id === 'frostpeak') this.applyCold()
     if (this.map.id === 'icelake') this.markSlide()
+    if (this.map.id === ECHO_MAP) this.checkEchoGoal()
     this.walkers.react()
     const spotter = this.walkers.spotter()
     if (spotter) {
@@ -832,6 +850,39 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * 霜铃回响：滑到本关码头则过关 / 发奖
+   * @author zjh
+   * @date 2026-10-23
+   */
+  private checkEchoGoal(): void {
+    if (!isEchoGoal(this.tileX, this.tileY)) {
+      this.refreshHud()
+      return
+    }
+    const { next, reward, lines } = clearEchoStage()
+    this.busy = true
+    this.dialogue.open(lines, () => {
+      if (reward) {
+        const where = GameState.addCreature(reward)
+        this.flashToast(where === 'party' ? '霜晶蝶加入了队伍！' : '霜晶蝶送去寄存所了。')
+        this.flashToast('支线「霜铃的回响」完成')
+        this.busy = false
+        this.refreshHud()
+        return
+      }
+      if (next) {
+        this.flashToast(next.hint)
+        GameState.playerX = next.start.x
+        GameState.playerY = next.start.y
+        this.restartMap()
+        return
+      }
+      this.busy = false
+      this.refreshHud()
+    })
+  }
+
   /** 滑到发光的停靠点，三处都到了才开铃殿 */
   private markSlide(): void {
     const goal = SLIDE_GOALS.find((g) => g.x === this.tileX && g.y === this.tileY)
@@ -986,6 +1037,8 @@ export class WorldScene extends Phaser.Scene {
     if (minor) text += `\n${minor}`
     const chick = chickHudLine()
     if (chick) text += `\n${chick}`
+    const echo = echoHudLine()
+    if (echo) text += `\n${echo}`
     this.hudText.setText(text)
   }
 }

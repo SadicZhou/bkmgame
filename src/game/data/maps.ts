@@ -12,7 +12,7 @@ import { buildDunes, buildObservatory } from './dunesMap'
 import { buildCloudBridge, buildCloudFeather, buildCloudMill, buildCloudShrine, buildCloudStart } from './cloudMap'
 import { buildTower1, buildTower2, buildTower3, buildTower4, buildTower5, buildTower6, buildTower7, buildTower8, buildTower9, buildTowerTop } from './towerMap'
 import { postgameNpcs } from './postgameNpcs'
-import { buildBellHall, buildFrostPeak, buildFrostVillage, buildIceLake } from './frostMap'
+import { buildBellHall, buildFrostEcho, buildFrostPeak, buildFrostVillage, buildIceLake } from './frostMap'
 import { buildForest } from './forestMap'
 import { buildLake } from './lakeMap'
 import { TS, borderWalls, fill, parseAscii, setRect } from './mapKit'
@@ -785,6 +785,7 @@ export const MAPS: Record<string, MapDef> = {
   frostpeak: buildFrostPeak(),
   icelake: buildIceLake(),
   bellhall: buildBellHall(),
+  frostecho: buildFrostEcho(),
   cloudstart: buildCloudStart(),
   cloudfeather: buildCloudFeather(),
   cloudmill: buildCloudMill(),

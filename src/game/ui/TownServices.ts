@@ -10,6 +10,7 @@ import { MAPS } from '../data/maps'
 import { PHENOMENA, PHENOMENON_RULES } from '../data/phenomena'
 import { minorBoardLine } from '../systems/EventHints'
 import { CHICKS, CHICKS_DONE_FLAG, chicksHomeCount } from '../systems/ChickQuest'
+import { ECHO_DONE, ECHO_STAGES, echoStagesCleared } from '../systems/EchoQuest'
 import { LAMP_PARTS, WANG_LAMP_DONE, lampPartsCount, wangLampActive } from '../systems/PaperLampQuest'
 import { SNOWMAN_DONE_FLAG, SNOWMAN_PARTS, snowmanPartsCount } from '../systems/SnowmanQuest'
 import { LETTERS_DONE_FLAG, lettersActive, lettersDelivered, LETTER_FLAGS } from '../systems/LetterQuest'
@@ -88,6 +89,9 @@ export class TownServices {
         const moon = isFullMoon(w.totalSteps) ? '今夜是满月，可放灯。' : '等满月夜到霜铃峰北口石台放灯。'
         lines.push(`【望的纸灯】材料 ${lampPartsCount()}/${LAMP_PARTS.length}。${moon}`)
       }
+    }
+    if (GameState.hasFlag('side_echo') && !GameState.hasFlag(ECHO_DONE)) {
+      lines.push(`【霜铃的回响】限步冰滑挑战（${echoStagesCleared()}/${ECHO_STAGES.length}）。铃殿里的回响之铃。`)
     }
     if (w.lureSteps > 0) lines.push(`引兽铃还在响，剩 ${w.lureSteps} 步。`)
     if (w.repelSteps > 0) lines.push(`驱兽香还有效，剩 ${w.repelSteps} 步。`)

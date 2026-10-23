@@ -155,6 +155,7 @@ export const ENCOUNTERS: Record<string, EncounterTable> = {
       { speciesId: 'frostfox', weight: 3, minLv: 33, maxLv: 35, time: 'night', weather: ['snow'] },
     ],
   },
+  frostecho: { baseRate: 0, grass: [] },
   cloudstart: {
     ...cloudGrass(),
     /** 旧钓竿够不到云海底；好钓竿才有云鳍鱼（S7-2） */

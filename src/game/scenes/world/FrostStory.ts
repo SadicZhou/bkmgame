@@ -9,6 +9,14 @@ import { GameState } from '../../state/GameState'
 import { Sfx } from '../../systems/AudioBeeps'
 import { FROST_FLAGS, warmCold } from '../../systems/Frost'
 import {
+  ECHO_DONE,
+  ECHO_STAGES,
+  abortEcho,
+  beginEchoStage,
+  echoStagesCleared,
+  failEchoStage,
+} from '../../systems/EchoQuest'
+import {
   HEART_LAMP,
   LAMP_PARTS,
   UNLIT_LAMP,
@@ -193,6 +201,66 @@ function pickLamp(id: (typeof LAMP_PARTS)[number]['id']) {
   }
 }
 
+/**
+ * 回响之铃：通关后开启限步冰滑三关
+ * @author zjh
+ * @date 2026-10-23
+ */
+function frostEcho(host: StoryHost): void {
+  if (GameState.hasFlag(ECHO_DONE)) {
+    host.say(['铃音已经记住你了。霜晶蝶也跟你走了。'])
+    return
+  }
+  const cleared = echoStagesCleared()
+  const stage = beginEchoStage(cleared + 1)
+  if (!stage) {
+    host.say(['三关都过了，可是……（铃轻颤了一下）'])
+    return
+  }
+  host.say(
+    [
+      '铃殿深处传来叠音：冰上的回响还没散。',
+      `来挑战限步冰滑吧。已通过 ${cleared}/${ECHO_STAGES.length} 关。`,
+      stage.hint,
+    ],
+    () => {
+      host.toast(`霜铃回响 · 第 ${stage.id} 关`)
+      host.travel('frostecho', stage.start.x, stage.start.y)
+    },
+  )
+}
+
+/**
+ * 挑战场木牌：重来本关 / 离开回铃殿
+ * @author zjh
+ * @date 2026-10-23
+ */
+function echoLeave(host: StoryHost): void {
+  host.choose(
+    '回响木牌',
+    [
+      { id: 'retry', label: '重来本关' },
+      { id: 'leave', label: '离开回铃殿' },
+    ],
+    (id) => {
+      if (id === 'leave') {
+        abortEcho()
+        host.say(['铃音远了。'], () => host.travel('bellhall', 5, 4))
+        return
+      }
+      const stage = failEchoStage()
+      if (!stage) {
+        host.travel('bellhall', 5, 4)
+        return
+      }
+      host.say(['回到起点，再试一次。'], () => {
+        host.toast(`剩余 ${stage.maxSlides} 次滑行`)
+        host.travel('frostecho', stage.start.x, stage.start.y)
+      })
+    },
+  )
+}
+
 export const FROST_STORIES = {
   frost_elder: elder,
   frost_shio: shio,
@@ -207,4 +275,6 @@ export const FROST_STORIES = {
   pick_lamp_paper: pickLamp('lamp_paper'),
   pick_lamp_wick: pickLamp('lamp_wick'),
   pick_aurora_dust: pickLamp('aurora_dust'),
+  frost_echo: frostEcho,
+  echo_leave: echoLeave,
 }
