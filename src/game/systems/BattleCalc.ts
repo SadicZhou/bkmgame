@@ -37,11 +37,24 @@ export function badgePowerMod(s: BattleState, attacker: CreatureInstance, move: 
  */
 /** 风铃坠：带着它时，玩家一方的实际速度 ×1.05 */
 export const WIND_CHIME_SPEED = 1.05
+/** 灯芯饰：带着它时，玩家一方的灵系招式 ×1.05 */
+export const WICK_CHARM_SPIRIT = 1.05
 
 export function effectiveSpeed(s: BattleState, c: CreatureInstance): number {
   const para = c.status === 'paralyze' ? 0.5 : 1
   const charm = s.playerParty.includes(c) && GameState.itemCount('wind_chime') > 0 ? WIND_CHIME_SPEED : 1
   return c.spd * stageMultiplier(volOf(s, c).stages.spd) * para * speedMod(c) * charm
+}
+
+/**
+ * 灯芯饰对灵系招式的倍率（仅玩家队伍）
+ * @author zjh
+ * @date 2026-10-23
+ */
+export function wickCharmPowerMod(s: BattleState, attacker: CreatureInstance, move: MoveDef): number {
+  if (move.type !== 'spirit') return 1
+  if (!s.playerParty.includes(attacker)) return 1
+  return GameState.itemCount('wick_charm') > 0 ? WICK_CHARM_SPIRIT : 1
 }
 
 /**
@@ -112,6 +125,7 @@ export function calcDamage(
     (crit ? 1.5 : 1) *
     attackerPowerMod(s, attacker, move) *
     badgePowerMod(s, attacker, move) *
+    wickCharmPowerMod(s, attacker, move) *
     defenderDamageMod(defender, move, mult) *
     weatherPowerMod(s.weather, move.type) *
     night *

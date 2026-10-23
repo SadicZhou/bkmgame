@@ -13,6 +13,7 @@ import { Sfx } from '../../systems/AudioBeeps'
 import { uniqueForBattle } from '../../systems/Phenomenon'
 import { rematchCountKey, rematchReady, rematchTeam } from '../../systems/Rematch'
 import { dayOf } from '../../systems/WorldClock'
+import { canDeliverLamp, deliverLamp } from '../../systems/HouseLampQuest'
 import { canDeliverTo, deliverLetter } from '../../systems/LetterQuest'
 import { runStory, type StoryHost } from './StoryEvents'
 import type { WorldHost } from './WorldHost'
@@ -58,6 +59,13 @@ export class NpcInteract {
     if (letter) {
       const { lines, justDone } = deliverLetter(letter, npc.name)
       host.dialogue.open(lines, justDone ? () => host.toast('支线「风羽的信」完成') : undefined)
+      return
+    }
+    // 支线 S8-1：送家用小灯（需持有灯芯）
+    const house = canDeliverLamp(npc)
+    if (house) {
+      const { lines, justDone } = deliverLamp(house, npc.name)
+      host.dialogue.open(lines, justDone ? () => host.toast('支线「一家一盏灯」完成') : undefined)
       return
     }
     if (npc.story && runStory(npc.story, this.story(), npc.name)) return

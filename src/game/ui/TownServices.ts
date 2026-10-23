@@ -11,6 +11,14 @@ import { PHENOMENA, PHENOMENON_RULES } from '../data/phenomena'
 import { minorBoardLine } from '../systems/EventHints'
 import { CHICKS, CHICKS_DONE_FLAG, chicksHomeCount } from '../systems/ChickQuest'
 import { ECHO_DONE, ECHO_STAGES, echoStagesCleared } from '../systems/EchoQuest'
+import {
+  HOUSES,
+  LAMPS_DONE,
+  WICK_SPOTS,
+  lampsActive,
+  lampsDelivered,
+  wicksPicked,
+} from '../systems/HouseLampQuest'
 import { NOTE_PAGES, NOTES_DONE, notesActive, notesCollected } from '../systems/NoteQuest'
 import { LAMP_PARTS, WANG_LAMP_DONE, lampPartsCount, wangLampActive } from '../systems/PaperLampQuest'
 import { SNOWMAN_DONE_FLAG, SNOWMAN_PARTS, snowmanPartsCount } from '../systems/SnowmanQuest'
@@ -98,6 +106,13 @@ export class TownServices {
       if (!GameState.hasFlag(NOTES_DONE)) {
         lines.push(
           `【阿禾的旧笔记】收集散页（${notesCollected()}/${NOTE_PAGES.length}）：草地、湖畔、回音林、锤音镇、星砂荒原。交回阿禾旁旧书架。`,
+        )
+      }
+    }
+    if (lampsActive() || GameState.hasFlag('side_lamps_started')) {
+      if (!GameState.hasFlag(LAMPS_DONE)) {
+        lines.push(
+          `【一家一盏灯】灯芯 ${wicksPicked()}/${WICK_SPOTS.length}，已送 ${lampsDelivered()}/${HOUSES.length} 户。广场灯芯筐接任务。`,
         )
       }
     }

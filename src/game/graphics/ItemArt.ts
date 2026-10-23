@@ -156,6 +156,8 @@ function paintOne(g: Icon, id: string): void {
   else if (id === 'aurora_dust') auroraDust(g)
   else if (id === 'wang_paper_lamp' || id === 'heart_paper_lamp') kidLamp(g)
   else if (id.startsWith('note_')) journal(g)
+  else if (id === 'house_wick') lampWick(g)
+  else if (id === 'wick_charm') festRibbon(g)
 }
 
 /** 喷雾罐：喷嘴、金属颈、标签和罐底 */
