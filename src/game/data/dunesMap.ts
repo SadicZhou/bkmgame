@@ -88,6 +88,16 @@ export function buildDunes(): MapDef {
         lines: ['沙窝里露出一页笔记。'],
       },
       {
+        id: 'dune_caravan',
+        name: '沙丘商队·队长',
+        x: 3,
+        y: 7,
+        color: 0xd0a060,
+        story: 'dune_caravan',
+        showIf: DUNE_FLAGS.unlocked,
+        lines: ['驼铃在响。沙暴里才方便赶路。'],
+      },
+      {
         id: 'dune_shuo',
         name: '朔',
         x: 5,

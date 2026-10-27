@@ -16,6 +16,11 @@ import { riftWeather } from '../data/riftMap'
 import { PHENOMENON_RULES } from '../data/phenomena'
 import { chickHudLine, carryingChick } from '../systems/ChickQuest'
 import {
+  caravanActive,
+  makeCaravanFoe,
+  noteCaravanStormEnd,
+} from '../systems/CaravanQuest'
+import {
   ECHO_MAP,
   clearEchoStage,
   echoHudLine,
@@ -906,7 +911,10 @@ export class WorldScene extends Phaser.Scene {
     GameState.setFlag('dune_walk', next.walk)
     GameState.setFlag('dune_storm', next.left)
     if (next.started) this.flashToast('沙暴卷起来了，看不太远。')
-    if (next.ended) this.flashToast('沙暴散了。')
+    if (next.ended) {
+      this.flashToast('沙暴散了。')
+      if (caravanActive()) this.afterCaravanStorm()
+    }
     if (next.started || next.ended) this.refreshAtmosphere()
     const bolt = num('dune_bolt') + 1
     GameState.setFlag('dune_bolt', bolt)
@@ -922,6 +930,27 @@ export class WorldScene extends Phaser.Scene {
       return true
     }
     return false
+  }
+
+  /**
+   * 护送商队：沙暴散时遭遇沙鳍鲨，满三次完成支线
+   * @author zjh
+   * @date 2026-10-27
+   */
+  private afterCaravanStorm(): void {
+    const progress = noteCaravanStormEnd()
+    if (!progress) return
+    this.busy = true
+    const lines = progress.justDone
+      ? [
+          `商队队长：第三回了！（${progress.count}/3）`,
+          '商队队长：驼队站住了。货摊给你开——满格电池和资质卡。',
+        ]
+      : [`商队队长：沙里有东西！（护送 ${progress.count}/3）`]
+    this.dialogue.open(lines, () => {
+      if (progress.justDone) this.flashToast('支线「沙丘商队」完成')
+      this.startWildBattle(makeCaravanFoe())
+    })
   }
 
   /** 黄圈随四拍亮灭；石门打开后落雷停 */

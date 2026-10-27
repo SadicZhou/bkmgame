@@ -12,6 +12,11 @@ import { minorBoardLine } from '../systems/EventHints'
 import { CHICKS, CHICKS_DONE_FLAG, chicksHomeCount } from '../systems/ChickQuest'
 import { ECHO_DONE, ECHO_STAGES, echoStagesCleared } from '../systems/EchoQuest'
 import {
+  CARAVAN_DONE,
+  CARAVAN_NEED,
+  caravanStormsDone,
+} from '../systems/CaravanQuest'
+import {
   HOUSES,
   LAMPS_DONE,
   WICK_SPOTS,
@@ -115,6 +120,13 @@ export class TownServices {
           `【一家一盏灯】灯芯 ${wicksPicked()}/${WICK_SPOTS.length}，已送 ${lampsDelivered()}/${HOUSES.length} 户。广场灯芯筐接任务。`,
         )
       }
+    }
+    if (GameState.hasFlag('side_caravan_started') && !GameState.hasFlag(CARAVAN_DONE)) {
+      lines.push(
+        `【沙丘商队】护送沙暴（${caravanStormsDone()}/${CARAVAN_NEED}）。星砂荒原南侧找驼队，沙暴中接任务。`,
+      )
+    } else if (GameState.hasFlag(CARAVAN_DONE)) {
+      lines.push('【沙丘商队】驼队货摊已开：满格电池、资质卡。')
     }
     if (w.lureSteps > 0) lines.push(`引兽铃还在响，剩 ${w.lureSteps} 步。`)
     if (w.repelSteps > 0) lines.push(`驱兽香还有效，剩 ${w.repelSteps} 步。`)

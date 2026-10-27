@@ -13,6 +13,7 @@ import { Sfx } from '../../systems/AudioBeeps'
 import { uniqueForBattle } from '../../systems/Phenomenon'
 import { rematchCountKey, rematchReady, rematchTeam } from '../../systems/Rematch'
 import { dayOf } from '../../systems/WorldClock'
+import { CARAVAN_DONE } from '../../systems/CaravanQuest'
 import { canDeliverLamp, deliverLamp } from '../../systems/HouseLampQuest'
 import { canDeliverTo, deliverLetter } from '../../systems/LetterQuest'
 import { runStory, type StoryHost } from './StoryEvents'
@@ -66,6 +67,13 @@ export class NpcInteract {
     if (house) {
       const { lines, justDone } = deliverLamp(house, npc.name)
       host.dialogue.open(lines, justDone ? () => host.toast('支线「一家一盏灯」完成') : undefined)
+      return
+    }
+    // 支线 S5-3：护送完成后打开商队商店
+    if (npc.id === 'dune_caravan' && GameState.hasFlag(CARAVAN_DONE)) {
+      say(['货摊开着。满格电池和资质卡都有。'], () =>
+        host.menus.openCaravanShop(() => say(['驼铃还在响。有需要再来。'])),
+      )
       return
     }
     if (npc.story && runStory(npc.story, this.story(), npc.name)) return

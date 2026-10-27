@@ -6,6 +6,7 @@
 
 import { GameState } from '../../state/GameState'
 import { Sfx } from '../../systems/AudioBeeps'
+import { CARAVAN_DONE, CARAVAN_NEED, beginCaravan } from '../../systems/CaravanQuest'
 import { DUNE_FLAGS, ROD_IDS, canChargeRod, rodFlag, rodsLit } from '../../systems/Dunes'
 import type { StoryHost } from './StoryEvents'
 
@@ -98,6 +99,30 @@ function rod(i: number): (host: StoryHost, name: string) => void {
   }
 }
 
+/**
+ * 沙丘商队：沙暴中接护送；完成后提示去买货（商店由互动层打开）
+ * @author zjh
+ * @date 2026-10-27
+ */
+function caravan(host: StoryHost, name: string): void {
+  if (GameState.hasFlag(CARAVAN_DONE)) {
+    host.say([`${name}：货摊开着。满格电池和资质卡都有——沙路上用得着。`])
+    return
+  }
+  const result = beginCaravan()
+  if ('reason' in result) {
+    host.say([`${name}：${result.reason.replace(/^队长：/, '')}`])
+    return
+  }
+  host.say(
+    result.lines,
+    () => {
+      host.toast(`沙丘商队 · 护送 0/${CARAVAN_NEED}`)
+      host.refreshHud()
+    },
+  )
+}
+
 export const DUNE_STORIES = {
   dune_sui: sui,
   dune_twins: twins,
@@ -105,4 +130,5 @@ export const DUNE_STORIES = {
   dune_rod_2: rod(2),
   dune_rod_3: rod(3),
   dune_rod_4: rod(4),
+  dune_caravan: caravan,
 }

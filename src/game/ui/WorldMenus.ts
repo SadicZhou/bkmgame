@@ -15,6 +15,7 @@ import { GameState } from '../state/GameState'
 import { nightTownActive } from '../systems/Night'
 import { Sfx } from '../systems/AudioBeeps'
 import { applyItemToCreature, checkItemOnCreature } from '../systems/BattleLogic'
+import { CARAVAN_STOCK } from '../systems/CaravanQuest'
 import { BEACONS, DUNE_FLAGS } from '../systems/Dunes'
 import { FEST_GIFTS, festOwnedCount } from '../systems/Festival'
 import { BOND_FLAG, FRIENDSHIP_GAIN, bondBar, bondStage, nextBondStage } from '../systems/Bond'
@@ -548,6 +549,45 @@ export class WorldMenus {
    * @author zjh
    * @date 2026-10-22
    */
+  /**
+   * 沙丘商队货摊：满格电池与资质卡
+   * @author zjh
+   * @date 2026-10-27
+   */
+  openCaravanShop(onClose: () => void): void {
+    const rows = (): ListRow[] =>
+      CARAVAN_STOCK.map(({ id, price }) => {
+        const it = ITEMS[id]
+        return {
+          label: it.name,
+          right: `${price} 焰币 · 持有 ${GameState.itemCount(id)}`,
+          icon: itemIconKey(id),
+          detail: it.desc,
+          onSelect: () => {
+            if (GameState.coins < price) {
+              Sfx.cancel()
+              this.hooks.toast('焰币不够哦')
+              return
+            }
+            GameState.coins -= price
+            GameState.addItem(id)
+            this.hooks.toast(`买下了 ${it.name}`)
+            this.hooks.refreshHud()
+            this.panel.update(rows(), this.coinsFooter())
+          },
+        }
+      })
+    this.panel.open({
+      title: '沙丘商队',
+      footer: this.coinsFooter(),
+      rows: rows(),
+      onCancel: () => {
+        this.panel.close()
+        onClose()
+      },
+    })
+  }
+
   openMerchantShop(onClose: () => void): void {
     const rows = (): ListRow[] =>
       MERCHANT_STOCK.map(({ id, price }) => {
