@@ -16,6 +16,7 @@ import {
   CARAVAN_NEED,
   caravanStormsDone,
 } from '../systems/CaravanQuest'
+import { STARGAZE_DONE, STAR_CONSTELLATIONS, starsFound } from '../systems/StargazeQuest'
 import {
   HOUSES,
   LAMPS_DONE,
@@ -127,6 +128,13 @@ export class TownServices {
       )
     } else if (GameState.hasFlag(CARAVAN_DONE)) {
       lines.push('【沙丘商队】驼队货摊已开：满格电池、资质卡。')
+    }
+    if (GameState.hasFlag('side_stargaze_started') && !GameState.hasFlag(STARGAZE_DONE)) {
+      lines.push(
+        `【观星之夜】星座 ${starsFound()}/${STAR_CONSTELLATIONS.length}。满月夜去观星台找穗或镜筒。`,
+      )
+    } else if (GameState.hasFlag(STARGAZE_DONE)) {
+      lines.push('【观星之夜】已完成。观星镜使夜里异色率 ×1.5。')
     }
     if (w.lureSteps > 0) lines.push(`引兽铃还在响，剩 ${w.lureSteps} 步。`)
     if (w.repelSteps > 0) lines.push(`驱兽香还有效，剩 ${w.repelSteps} 步。`)

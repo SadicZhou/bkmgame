@@ -204,6 +204,18 @@ export function buildObservatory(): MapDef {
         story: 'dune_sui',
         lines: ['星图在你菜单里。九颗星，亮了的才算数。'],
       },
+      {
+        id: 'dune_telescope',
+        name: '观星镜筒',
+        role: 'prop',
+        story: 'dune_telescope',
+        x: 3,
+        y: 2,
+        color: 0xc0c8e0,
+        showIf: 'star_chart',
+        hideIf: 'side_stargaze_done',
+        lines: ['架在窗边的长镜筒，对准满月夜的天空。'],
+      },
     ],
   }
 }

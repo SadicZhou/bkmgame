@@ -133,6 +133,7 @@ function paintOne(g: Icon, id: string): void {
   else if (id === 'strength_gloves') gloves(g)
   else if (id === 'dust_badge') badge(g)
   else if (id === 'star_charm') charm(g)
+  else if (id === 'star_scope') bottle(g)
   else if (id === 'canyon_ore') ore(g)
   else if (id === 'hearth_stone') hearth(g)
   else if (id === 'book_rock_slide' || id === 'book_tailwind' || id === 'book_defog' || id === 'book_heart_echo') book(g)

@@ -8,9 +8,75 @@ import { GameState } from '../../state/GameState'
 import { Sfx } from '../../systems/AudioBeeps'
 import { CARAVAN_DONE, CARAVAN_NEED, beginCaravan } from '../../systems/CaravanQuest'
 import { DUNE_FLAGS, ROD_IDS, canChargeRod, rodFlag, rodsLit } from '../../systems/Dunes'
+import {
+  STARGAZE_DONE,
+  STAR_SCOPE,
+  aimStar,
+  canStargaze,
+  nextStar,
+  starsFound,
+} from '../../systems/StargazeQuest'
 import type { StoryHost } from './StoryEvents'
 
 const flag = (k: string) => GameState.getFlag(k)
+
+/**
+ * 满月夜观星：逐个对准星座
+ * @author zjh
+ * @date 2026-10-27
+ */
+function runStargaze(host: StoryHost, name: string): void {
+  if (GameState.hasFlag(STARGAZE_DONE)) {
+    host.say([
+      `${name}：五座星座都记下了。`,
+      GameState.itemCount(STAR_SCOPE) > 0
+        ? `${name}：观星镜夜里带着，异色会更容易露面。`
+        : `${name}：镜筒还在你包里吗？`,
+    ])
+    return
+  }
+  if (!canStargaze(GameState.world.totalSteps)) {
+    host.say([
+      `${name}：等满月夜再来。月亮一圆，星座的线才够清楚。`,
+      `${name}：已经找到 ${starsFound()}/5。`,
+    ])
+    return
+  }
+  const ask = (): void => {
+    const star = nextStar()
+    if (!star) return
+    host.say([`${name}：把镜筒抬起来。`, star.hint], () => {
+      host.choose(
+        `这是哪一座？（${starsFound()}/5）`,
+        star.options.map((o) => ({ id: o.id, label: o.label })),
+        (pick) => {
+          const r = aimStar(star.id, pick)
+          if (!r.ok) {
+            host.say([r.reason], () => ask())
+            return
+          }
+          host.say(r.lines, () => {
+            if (r.reward) {
+              Sfx.win()
+              host.toast('获得了重要物品「观星镜」')
+              host.toast('支线「观星之夜」完成')
+              host.refreshHud()
+              return
+            }
+            ask()
+          })
+        },
+      )
+    })
+  }
+  host.say(
+    [
+      `${name}：满月。镜筒借你。`,
+      `${name}：荒原上有五座星座，对准了告诉我名字。找错了就再来。`,
+    ],
+    () => ask(),
+  )
+}
 
 function sui(host: StoryHost, name: string): void {
   const say = (lines: string[]) => host.say(lines.map((l) => `${name}：${l}`))
@@ -44,7 +110,18 @@ function sui(host: StoryHost, name: string): void {
     return
   }
   if (GameState.hasFlag(DUNE_FLAGS.chart)) {
-    say(['沙暴来的时候别往远处看，跟着避雷针的光走。', '落雷是四拍：亮、暗、暗、落。落的那一拍，别站在黄圈里。'])
+    if (
+      !GameState.hasFlag(STARGAZE_DONE) &&
+      (canStargaze(GameState.world.totalSteps) || GameState.hasFlag('side_stargaze_started'))
+    ) {
+      runStargaze(host, name)
+      return
+    }
+    say([
+      '沙暴来的时候别往远处看，跟着避雷针的光走。',
+      '落雷是四拍：亮、暗、暗、落。落的那一拍，别站在黄圈里。',
+      GameState.hasFlag(STARGAZE_DONE) ? '观星镜夜里带着就好。' : '满月夜再来，我们找星座。',
+    ])
     return
   }
   GameState.addItem('charge_bottle', 1)
@@ -123,6 +200,10 @@ function caravan(host: StoryHost, name: string): void {
   )
 }
 
+function telescope(host: StoryHost): void {
+  runStargaze(host, '星图师穗')
+}
+
 export const DUNE_STORIES = {
   dune_sui: sui,
   dune_twins: twins,
@@ -131,4 +212,5 @@ export const DUNE_STORIES = {
   dune_rod_3: rod(3),
   dune_rod_4: rod(4),
   dune_caravan: caravan,
+  dune_telescope: telescope,
 }
