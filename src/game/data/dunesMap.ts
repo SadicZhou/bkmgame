@@ -9,6 +9,7 @@ import { TS, parseAscii } from './mapKit'
 import type { MapDef, NpcDef } from './maps'
 import { postgameNpcs } from './postgameNpcs'
 import { DUNE_FLAGS, ROD_IDS, rodFlag } from '../systems/Dunes'
+import { SAND_SPOTS } from '../systems/StarSandQuest'
 
 const RODS: { i: (typeof ROD_IDS)[number]; x: number; y: number }[] = [
   { i: 1, x: 4, y: 5 },
@@ -75,6 +76,18 @@ export function buildDunes(): MapDef {
     ],
     npcs: [
       ...rodNpcs(),
+      ...SAND_SPOTS.map((s) => ({
+        id: `star_sand_${s.id}`,
+        name: '星砂',
+        role: 'prop' as const,
+        story: `pick_star_sand_${s.id}`,
+        x: s.x,
+        y: s.y,
+        color: 0xf0e8a0,
+        showIf: 'star_chart',
+        hideIf: [s.flag, 'side_sand_done'],
+        lines: ['沙窝里闪着细沙。'],
+      })),
       {
         id: 'note_volt_spot',
         name: '星砂页',

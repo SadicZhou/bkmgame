@@ -81,6 +81,7 @@ function encounterCtx(mapId: string, source: EncounterSource): EncounterContext 
       (GameState.itemCount('travel_journal') > 0 || GameState.hasFlag('dex_complete') ? 2 : 1) *
       (GameState.hasFlag('unique_complete') ? 2 : 1),
     goldRod: GameState.itemCount('gold_rod') > 0,
+    sandPouch: mapId === 'dunes' && GameState.itemCount('sand_pouch') > 0,
   }
 }
 

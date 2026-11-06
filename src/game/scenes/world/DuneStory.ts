@@ -9,6 +9,15 @@ import { Sfx } from '../../systems/AudioBeeps'
 import { CARAVAN_DONE, CARAVAN_NEED, beginCaravan } from '../../systems/CaravanQuest'
 import { DUNE_FLAGS, ROD_IDS, canChargeRod, rodFlag, rodsLit } from '../../systems/Dunes'
 import {
+  SAND_DONE,
+  SAND_STARTED,
+  SAND_SPOTS,
+  STAR_SAND_NEED,
+  pickStarSand,
+  sandCount,
+  turnInStarSand,
+} from '../../systems/StarSandQuest'
+import {
   STARGAZE_DONE,
   STAR_SCOPE,
   aimStar,
@@ -110,11 +119,57 @@ function sui(host: StoryHost, name: string): void {
     return
   }
   if (GameState.hasFlag(DUNE_FLAGS.chart)) {
+    if (!GameState.hasFlag(SAND_DONE) && sandCount() >= STAR_SAND_NEED) {
+      const turned = turnInStarSand()
+      if ('lines' in turned) {
+        host.say(turned.lines, () => {
+          if (turned.reward) {
+            Sfx.win()
+            host.toast('获得了重要物品「星砂袋」')
+            host.toast('支线「星砂收集者」完成')
+            host.refreshHud()
+          }
+        })
+        return
+      }
+    }
     if (
       !GameState.hasFlag(STARGAZE_DONE) &&
       (canStargaze(GameState.world.totalSteps) || GameState.hasFlag('side_stargaze_started'))
     ) {
       runStargaze(host, name)
+      return
+    }
+    if (!GameState.hasFlag(SAND_DONE)) {
+      host.choose(
+        '穗',
+        [
+          { id: 'sand', label: `交星砂（持有 ${sandCount()}/${STAR_SAND_NEED}）` },
+          { id: 'chat', label: '问问荒原' },
+        ],
+        (id) => {
+          if (id === 'sand') {
+            const r = turnInStarSand()
+            if ('reason' in r) {
+              say([r.reason])
+              return
+            }
+            host.say(r.lines, () => {
+              Sfx.win()
+              host.toast('获得了重要物品「星砂袋」')
+              host.toast('支线「星砂收集者」完成')
+              host.refreshHud()
+            })
+            return
+          }
+          say([
+            '沙暴来的时候别往远处看，跟着避雷针的光走。',
+            '落雷是四拍：亮、暗、暗、落。落的那一拍，别站在黄圈里。',
+            '荒原沙窝里有星砂，凑十颗拿来，我有袋子谢你。',
+            GameState.hasFlag(STARGAZE_DONE) ? '观星镜夜里带着就好。' : '满月夜再来，我们找星座。',
+          ])
+        },
+      )
       return
     }
     say([
@@ -126,12 +181,14 @@ function sui(host: StoryHost, name: string): void {
   }
   GameState.addItem('charge_bottle', 1)
   GameState.setFlag(DUNE_FLAGS.chart, true)
+  GameState.setFlag(SAND_STARTED, true)
   Sfx.win()
   say([
     '你从峡谷那边来的吧。荒原上的雷，不是天气，是雷鸣隼在喊。',
     '菜单里多了一页「星图」。九座灯台，亮过的星我都标上了。',
     '这瓶蓄雷液给你。队伍里没有雷系伙伴的话，用它也能给避雷针充电。',
     '四根都亮了，雷心坑的路才会开。',
+    '对了——沙窝里散着星砂。凑十颗拿来，我有袋子谢你。',
   ])
 }
 
@@ -204,6 +261,17 @@ function telescope(host: StoryHost): void {
   runStargaze(host, '星图师穗')
 }
 
+function pickSand(spotId: string): (host: StoryHost) => void {
+  return (host) => {
+    const result = pickStarSand(spotId)
+    if ('reason' in result) {
+      host.say([result.reason])
+      return
+    }
+    host.say(result.lines, () => host.refreshNpcs())
+  }
+}
+
 export const DUNE_STORIES = {
   dune_sui: sui,
   dune_twins: twins,
@@ -213,4 +281,5 @@ export const DUNE_STORIES = {
   dune_rod_4: rod(4),
   dune_caravan: caravan,
   dune_telescope: telescope,
+  ...Object.fromEntries(SAND_SPOTS.map((s) => [`pick_star_sand_${s.id}`, pickSand(s.id)])),
 }

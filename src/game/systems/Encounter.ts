@@ -41,6 +41,8 @@ export interface EncounterContext {
   shinyMod?: number
   /** 金钓竿：稀有伙伴权重再乘 2 */
   goldRod?: boolean
+  /** 星砂袋：荒原稀有伙伴权重再乘 2 */
+  sandPouch?: boolean
 }
 
 export interface EncounterPick {
@@ -87,6 +89,7 @@ export function entryWeight(ctx: EncounterContext, e: EncounterEntry): number {
   if (rare && ctx.rarePity >= RARE_PITY) w *= 3
   if (rare && ctx.lureActive) w *= 2
   if (rare && ctx.goldRod) w *= 2
+  if (rare && ctx.sandPouch) w *= 2
   if (rare && ctx.leadAbility === 'guide') w *= 1.5
   if (ctx.migrationSpecies === e.speciesId) w *= 5
   return w
