@@ -18,6 +18,7 @@ import {
 } from '../systems/CaravanQuest'
 import { SAND_DONE, STAR_SAND_NEED, sandCount } from '../systems/StarSandQuest'
 import { MICE_DONE, MICE_NEED, miceFound } from '../systems/MouseQuest'
+import { SONG_DONE, SONG_HEARD, SONG_STONES, songStep } from '../systems/MelodyQuest'
 import { PAINTINGS_DONE, TOWER_PAINTINGS, paintingsFound } from '../systems/TowerPaintings'
 import { STARGAZE_DONE, STAR_CONSTELLATIONS, starsFound } from '../systems/StargazeQuest'
 import {
@@ -153,6 +154,11 @@ export class TownServices {
       lines.push(`【迷路的小鼠】宝宝 ${miceFound()}/${MICE_NEED}。回音林找齐后交给蓬尾鼠妈妈。`)
     } else if (GameState.hasFlag(MICE_DONE)) {
       lines.push('【迷路的小鼠】已完成。')
+    }
+    if (GameState.hasFlag(SONG_HEARD) && !GameState.hasFlag(SONG_DONE)) {
+      lines.push(`【回音石的歌】旋律 ${songStep()}/${SONG_STONES.length}。按老铃铛的顺序敲响六块音石。`)
+    } else if (GameState.hasFlag(SONG_DONE)) {
+      lines.push('【回音石的歌】已完成。铃铛猫已加入旅团。')
     }
     if (GameState.hasFlag('mush_quest') && !GameState.hasFlag('mush_done')) {
       lines.push('【菇菇派对】回音林采 8 种菇（昼 4 / 夜 4），交给伞灵菇老奶奶。')

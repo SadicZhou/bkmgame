@@ -22,6 +22,7 @@ export const ART_SPECIES = Object.keys(SPECIES)
  */
 /** 还没有立绘、用程序绘制的物种（有 PNG 后从这里删掉） */
 const DRAWN = new Set([
+  'bellcat',
   'drillmole',
   'crystalbat',
   'amberling',

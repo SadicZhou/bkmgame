@@ -7,6 +7,7 @@
  */
 
 import { ECHO_STONES, stoneLitFlag } from './forestMap'
+import { EXTRA_SONG_STONES, SONG_HEARD, songLitFlag } from '../systems/MelodyQuest'
 
 /** 装饰动效：温泉蒸汽 / 火焰跳动 / 灯台光晕 / 蘑菇微光 */
 export type DecorFx = 'steam' | 'flame' | 'beacon' | 'glow'
@@ -83,6 +84,10 @@ export const DECOR: Record<string, DecorDef[]> = {
     ...ECHO_STONES.flatMap((s): DecorDef[] => [
       { key: 'decor-echostone', x: s.x, y: s.y, w: 1, h: 1, solid: true, hideIf: stoneLitFlag(s.id) },
       { key: 'decor-echostone-lit', x: s.x, y: s.y, w: 1, h: 1, solid: true, showIf: stoneLitFlag(s.id) },
+    ]),
+    ...EXTRA_SONG_STONES.flatMap((s): DecorDef[] => [
+      { key: 'decor-echostone', x: s.x, y: s.y, w: 1, h: 1, solid: true, showIf: SONG_HEARD, hideIf: songLitFlag(s.id) },
+      { key: 'decor-echostone-lit', x: s.x, y: s.y, w: 1, h: 1, solid: true, showIf: songLitFlag(s.id) },
     ]),
     ...[
       [22, 23],

@@ -9,6 +9,7 @@ import { TS, parseAscii } from './mapKit'
 import type { MapDef, NpcDef } from './maps'
 import { MUSH_GRANNY, mushroomSpots } from './mushrooms'
 import { MICE_DONE, MOUSE_BABIES } from '../systems/MouseQuest'
+import { EXTRA_SONG_STONES, SONG_DONE, SONG_HEARD } from '../systems/MelodyQuest'
 import { postgameNpcs } from './postgameNpcs'
 
 /** 第三章旗标 */
@@ -77,16 +78,30 @@ function signs(): NpcDef[] {
 
 /** 四音石（不画小人，外观由装饰物 decor-echostone 负责） */
 function stones(): NpcDef[] {
-  return ECHO_STONES.map((s) => ({
-    id: `stone_${s.id}`,
-    name: `${s.name}音石`,
-    role: 'prop' as const,
-    story: `stone_${s.id}`,
-    x: s.x,
-    y: s.y,
-    color: 0x7a8a7a,
-    lines: [],
-  }))
+  return [
+    ...ECHO_STONES.map((s) => ({
+      id: `stone_${s.id}`,
+      name: `${s.name}音石`,
+      role: 'prop' as const,
+      story: `stone_${s.id}`,
+      x: s.x,
+      y: s.y,
+      color: 0x7a8a7a,
+      lines: [],
+    })),
+    ...EXTRA_SONG_STONES.map((s) => ({
+      id: `stone_${s.id}`,
+      name: `${s.name}音石`,
+      role: 'prop' as const,
+      story: `stone_${s.id}`,
+      x: s.x,
+      y: s.y,
+      color: 0x9aaa8a,
+      showIf: SONG_HEARD,
+      hideIf: SONG_DONE,
+      lines: [],
+    })),
+  ]
 }
 
 /**
@@ -300,6 +315,17 @@ export function buildForest(): MapDef {
           '（它低下头，鹿角对准了你。）',
         ],
         afterLines: ['（林语鹿轻轻摇了摇头，鹿角上的铃铛叮叮当当地响。）'],
+      },
+      {
+        id: 'old_bell',
+        name: '老铃铛',
+        role: 'prop',
+        story: 'old_bell',
+        x: 13,
+        y: 5,
+        color: 0xc8a050,
+        showIf: FOREST_FLAGS.deer,
+        lines: ['（一只生锈的老铃铛挂在古树下。）'],
       },
       {
         id: 'note_leaf_spot',

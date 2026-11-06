@@ -9,6 +9,7 @@ import { ECHO_STONES, FOREST_FLAGS } from '../../data/forestMap'
 import { GameState } from '../../state/GameState'
 import { Sfx } from '../../systems/AudioBeeps'
 import { pressStone, stoneStep } from '../../systems/EchoStones'
+import { trySongStone } from './SongStory'
 import type { StoryHost } from './StoryEvents'
 
 const has = (k: string) => GameState.hasFlag(k)
@@ -68,6 +69,7 @@ export function forestMoss(host: StoryHost, name: string): void {
  */
 function stoneStory(stoneId: string) {
   return (host: StoryHost): void => {
+    if (trySongStone(host, stoneId)) return
     const stone = ECHO_STONES.find((s) => s.id === stoneId)
     if (!stone) return
     const result = pressStone(GameState, stoneId)

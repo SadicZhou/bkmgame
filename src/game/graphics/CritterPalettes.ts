@@ -60,6 +60,7 @@ export const CRITTERS: Record<string, CritterPalette> = {
   magmane: { body: 0xd9483b, belly: 0xffd0a0, accent: 0xffb030, ear: 0xff7a30, kind: 'lion', evolved: true },
   puffmouse: { body: 0xe8d8c0, belly: 0xfff4e0, accent: 0xffb7c5, ear: 0xd8c0a0, kind: 'mouse' },
   bushtail: { body: 0xd8b890, belly: 0xfff0d8, accent: 0xffd0a0, ear: 0xc8a070, kind: 'mouse', evolved: true },
+  bellcat: { body: 0xf0e0c8, belly: 0xfff8f0, accent: 0xf5d442, ear: 0xe0c8a0, kind: 'fox', extra: 'star' },
   wickling: { body: 0xf0a860, belly: 0xffe8c0, accent: 0xffe060, ear: 0xd08848, kind: 'lizard' },
   lanternlizard: { body: 0xe08040, belly: 0xfff0d0, accent: 0xfff080, ear: 0xc06830, kind: 'lizard', evolved: true },
   sproutcap: { body: 0xf0e8d0, belly: 0xfff8e8, accent: 0x7bc96b, ear: 0x5aa850, kind: 'mushroom' },

@@ -76,6 +76,7 @@ const LIST: CreatureSpecies[] = [
   // ── 常 ──
   sp({ id: 'puffmouse', dexNo: '01', name: '绒团鼠', type: 'normal', rarity: 'common', learnset: learn([1, 'tackle'], [1, 'growl'], [4, 'quick_jab'], [8, 'body_slam'], [15, 'rally'], [20, 'double_edge']), expYield: 26, evolvesTo: 'bushtail', evolveLevel: 12, abilities: ['fluffy', 'timid'], hiddenAbility: 'lucky', catchRate: 1, desc: '浑身蓬松的小家伙，受惊时会缩成一个毛球滚走。' }, [30, 12, 10, 14]),
   sp({ id: 'bushtail', dexNo: '02', name: '蓬尾鼠', type: 'normal', rarity: 'common', learnset: learn([1, 'tackle'], [1, 'growl'], [4, 'quick_jab'], [8, 'body_slam'], [15, 'rally'], [20, 'double_edge']), expYield: 42, abilities: ['fluffy', 'timid'], hiddenAbility: 'lucky', catchRate: 1, desc: '大尾巴比身体还蓬，冬天会把自己裹成一团睡觉。' }, [40, 16, 13, 18]),
+  sp({ id: 'bellcat', dexNo: '03', name: '铃铛猫', type: 'normal', rarity: 'rare', learnset: learn([1, 'tackle'], [1, 'growl'], [5, 'quick_jab'], [10, 'dazzle'], [15, 'rally'], [20, 'body_slam'], [25, 'double_edge']), expYield: 58, abilities: ['lucky', 'swift'], hiddenAbility: 'echo', catchRate: 0.6, desc: '脖子挂铃铛，尾巴卷成音符。只在旋律正确时才会从树根后探出头。' }, [38, 15, 14, 19]),
 
   // ── 焰 ──
   sp({ id: 'flarehorn', dexNo: '04', name: '焰角兔', type: 'flame', rarity: 'starter', learnset: FLAME_STARTER(15), expYield: 28, evolvesTo: 'blazehorn', evolveLevel: 9, abilities: ['blaze_heart', 'swift'], hiddenAbility: 'kindred', catchRate: 1, desc: '额角藏着一粒火种，开心时会冒出小火星。' }, [32, 14, 10, 13]),
