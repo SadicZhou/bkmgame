@@ -8,6 +8,7 @@
 import { TS, parseAscii } from './mapKit'
 import type { MapDef, NpcDef } from './maps'
 import { MUSH_GRANNY, mushroomSpots } from './mushrooms'
+import { MICE_DONE, MOUSE_BABIES } from '../systems/MouseQuest'
 import { postgameNpcs } from './postgameNpcs'
 
 /** 第三章旗标 */
@@ -218,6 +219,29 @@ export function buildForest(): MapDef {
       ...stones(),
       MUSH_GRANNY,
       ...mushroomSpots(),
+      {
+        id: 'mouse_mom',
+        name: '蓬尾鼠妈妈',
+        story: 'mouse_mom',
+        x: 10,
+        y: 24,
+        color: 0xe8d0a8,
+        showIf: 'forest_unlocked',
+        hideIf: MICE_DONE,
+        lines: ['（她焦急地甩着大尾巴，朝林子深处张望。）'],
+      },
+      ...MOUSE_BABIES.map((b) => ({
+        id: `mouse_baby_${b.id}`,
+        name: '蓬尾鼠宝宝',
+        role: 'prop' as const,
+        story: `pick_mouse_${b.id}`,
+        x: b.x,
+        y: b.y,
+        color: 0xf0e0c0,
+        showIf: 'forest_unlocked',
+        hideIf: [b.flag, MICE_DONE],
+        lines: ['（小小的绒团在发抖。）'],
+      })),
       {
         id: 'forest_vines',
         name: '藤蔓',

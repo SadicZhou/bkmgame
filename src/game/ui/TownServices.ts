@@ -17,6 +17,7 @@ import {
   caravanStormsDone,
 } from '../systems/CaravanQuest'
 import { SAND_DONE, STAR_SAND_NEED, sandCount } from '../systems/StarSandQuest'
+import { MICE_DONE, MICE_NEED, miceFound } from '../systems/MouseQuest'
 import { PAINTINGS_DONE, TOWER_PAINTINGS, paintingsFound } from '../systems/TowerPaintings'
 import { STARGAZE_DONE, STAR_CONSTELLATIONS, starsFound } from '../systems/StargazeQuest'
 import {
@@ -147,6 +148,14 @@ export class TownServices {
       lines.push(`【塔里的画】旧画 ${paintingsFound()}/${TOWER_PAINTINGS.length}。灰烬之塔第 9 层墙上。`)
     } else if (GameState.hasFlag(PAINTINGS_DONE)) {
       lines.push('【塔里的画】已看完六幅。终章结局会多一段回忆。')
+    }
+    if (GameState.hasFlag('side_mice_started') && !GameState.hasFlag(MICE_DONE)) {
+      lines.push(`【迷路的小鼠】宝宝 ${miceFound()}/${MICE_NEED}。回音林找齐后交给蓬尾鼠妈妈。`)
+    } else if (GameState.hasFlag(MICE_DONE)) {
+      lines.push('【迷路的小鼠】已完成。')
+    }
+    if (GameState.hasFlag('mush_quest') && !GameState.hasFlag('mush_done')) {
+      lines.push('【菇菇派对】回音林采 8 种菇（昼 4 / 夜 4），交给伞灵菇老奶奶。')
     }
     if (w.lureSteps > 0) lines.push(`引兽铃还在响，剩 ${w.lureSteps} 步。`)
     if (w.repelSteps > 0) lines.push(`驱兽香还有效，剩 ${w.repelSteps} 步。`)

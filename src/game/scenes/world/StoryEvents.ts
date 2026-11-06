@@ -18,6 +18,7 @@ import { FROST_STORIES } from './FrostStory'
 import { FOREST_STORIES } from './ForestStory'
 import { MUSHROOM_STORIES } from './MushroomStory'
 import { HOUSE_LAMP_STORIES } from './HouseLampStory'
+import { MOUSE_STORIES } from './MouseStory'
 import { NOTE_STORIES } from './NoteStory'
 
 /** WorldScene 提供给剧情脚本的能力 */
@@ -120,6 +121,7 @@ const STORIES: Record<string, StoryFn> = {
   fish_q_mine: (host) => fishSpotStory(host, 'fish_q_mine'),
   ...FOREST_STORIES,
   ...MUSHROOM_STORIES,
+  ...MOUSE_STORIES,
   ...CANYON_STORIES,
   ...DUNE_STORIES,
   ...FROST_STORIES,
