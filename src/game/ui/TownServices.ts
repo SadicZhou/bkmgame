@@ -17,6 +17,7 @@ import {
   caravanStormsDone,
 } from '../systems/CaravanQuest'
 import { SAND_DONE, STAR_SAND_NEED, sandCount } from '../systems/StarSandQuest'
+import { PAINTINGS_DONE, TOWER_PAINTINGS, paintingsFound } from '../systems/TowerPaintings'
 import { STARGAZE_DONE, STAR_CONSTELLATIONS, starsFound } from '../systems/StargazeQuest'
 import {
   HOUSES,
@@ -141,6 +142,11 @@ export class TownServices {
       lines.push(`【星砂收集者】星砂 ${sandCount()}/${STAR_SAND_NEED}。荒原沙窝捡沙，交给观星台穗。`)
     } else if (GameState.hasFlag(SAND_DONE)) {
       lines.push('【星砂收集者】已完成。星砂袋使荒原稀有权重 ×2。')
+    }
+    if (paintingsFound() > 0 && !GameState.hasFlag(PAINTINGS_DONE)) {
+      lines.push(`【塔里的画】旧画 ${paintingsFound()}/${TOWER_PAINTINGS.length}。灰烬之塔第 9 层墙上。`)
+    } else if (GameState.hasFlag(PAINTINGS_DONE)) {
+      lines.push('【塔里的画】已看完六幅。终章结局会多一段回忆。')
     }
     if (w.lureSteps > 0) lines.push(`引兽铃还在响，剩 ${w.lureSteps} 步。`)
     if (w.repelSteps > 0) lines.push(`驱兽香还有效，剩 ${w.repelSteps} 步。`)

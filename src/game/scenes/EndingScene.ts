@@ -10,6 +10,7 @@ import { addBackdrop } from '../graphics/SceneArt'
 import { DEX_ORDER, battleName, spriteKey } from '../data/creatures'
 import { GameState } from '../state/GameState'
 import { Sfx } from '../systems/AudioBeeps'
+import { PAINTING_ENDING_LINES, PAINTINGS_DONE } from '../systems/TowerPaintings'
 import { InputKeys } from '../ui/InputKeys'
 import { fadeIn, fadeToScene } from '../ui/Transition'
 
@@ -74,11 +75,13 @@ export class EndingScene extends Phaser.Scene {
     this.tweens.add({ targets: title, alpha: 1, y: 70, duration: 1200 })
 
     const journal = GameState.hasFlag('dex_complete') || GameState.itemCount('travel_journal') > 0
+    const paintings = GameState.hasFlag(PAINTINGS_DONE)
     const lines = finale
       ? [
           '九座灯台的光从各地升起，在天上连成一只鸟。',
           '灯灯停在墨尘肩上，就像十年前一样。',
           '火会伤人，也会温暖人。重要的是，谁来守护它。',
+          ...(paintings ? PAINTING_ENDING_LINES : []),
           ...(journal ? ['手账最后一页多了一行字：这一次，五个人都在灯下。'] : []),
         ]
       : [
@@ -104,8 +107,8 @@ export class EndingScene extends Phaser.Scene {
       })
     }
 
-    // 队伍展示
-    const partyY = finale && journal ? 268 : 252
+    // 队伍展示（回忆 / 手账多几行字时往下挪）
+    const partyY = finale ? 252 + (paintings ? 40 : 0) + (journal ? 16 : 0) : 252
     const party = GameState.party
     const gap = Math.min(96, (width - 80) / Math.max(1, party.length))
     const startX = width / 2 - (gap * (party.length - 1)) / 2

@@ -5,6 +5,7 @@
  */
 
 import { GameState } from '../../state/GameState'
+import { TOWER_PAINTINGS, viewPainting } from '../../systems/TowerPaintings'
 import { openTowerStairs, pressNote } from '../../systems/Tower'
 import type { StoryFn, StoryHost } from './StoryEvents'
 
@@ -94,10 +95,24 @@ function fei(host: StoryHost): void {
   )
 }
 
+function paint(id: string): StoryFn {
+  return (host) => {
+    const r = viewPainting(id)
+    if ('reason' in r) {
+      host.say([r.reason])
+      return
+    }
+    host.say(r.lines, () => {
+      if (r.justDone) host.toast('支线「塔里的画」完成')
+    })
+  }
+}
+
 export const TOWER_STORIES: Record<string, StoryFn> = {
   town_sendoff: sendoff,
   tower_sluice: sluice,
   tower_note_1: note(1),
+  ...Object.fromEntries(TOWER_PAINTINGS.map((p) => [`tower_paint_${p.id}`, paint(p.id)])),
   tower_note_2: note(2),
   tower_note_3: note(3),
   tower_note_4: note(4),

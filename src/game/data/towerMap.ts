@@ -7,6 +7,7 @@
 import type { MapDef, NpcDef, TileKind } from './maps'
 import { postgameNpcs } from './postgameNpcs'
 import { TS, borderWalls, fill } from './mapKit'
+import { TOWER_PAINTINGS } from '../systems/TowerPaintings'
 
 const W = 11
 const H = 8
@@ -358,6 +359,16 @@ export function buildTower9(): MapDef {
         color: 0xe07050,
         lines: ['上面就是灯台。'],
       },
+      ...TOWER_PAINTINGS.map((p) => ({
+        id: `tower_paint_${p.id}`,
+        name: p.title,
+        role: 'prop' as const,
+        story: `tower_paint_${p.id}`,
+        x: p.x,
+        y: p.y,
+        color: 0xc8b898,
+        lines: p.lines,
+      })),
       fire(),
     ],
   })
