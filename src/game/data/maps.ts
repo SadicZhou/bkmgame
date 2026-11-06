@@ -16,6 +16,7 @@ import { buildBellHall, buildFrostEcho, buildFrostPeak, buildFrostVillage, build
 import { buildForest } from './forestMap'
 import { buildLake } from './lakeMap'
 import { TS, borderWalls, fill, parseAscii, setRect } from './mapKit'
+import { FLAME_SPOTS, PATROL_DONE, PATROL_STARTED } from '../systems/NightPatrolQuest'
 
 /** ice 冰面（霜粒鹅遭遇格）· bridge 浮桥（开放前视为水面）· dock 码头木板 */
 export type TileKind =
@@ -824,6 +825,30 @@ function buildPass(): MapDef {
         hideIf: 'got_house_wick_8',
         lines: ['温泉旁晒着的灯芯。'],
       },
+      {
+        id: 'patrol_wick',
+        name: '灯芯蜥',
+        story: 'patrol_wick',
+        x: 6,
+        y: 16,
+        color: 0xf0a860,
+        showIf: '@night',
+        hideIf: PATROL_DONE,
+        lines: ['（尾巴尖的小火苗在夜风里摇。）'],
+      },
+      ...FLAME_SPOTS.map((f) => ({
+        id: `patrol_flame_${f.id}`,
+        name: '小火苗',
+        role: 'prop' as const,
+        story: `pick_patrol_flame_${f.id}`,
+        x: f.x,
+        y: f.y,
+        color: 0xff9040,
+        bob: true,
+        showIf: [PATROL_STARTED, '@night'] as string[],
+        hideIf: [f.flag, PATROL_DONE] as string[],
+        lines: ['（一点橙火在灰烬里跳。）'],
+      })),
       ...postgameNpcs('pass'),
     ],
   }

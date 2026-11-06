@@ -20,6 +20,7 @@ import { MUSHROOM_STORIES } from './MushroomStory'
 import { HOUSE_LAMP_STORIES } from './HouseLampStory'
 import { MOUSE_STORIES } from './MouseStory'
 import { NOTE_STORIES } from './NoteStory'
+import { NIGHT_PATROL_STORIES } from './NightPatrolStory'
 import { SONG_STORIES } from './SongStory'
 
 /** WorldScene 提供给剧情脚本的能力 */
@@ -124,6 +125,7 @@ const STORIES: Record<string, StoryFn> = {
   ...MUSHROOM_STORIES,
   ...MOUSE_STORIES,
   ...SONG_STORIES,
+  ...NIGHT_PATROL_STORIES,
   ...CANYON_STORIES,
   ...DUNE_STORIES,
   ...FROST_STORIES,
