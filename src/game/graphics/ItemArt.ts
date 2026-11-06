@@ -137,7 +137,14 @@ function paintOne(g: Icon, id: string): void {
   else if (id === 'star_sand') auroraDust(g)
   else if (id === 'canyon_ore') ore(g)
   else if (id === 'hearth_stone') hearth(g)
-  else if (id === 'book_rock_slide' || id === 'book_tailwind' || id === 'book_defog' || id === 'book_heart_echo') book(g)
+  else if (
+    id === 'book_rock_slide' ||
+    id === 'book_tailwind' ||
+    id === 'book_defog' ||
+    id === 'book_heart_echo' ||
+    id === 'book_foam_shield'
+  )
+    book(g)
   else if (id === 'charge_bottle') bottle(g)
   else if (id === 'fold_board') board(g)
   else if (id === 'star_glider') glider(g)

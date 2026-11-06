@@ -20,6 +20,7 @@ import { SAND_DONE, STAR_SAND_NEED, sandCount } from '../systems/StarSandQuest'
 import { MICE_DONE, MICE_NEED, miceFound } from '../systems/MouseQuest'
 import { SONG_DONE, SONG_HEARD, SONG_STONES, songStep } from '../systems/MelodyQuest'
 import { PATROL_DONE, PATROL_NEED, PATROL_STARTED, flamesFound } from '../systems/NightPatrolQuest'
+import { BUBBLE_DONE, BUBBLE_NEED, BUBBLE_STARTED, bubbleStreak } from '../systems/BubbleCalmQuest'
 import { PAINTINGS_DONE, TOWER_PAINTINGS, paintingsFound } from '../systems/TowerPaintings'
 import { STARGAZE_DONE, STAR_CONSTELLATIONS, starsFound } from '../systems/StargazeQuest'
 import {
@@ -165,6 +166,11 @@ export class TownServices {
       lines.push(`【山道夜巡】小火苗 ${flamesFound()}/${PATROL_NEED}。夜里余烬山道找回后交给灯芯蜥。`)
     } else if (GameState.hasFlag(PATROL_DONE)) {
       lines.push('【山道夜巡】已完成。高资质灯芯蜥已加入旅团。')
+    }
+    if (GameState.hasFlag(BUBBLE_STARTED) && !GameState.hasFlag(BUBBLE_DONE)) {
+      lines.push(`【受惊的泡泡鱼】连钓 ${bubbleStreak()}/${BUBBLE_NEED}。雾泉湖畔连续上钩安抚鱼群（失手会中断）。`)
+    } else if (GameState.hasFlag(BUBBLE_DONE)) {
+      lines.push('【受惊的泡泡鱼】已完成。技能书·泡沫护盾已入手。')
     }
     if (GameState.hasFlag('mush_quest') && !GameState.hasFlag('mush_done')) {
       lines.push('【菇菇派对】回音林采 8 种菇（昼 4 / 夜 4），交给伞灵菇老奶奶。')

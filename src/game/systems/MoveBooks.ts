@@ -28,6 +28,12 @@ export const MOVE_BOOKS: Record<string, BookDef> = {
     moveName: '心火共鸣',
     universal: true,
   },
+  book_foam_shield: {
+    itemId: 'book_foam_shield',
+    moveId: 'foam_shield',
+    moveName: '泡沫护盾',
+    type: 'tide',
+  },
 }
 
 /**

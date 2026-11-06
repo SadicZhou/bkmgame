@@ -107,6 +107,9 @@ const LIST: MoveDef[] = [
   atk('splash', '水花拍', 'tide', 16, 100, 35, '拍起水花攻击。'),
   atk('bubble_roll', '泡泡滚', 'tide', 24, 100, 25, '10% 降低对手速度 1 阶。', { effect: { chance: 10, target: 'foe', stages: { spd: -1 } } }),
   sta('aqua_ring', '潮愈', 'tide', -1, 10, '5 回合内每回合回复 1/16 HP。', { special: 'aqua_ring' }),
+  sta('foam_shield', '泡沫护盾', 'tide', -1, 10, '提升自身防御 2 阶。泡泡裹住身体。', {
+    effect: { chance: 100, target: 'self', stages: { def: 2 } },
+  }),
   atk('tide_crash', '潮涌撞', 'tide', 30, 95, 15, '乘着浪头撞击。', { contact: true }),
   atk('torrent', '激流', 'tide', 38, 90, 10, '喷出湍急的水流。'),
   atk('abyss_roar', '深海咆哮', 'tide', 45, 85, 5, '降低对手防御 1 阶。沧澜鲸专属。', { effect: { chance: 100, target: 'foe', stages: { def: -1 } } }),

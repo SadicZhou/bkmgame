@@ -6,6 +6,7 @@
 
 import { SPECIES } from '../../data/creatures'
 import { GameState } from '../../state/GameState'
+import { noteBubbleCatch, noteBubbleMiss } from '../../systems/BubbleCalmQuest'
 import { canFishAt, rodKindOf, type RodKind } from '../../systems/Fishing'
 import { anglerRecord, judgeContest, recordCatch, recordFlag, rollFishSize } from '../../systems/FishLog'
 import { weatherOf } from '../../systems/WorldClock'
@@ -57,8 +58,12 @@ export class FishingController {
     const ts = map.tileSize
     this.overlay.start(host.playerXY(), { x: x * ts + ts / 2, y: y * ts + ts / 2 }, {
       onEnd: (result) => {
-        if (result === 'early') return host.toast('还没咬钩……')
-        if (result === 'escaped') return host.toast('鱼溜走了……再试一次吧')
+        if (result === 'early' || result === 'escaped') {
+          const miss = noteBubbleMiss(map.id)
+          host.toast(result === 'early' ? '还没咬钩……' : '鱼溜走了……再试一次吧')
+          if (miss) host.toast(miss)
+          return
+        }
         this.onHooked(rod)
       },
     })
@@ -73,7 +78,9 @@ export class FishingController {
     const { host } = this
     const caught = rollFishing(host.map.id, rod)
     if (!caught) {
+      const miss = noteBubbleMiss(host.map.id)
       host.toast('钓上来的小家伙看了你一眼，游走了（驱兽香生效中）')
+      if (miss) host.toast(miss)
       return
     }
     const { enemy, strong } = caught
@@ -92,6 +99,9 @@ export class FishingController {
       lines.push(`超过了澈的纪录（${anglerRecord(enemy.speciesId)} cm）！去给他看看吧。`)
     }
     if (contest) lines.push('达到了钓鱼大赛的目标！战斗结束后去告诉钓鱼少年澈吧。')
+    const bubble = noteBubbleCatch(host.map.id)
+    lines.push(...bubble.lines)
+    if (bubble.done) host.toast('支线「受惊的泡泡鱼」完成')
     // 支线 S7-2：起风岛首次钓到云鳍鱼
     if (enemy.speciesId === 'cloudfin' && !GameState.hasFlag('side_cloud_fish')) {
       GameState.setFlag('side_cloud_fish', true)
