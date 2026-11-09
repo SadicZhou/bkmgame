@@ -19,6 +19,7 @@ import {
 import { MILL_A, MILL_B, MILL_C, toggleMill, type MillId } from '../../systems/Cloud'
 import { dexComplete } from '../../systems/Postgame'
 import type { StoryHost } from './StoryEvents'
+import { tryTownMailElder } from './TownMailStory'
 
 function mill(id: MillId): (host: StoryHost, name: string) => void {
   return (host, name) => {
@@ -93,6 +94,8 @@ function townElder(host: StoryHost, name: string): boolean {
     host.toast('获得了重要物品「旅团手账」')
     return true
   }
+  // 支线 S0-2：序章送信（未完成时接管；完成后交还给普通台词）
+  if (tryTownMailElder(host, name)) return true
   if (!GameState.hasFlag('roc_beaten') || GameState.hasFlag('he_confessed')) return false
   if (!GameState.hasFlag('cloud_photo')) {
     host.say([`${name}：你从云上下来了。`, `${name}：先把那半张照片找回来，我才说得出口。`])

@@ -16,6 +16,7 @@ import { dayOf } from '../../systems/WorldClock'
 import { CARAVAN_DONE } from '../../systems/CaravanQuest'
 import { canDeliverLamp, deliverLamp } from '../../systems/HouseLampQuest'
 import { canDeliverTo, deliverLetter } from '../../systems/LetterQuest'
+import { canDeliverTownMail, deliverTownMail } from '../../systems/TownMailQuest'
 import { runStory, type StoryHost } from './StoryEvents'
 import type { WorldHost } from './WorldHost'
 
@@ -55,6 +56,13 @@ export class NpcInteract {
   private talk(npc: NpcDef): void {
     const { host } = this
     const say = (lines: string[], after?: () => void) => host.dialogue.open(lines.map((l) => `${npc.name}：${l}`), after)
+    // 支线 S0-2：小镇内阿禾的短信
+    const townMail = canDeliverTownMail(npc)
+    if (townMail) {
+      const { lines, allDone } = deliverTownMail(townMail, npc.name)
+      host.dialogue.open(lines, allDone ? () => host.toast('四封信都送到了，回阿禾那里看看') : undefined)
+      return
+    }
     // 支线 S7-3：优先送信（须已满足对方首次剧情条件）
     const letter = canDeliverTo(npc)
     if (letter) {

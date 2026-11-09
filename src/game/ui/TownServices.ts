@@ -24,6 +24,12 @@ import { BUBBLE_DONE, BUBBLE_NEED, BUBBLE_STARTED, bubbleStreak } from '../syste
 import { EGG_DONE, EGG_NEED_STEPS, EGG_STARTED, eggStepsLeft } from '../systems/MistEggQuest'
 import { AMULET_DONE, AMULET_GOT, AMULET_STARTED } from '../systems/HikerAmuletQuest'
 import { FOX_DONE, FOX_FOUND, FOX_STARTED, FOX_TALK_NEED, foxTalks } from '../systems/LostFoxQuest'
+import {
+  TOWN_MAIL_DONE,
+  TOWN_MAIL_STARTED,
+  TOWN_MAILS,
+  townMailsDelivered,
+} from '../systems/TownMailQuest'
 import { PAINTINGS_DONE, TOWER_PAINTINGS, paintingsFound } from '../systems/TowerPaintings'
 import { STARGAZE_DONE, STAR_CONSTELLATIONS, starsFound } from '../systems/StargazeQuest'
 import {
@@ -195,6 +201,13 @@ export class TownServices {
       else lines.push(`【小路的翠叶狐】再和小路聊聊（${foxTalks()}/${FOX_TALK_NEED}）。`)
     } else if (GameState.hasFlag(FOX_DONE)) {
       lines.push('【小路的翠叶狐】已完成。')
+    }
+    if (GameState.hasFlag(TOWN_MAIL_STARTED) && !GameState.hasFlag(TOWN_MAIL_DONE)) {
+      lines.push(
+        `【小镇送信】已送 ${townMailsDelivered()}/${TOWN_MAILS.length}。交给阿田、铃、麦、记忆婆婆，再回阿禾处。`,
+      )
+    } else if (GameState.hasFlag(TOWN_MAIL_DONE)) {
+      lines.push('【小镇送信】已完成。')
     }
     if (GameState.hasFlag('mush_quest') && !GameState.hasFlag('mush_done')) {
       lines.push('【菇菇派对】回音林采 8 种菇（昼 4 / 夜 4），交给伞灵菇老奶奶。')
