@@ -17,6 +17,7 @@ import { buildForest } from './forestMap'
 import { buildLake } from './lakeMap'
 import { TS, borderWalls, fill, parseAscii, setRect } from './mapKit'
 import { FLAME_SPOTS, PATROL_DONE, PATROL_STARTED } from '../systems/NightPatrolQuest'
+import { AMULET_DONE, AMULET_GOT, AMULET_SPOT, AMULET_STARTED } from '../systems/HikerAmuletQuest'
 
 /** ice 冰面（霜粒鹅遭遇格）· bridge 浮桥（开放前视为水面）· dock 码头木板 */
 export type TileKind =
@@ -745,6 +746,7 @@ function buildPass(): MapDef {
         id: 'hiker',
         name: '登山客峰',
         role: 'trainer',
+        story: 'hiker_amulet',
         x: 8,
         y: 11,
         color: 0x8a6a4a,
@@ -765,6 +767,19 @@ function buildPass(): MapDef {
           '对了，它浑身是火——潮系和岩系的伙伴能克制它，叶系和焰系就别硬碰了。',
           '这条山道的雾泉螈、草地上的岩甲虫和碧波龟都很适合带上去。',
         ],
+      },
+      {
+        id: 'hiker_amulet_spot',
+        name: '灰烬草里的东西',
+        role: 'prop',
+        story: 'pick_hiker_amulet',
+        x: AMULET_SPOT.x,
+        y: AMULET_SPOT.y,
+        color: 0xc4a060,
+        bob: true,
+        showIf: AMULET_STARTED,
+        hideIf: [AMULET_GOT, AMULET_DONE],
+        lines: ['（灰烬草里有块木头。）'],
       },
       {
         id: 'spring',

@@ -22,6 +22,7 @@ import { SONG_DONE, SONG_HEARD, SONG_STONES, songStep } from '../systems/MelodyQ
 import { PATROL_DONE, PATROL_NEED, PATROL_STARTED, flamesFound } from '../systems/NightPatrolQuest'
 import { BUBBLE_DONE, BUBBLE_NEED, BUBBLE_STARTED, bubbleStreak } from '../systems/BubbleCalmQuest'
 import { EGG_DONE, EGG_NEED_STEPS, EGG_STARTED, eggStepsLeft } from '../systems/MistEggQuest'
+import { AMULET_DONE, AMULET_GOT, AMULET_STARTED } from '../systems/HikerAmuletQuest'
 import { PAINTINGS_DONE, TOWER_PAINTINGS, paintingsFound } from '../systems/TowerPaintings'
 import { STARGAZE_DONE, STAR_CONSTELLATIONS, starsFound } from '../systems/StargazeQuest'
 import {
@@ -177,6 +178,15 @@ export class TownServices {
       lines.push(`【雾泉螈的蛋】再走 ${eggStepsLeft()}/${EGG_NEED_STEPS} 步就会孵化。`)
     } else if (GameState.hasFlag(EGG_DONE)) {
       lines.push('【雾泉螈的蛋】已完成。高资质雾泉螈已加入旅团。')
+    }
+    if (GameState.hasFlag(AMULET_STARTED) && !GameState.hasFlag(AMULET_DONE)) {
+      lines.push(
+        GameState.hasFlag(AMULET_GOT)
+          ? '【登山客的护身符】已捡到，去余烬山道还给登山客峰。'
+          : '【登山客的护身符】在余烬山道灰烬草里寻找，还给登山客峰。',
+      )
+    } else if (GameState.hasFlag(AMULET_DONE)) {
+      lines.push('【登山客的护身符】已完成。')
     }
     if (GameState.hasFlag('mush_quest') && !GameState.hasFlag('mush_done')) {
       lines.push('【菇菇派对】回音林采 8 种菇（昼 4 / 夜 4），交给伞灵菇老奶奶。')

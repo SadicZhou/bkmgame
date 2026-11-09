@@ -132,7 +132,7 @@ function paintOne(g: Icon, id: string): void {
   else if (id === 'gold_rod') rod(g, 'gold')
   else if (id === 'strength_gloves') gloves(g)
   else if (id === 'dust_badge') badge(g)
-  else if (id === 'star_charm' || id === 'sand_pouch') charm(g)
+  else if (id === 'star_charm' || id === 'sand_pouch' || id === 'hiker_amulet') charm(g)
   else if (id === 'star_scope') bottle(g)
   else if (id === 'star_sand') auroraDust(g)
   else if (id === 'canyon_ore') ore(g)

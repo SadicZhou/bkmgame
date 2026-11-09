@@ -76,6 +76,14 @@ export const ITEMS: Record<string, ItemDef> = {
     price: 0,
     desc: '安抚受惊鱼群后浮出的书页。背包里打开，可让潮系伙伴学会泡沫护盾（技能未满时）。',
   },
+  hiker_amulet: {
+    id: 'hiker_amulet',
+    name: '登山护身符',
+    kind: 'key',
+    value: 0,
+    price: 0,
+    desc: '登山客峰掉在灰烬草里的木牌护身符。上面刻着小小的火印。',
+  },
   house_wick: {
     id: 'house_wick',
     name: '家用灯芯',
@@ -207,6 +215,7 @@ export const KEY_ITEMS: string[] = [
   'book_defog',
   'book_heart_echo',
   'book_foam_shield',
+  'hiker_amulet',
   'house_wick',
   'wick_charm',
   'note_ember',
