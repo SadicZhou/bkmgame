@@ -23,6 +23,7 @@ import { PATROL_DONE, PATROL_NEED, PATROL_STARTED, flamesFound } from '../system
 import { BUBBLE_DONE, BUBBLE_NEED, BUBBLE_STARTED, bubbleStreak } from '../systems/BubbleCalmQuest'
 import { EGG_DONE, EGG_NEED_STEPS, EGG_STARTED, eggStepsLeft } from '../systems/MistEggQuest'
 import { AMULET_DONE, AMULET_GOT, AMULET_STARTED } from '../systems/HikerAmuletQuest'
+import { FOX_DONE, FOX_FOUND, FOX_STARTED, FOX_TALK_NEED, foxTalks } from '../systems/LostFoxQuest'
 import { PAINTINGS_DONE, TOWER_PAINTINGS, paintingsFound } from '../systems/TowerPaintings'
 import { STARGAZE_DONE, STAR_CONSTELLATIONS, starsFound } from '../systems/StargazeQuest'
 import {
@@ -187,6 +188,13 @@ export class TownServices {
       )
     } else if (GameState.hasFlag(AMULET_DONE)) {
       lines.push('【登山客的护身符】已完成。')
+    }
+    if (!GameState.hasFlag(FOX_DONE) && (GameState.hasFlag(FOX_STARTED) || foxTalks() > 0)) {
+      if (GameState.hasFlag(FOX_FOUND)) lines.push('【小路的翠叶狐】已找回，回小镇交给小路。')
+      else if (GameState.hasFlag(FOX_STARTED)) lines.push('【小路的翠叶狐】在青苔草地高草里寻找迷路的翠叶狐。')
+      else lines.push(`【小路的翠叶狐】再和小路聊聊（${foxTalks()}/${FOX_TALK_NEED}）。`)
+    } else if (GameState.hasFlag(FOX_DONE)) {
+      lines.push('【小路的翠叶狐】已完成。')
     }
     if (GameState.hasFlag('mush_quest') && !GameState.hasFlag('mush_done')) {
       lines.push('【菇菇派对】回音林采 8 种菇（昼 4 / 夜 4），交给伞灵菇老奶奶。')

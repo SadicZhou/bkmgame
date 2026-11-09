@@ -18,6 +18,7 @@ import { buildLake } from './lakeMap'
 import { TS, borderWalls, fill, parseAscii, setRect } from './mapKit'
 import { FLAME_SPOTS, PATROL_DONE, PATROL_STARTED } from '../systems/NightPatrolQuest'
 import { AMULET_DONE, AMULET_GOT, AMULET_SPOT, AMULET_STARTED } from '../systems/HikerAmuletQuest'
+import { FOX_DONE, FOX_FOUND, FOX_SPOT, FOX_STARTED } from '../systems/LostFoxQuest'
 
 /** ice 冰面（霜粒鹅遭遇格）· bridge 浮桥（开放前视为水面）· dock 码头木板 */
 export type TileKind =
@@ -484,6 +485,7 @@ function buildTown(): MapDef {
       {
         id: 'kid',
         name: '小路',
+        story: 'kid_fox',
         x: 11,
         y: 8,
         color: 0xf0a0c0,
@@ -695,6 +697,17 @@ function buildMeadow(): MapDef {
         showIf: 'side_lamps_started',
         hideIf: 'got_house_wick_4',
         lines: ['高草里的灯芯。'],
+      },
+      {
+        id: 'lost_fox',
+        name: '迷路的翠叶狐',
+        story: 'find_lost_fox',
+        x: FOX_SPOT.x,
+        y: FOX_SPOT.y,
+        color: 0x7bc96b,
+        showIf: FOX_STARTED,
+        hideIf: [FOX_FOUND, FOX_DONE],
+        lines: ['（叶子尾巴轻轻发抖。）'],
       },
     ],
   }
