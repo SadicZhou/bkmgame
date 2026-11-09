@@ -26,6 +26,7 @@ import {
   type MinorStart,
   type PhenomenonEnv,
 } from './Phenomenon'
+import { tickMistEgg } from './MistEggQuest'
 import { advanceClock, isNight, type ClockEvents } from './WorldClock'
 
 export interface StepResult {
@@ -37,6 +38,8 @@ export interface StepResult {
   goal?: GoalProgress
   crystal?: CrystalReward
   encounter?: CreatureInstance
+  /** 雾泉螈蛋孵化台词 */
+  eggHatch?: { lines: string[]; where: 'party' | 'storage' }
 }
 
 /** 异象判定所需环境（读取全局状态） */
@@ -142,6 +145,9 @@ export function stepWorld(mapId: string, x: number, y: number, encounterSource: 
   if (active && lockedWeather) w.weatherByMap[active.mapId] = lockedWeather
   const lead = GameState.party[0]
   if (lead && w.totalSteps % FRIENDSHIP_GAIN.walkSteps === 0) addFriendship(lead, FRIENDSHIP_GAIN.walk)
+
+  const hatch = tickMistEgg()
+  if (hatch) res.eggHatch = hatch
 
   res.phenomenonFaded = tickPhenomenon(w, env) ?? undefined
   res.minorEnded = tickMinor(w) ?? undefined

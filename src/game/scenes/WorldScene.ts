@@ -712,6 +712,12 @@ export class WorldScene extends Phaser.Scene {
       this.flashToast(res.crystal.kind === 'coins' ? `心火结晶化作了 ${res.crystal.amount} 焰币！` : `心火结晶里藏着 ${ITEMS[res.crystal.itemId].name}！`)
       redraw = true
     }
+    if (res.eggHatch) {
+      Sfx.win()
+      messages.push(...res.eggHatch.lines)
+      this.flashToast('支线「雾泉螈的蛋」完成')
+      this.refreshHud()
+    }
 
     if (redraw) {
       this.eventView.refresh()

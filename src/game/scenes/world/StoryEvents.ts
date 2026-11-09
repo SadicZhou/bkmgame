@@ -20,6 +20,7 @@ import { MUSHROOM_STORIES } from './MushroomStory'
 import { HOUSE_LAMP_STORIES } from './HouseLampStory'
 import { MOUSE_STORIES } from './MouseStory'
 import { NOTE_STORIES } from './NoteStory'
+import { MIST_EGG_STORIES } from './MistEggStory'
 import { NIGHT_PATROL_STORIES } from './NightPatrolStory'
 import { SONG_STORIES } from './SongStory'
 
@@ -126,6 +127,7 @@ const STORIES: Record<string, StoryFn> = {
   ...MOUSE_STORIES,
   ...SONG_STORIES,
   ...NIGHT_PATROL_STORIES,
+  ...MIST_EGG_STORIES,
   ...CANYON_STORIES,
   ...DUNE_STORIES,
   ...FROST_STORIES,
